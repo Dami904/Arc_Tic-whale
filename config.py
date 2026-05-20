@@ -15,6 +15,9 @@ CIRCLE_ENTITY_SECRET = os.getenv("CIRCLE_ENTITY_SECRET")
 AGENT_WALLET_ADDRESS = os.getenv("AGENT_WALLET_ADDRESS")
 AGENT_WALLET_ID = os.getenv("AGENT_WALLET_ID")
 
+# Telegram Keys
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
 # Force the Gemini key into the system environment for LangChain
 if GOOGLE_API_KEY:
     os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY

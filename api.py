@@ -23,7 +23,7 @@ from config import AGENT_WALLET_ADDRESS, AGENT_WALLET_ID
 # Initialize the database when the server starts
 init_db()
 
-app = FastAPI(title="Agora AI Agent API")
+app = FastAPI(title="Arc Tic Whale")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 

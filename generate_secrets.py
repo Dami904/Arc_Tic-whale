@@ -5,8 +5,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Hash import SHA256
 
-# Paste your Circle API Key here
-API_KEY = "TEST_API_KEY:017f9ea1caf2105af245dc9f1f0d4c25:b8c3dbc8dbef6d4f93b39d50052e8faf"
+from config import CIRCLE_API_KEY
 
 def generate_entity_secret():
     # 1. Generate the raw 32-byte secret (This is your ultimate master key)
@@ -21,7 +20,7 @@ def generate_entity_secret():
     # 2. Fetch Circle's Public Key
     print("Fetching Circle's Public Key...")
     url = "https://api.circle.com/v1/w3s/config/entity/publicKey"
-    headers = {"Authorization": f"Bearer {API_KEY}"}
+    headers = {"Authorization": f"Bearer {CIRCLE_API_KEY}"}
     response = httpx.get(url, headers=headers)
     
     if response.status_code != 200:
