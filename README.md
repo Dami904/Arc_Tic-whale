@@ -1,6 +1,90 @@
-# Agora Crypto Network — Arc-Tic Whale
+# Arc_Tic Whale
 
-AI-powered copy-trading platform on **Circle Arc Testnet**. The Conservative Whale agent uses Google Gemini to analyze market data, execute swaps via Uniswap V3, and lets users mirror its trades automatically.
+**Arc_Tic Whale** is an AI-driven copy-trading app on **Arc Testnet**. Four Google Gemini-powered investing agents analyze live markets, execute swaps via Uniswap V3, and let users mirror agent strategies automatically — with every user wallet protected by **Circle Agent Stack spending policies**.
+
+---
+
+## ⭐ Circle Agent Stack Integration
+
+> This project integrates [Circle Agent Stack](https://agents.circle.com) — Circle's financial infrastructure for the agentic economy (launched May 2026).
+
+### What Circle Agent Stack adds to this project
+
+A dedicated **Node.js microservice** (`agent_service/`) sits alongside the Python backend. Every time a user wallet is created, it goes through the Agent Service, which attaches **spending policy guardrails** via the Circle Agent Stack SDK before the wallet is handed back to the user.
+
+```
+User signs up
+      │
+      ▼
+Python FastAPI  ──httpx──►  Circle Agent Service (Node.js · port 3001)
+                                    │
+                                    │  @circle-fin/developer-controlled-wallets
+                                    ▼
+                             Circle API → Arc Testnet wallet created
+                                    │
+                                    ▼
+                          Spending policy attached:
+                          • Max $2.00 per transaction
+                          • Max $50.00 per day
+                          • Max $500.00 per month
+```
+
+### Circle Agent Stack SDK used
+
+**Package:** `@circle-fin/developer-controlled-wallets@^10.3.1` (JS/TypeScript SDK)
+
+**File:** [`agent_service/index.js`](agent_service/index.js)
+
+| SDK call | What it does |
+|---|---|
+| `initiateDeveloperControlledWalletsClient()` | Authenticates with Circle using `CIRCLE_API_KEY` + `CIRCLE_ENTITY_SECRET` |
+| `client.createWalletSet()` | Creates a named wallet set for the user |
+| `client.createWallets()` | Provisions an SCA (Smart Contract Account) wallet on Arc Testnet |
+| `client.updateWallet({ spendingLimits })` | **Attaches spending policy** — per-tx, daily, and monthly USDC caps |
+| `client.getWallet()` | Retrieves wallet info |
+| `client.listWalletBalance()` | Queries USDC balance for a wallet |
+
+### Agent Service REST API
+
+The Agent Service exposes these endpoints (port 3001):
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/health` | Returns Circle configuration status + dry-run mode |
+| `POST` | `/wallets` | Create wallet + attach spending policy |
+| `GET` | `/wallets/:id` | Get wallet state and address |
+| `GET` | `/wallets/:id/balance` | Get token balances |
+| `PUT` | `/wallets/:id/policy` | Update spending limits on an existing wallet |
+
+### Spending policy shape
+
+```js
+// Attached to every new user wallet at creation time
+spendingLimits: [
+  { limits: [{ amount: "2.00",   currency: "USD" }], timeFrame: "TRANSACTION" },
+  { limits: [{ amount: "50.00",  currency: "USD" }], timeFrame: "DAILY"       },
+  { limits: [{ amount: "500.00", currency: "USD" }], timeFrame: "MONTHLY"     },
+]
+```
+
+### Fallback safety
+
+If the Agent Service is unreachable, the Python backend automatically falls back to the existing Circle Developer Controlled Wallets Python SDK — **no user-facing errors, no downtime**.
+
+---
+
+## AI Agent Variations
+
+One `GOOGLE_API_KEY` powers all four agent profiles. Each uses the same Gemini 2.5 Flash model with a different system prompt, risk posture, and temperature — producing genuinely different investing decisions:
+
+| Agent ID | Display Name | Risk | Temp | Strategy |
+|---|---|---|---|---|
+| `Conservative_Whale` | Arc_Tic Whale 🐋 | Low | 0.2 | Patient blue-chip accumulator, buys confirmed dips only |
+| `Macro_Economist` | Macro Economist 📈 | Medium | 0.35 | Fed-watching swing trader, reacts to macro news |
+| `Aggressive_Degen` | Aggressive Degen ⚡ | High | 0.55 | Momentum breakout trader, accepts higher drawdown |
+| `Yield_Farmer` | Yield Farmer 🌊 | Low | 0.25 | Stablecoin-first, rotates into majors only on strong setups |
+
+All four agents are live in the marketplace. Users can follow any agent — each gets its own metrics, follower count, and feed entries attributed correctly.
 
 ---
 
@@ -11,41 +95,47 @@ flowchart TD
     CG[CoinGecko API] --> MD[market_data.py]
     YF[Yahoo Finance] --> MD
 
-    MD --> TS[trade_service.py<br/>run_trade_cycle]
-    TS --> AI[agents.py<br/>ask_conservative_whale]
+    MD --> TS[trade_service.py\nrun_trade_cycle]
+    TS --> AI[agents.py\nask_agent × 4 profiles]
     AI --> GL[Google Gemini 2.5 Flash]
 
-    TS --> TE[trade_executor.py<br/>Uniswap V3 swap]
-    TE --> CW[Circle Developer Wallets<br/>Arc Testnet]
-    TE --> WM[wallet_manager.py]
+    TS --> TE[trade_executor.py\nUniswap V3 swap]
+    TE --> CW[Circle DCW Python SDK\nArc Testnet]
 
     TS --> CE[copy_engine.py]
-    CE --> DB[(SQLite<br/>agora_marketplace.db)]
+    CE --> DB[(SQLite\nagora_marketplace.db)]
 
     TS --> SO[social.py]
-    SO --> CP[@thecanteenapp]
 
-    API[api.py<br/>FastAPI] --> TS
-    CLI[main.py<br/>CLI] --> TS
+    AS[Circle Agent Service\nNode.js · port 3001\n@circle-fin/developer-controlled-wallets] -->|wallet + spending policy| WM[wallet_manager.py]
+    WM --> CW
 
-    WEB[index.html<br/>Telegram Mini App] --> API
-    TB[bot.py<br/>Telegram Bot] --> WEB
+    API[api.py\nFastAPI · port 8765] --> TS
+    CLI[main.py\nCLI] --> TS
+
+    WEB[index.html\nTelegram Mini App] --> API
+    WEB --> AS
+    TB[bot.py\nTelegram Bot] --> WEB
 ```
 
 ### Data Flow
 
 ```
-Market Data (CoinGecko/Yahoo)
+Market Data (CoinGecko / Yahoo Finance)
        │
        ▼
-  AI Agent (Gemini 2.5 Flash)
-  ──► DECISION: BUY / SELL / HOLD
+  AI Agent (Gemini 2.5 Flash · one of 4 profiles)
+  ──► DECISION: BUY / SELL / HOLD + asset + reason
        │
        ▼
-  Trade Executor (Circle Wallet → Uniswap V3 on Arc Testnet)
+  Trade Executor (Circle Wallet → Uniswap V3 → Arc Testnet)
        │
-       ├──► Copy Engine (mirror to followers)
-       └──► Social Post (@thecanteenapp)
+       ├──► Copy Engine  (mirror trade to all follower wallets)
+       └──► Social Feed  (live feed entry attributed to correct agent)
+
+  On user wallet creation:
+  Python ──► Circle Agent Service (Node.js)
+          ──► Circle API: create wallet + attach spending policy
 ```
 
 ---
@@ -55,6 +145,7 @@ Market Data (CoinGecko/Yahoo)
 ### Prerequisites
 
 - Python 3.11+
+- **Node.js 20+** (for Circle Agent Service)
 - A [Circle API](https://console.circle.com) account with Arc Testnet access
 - A [Google AI](https://aistudio.google.com) API key (Gemini)
 - Optional: Telegram Bot Token for the Mini App
@@ -65,78 +156,119 @@ Market Data (CoinGecko/Yahoo)
 git clone <repo-url>
 cd circle1
 
+# Python backend
 python -m venv venv
-# Windows: venv\Scripts\activate
-# Linux/macOS: source venv/bin/activate
-
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+
+# Circle Agent Service (Node.js)
+cd agent_service
+npm install
+cd ..
 ```
 
 ### Configuration
 
-Copy `.env` and fill in your keys:
-
 ```env
-# Required
+# AI Provider
 GOOGLE_API_KEY=your_gemini_key
+
+# Circle Web3 Infrastructure
 CIRCLE_API_KEY=your_circle_api_key
 CIRCLE_ENTITY_SECRET=your_circle_entity_secret
 AGENT_WALLET_ADDRESS=0x...
 AGENT_WALLET_ID=uuid-from-circle
 
-# Optional
+# Circle Agent Stack — Node.js microservice
+AGENT_SERVICE_URL=http://localhost:3001
+AGENT_SERVICE_PORT=3001
+
+# Telegram (optional)
 BOT_TOKEN=your_telegram_bot_token
-API_AUTH_TOKEN=secure-token-for-api-endpoints
-LOG_LEVEL=INFO                  # DEBUG / INFO / WARNING / ERROR
-TRADE_DRY_RUN=true              # true = no real blockchain tx
+WEBAPP_URL=http://127.0.0.1:8765/webapp
+
+# Runtime Modes
+TRADE_DRY_RUN=true              # true = no real blockchain tx; also bypasses API auth
 AGENT_DEV_MODE=false            # true = skip Gemini, return mock BUY
 SOCIAL_DEV_MODE=false           # true = skip Gemini social post
-RATE_LIMIT_PER_MINUTE=30        # max API calls per minute
+
+# API Security
+API_AUTH_TOKEN=change-me-to-a-secure-token
 CORS_ALLOWED_ORIGINS=http://127.0.0.1:8765,https://yourdomain.com
+RATE_LIMIT_PER_MINUTE=30
+LOG_LEVEL=INFO
 ```
 
 ---
 
-## Run Modes
+## Running the App
 
-### 1. CLI (single trade cycle)
+### Quick start (both services together)
+
+```bash
+./start.sh
+```
+
+This launches the Circle Agent Service on port 3001 and the FastAPI backend on port 8765 together.
+
+### Manual start
+
+```bash
+# Terminal 1 — Circle Agent Service
+cd agent_service && node index.js
+
+# Terminal 2 — FastAPI backend
+source venv/bin/activate
+uvicorn server.api:app --host 127.0.0.1 --port 8765 --reload
+```
+
+Then open **http://127.0.0.1:8765/webapp** in your browser.
+
+### CLI (single trade cycle)
 
 ```bash
 python -m server.main
 ```
 
-Runs one full AI → trade → copy → social cycle and exits.
-
-### 2. API Server (FastAPI)
-
-```bash
-uvicorn server.api:app --host 127.0.0.1 --port 8765 --reload
-```
-
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| `/` | GET | No | Health check + agent address |
-| `/stats` | GET | No | Wallet balance + performance |
-| `/market-data` | GET | Rate-limited | Live crypto/stock prices |
-| `/webapp` | GET | No | Telegram Mini App UI |
-| `/trigger-trade` | POST | Bearer token | Force one AI trade cycle |
-| `/follow` | POST | Bearer token + rate-limited | Register as copy-trader |
-
-### 3. Telegram Bot
+### Telegram Bot
 
 ```bash
 python -m server.bot
 ```
 
-Serves the Mini App via `/start` command.
+---
 
-### 4. Development Mode
+## API Endpoints
 
-Set `AGENT_DEV_MODE=true` and `TRADE_DRY_RUN=true` to test the full pipeline without real API calls or blockchain transactions:
+### FastAPI (port 8765)
 
-```bash
-AGENT_DEV_MODE=true TRADE_DRY_RUN=true python -m server.main
-```
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/` | GET | — | Health check |
+| `/stats` | GET | — | Wallet balance + performance |
+| `/market-data` | GET | Rate-limited | Live crypto/stock prices |
+| `/dashboard` | GET | — | Full dashboard: wallet, agents, feed, trades |
+| `/trade-history` | GET | — | Trade history (scoped by username) |
+| `/users/ensure` | POST | Rate-limited | Create/load user wallet (via Agent Service) |
+| `/follow` | POST | Localhost/Bearer | Register as copy-trader for an agent |
+| `/trigger-trade` | POST | Localhost/Bearer | Force one AI trade cycle |
+| `/deposit` | POST | Localhost/Bearer | Get deposit address |
+| `/withdraw` | POST | Localhost/Bearer | Submit USDC withdrawal |
+| `/referrals` | GET | — | Referral code + reward history |
+| `/settings/:key` | POST | Localhost/Bearer | Update kill-switch / alerts / summary |
+| `/webapp` | GET | — | Telegram Mini App UI |
+
+> **Auth note:** Localhost requests (`127.0.0.1`) bypass Bearer token auth automatically. External callers require `Authorization: Bearer <API_AUTH_TOKEN>`. `TRADE_DRY_RUN=true` bypasses auth entirely.
+
+### Circle Agent Service (port 3001)
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/health` | GET | Service status + Circle config check |
+| `/wallets` | POST | Create wallet with spending policy |
+| `/wallets/:id` | GET | Get wallet info |
+| `/wallets/:id/balance` | GET | Get token balances |
+| `/wallets/:id/policy` | PUT | Update spending limits |
 
 ---
 
@@ -144,82 +276,90 @@ AGENT_DEV_MODE=true TRADE_DRY_RUN=true python -m server.main
 
 ```
 circle1/
+├── agent_service/               ◄ Circle Agent Stack (Node.js)
+│   ├── index.js                 #   Express server — wallet + spending policy API
+│   └── package.json             #   @circle-fin/developer-controlled-wallets, express
+│
 ├── backend/
-│   ├── trade_service.py     # Shared run_trade_cycle() pipeline
-│   ├── agents.py            # Gemini AI agent + fallback logic
-│   ├── market_data.py       # CoinGecko & Yahoo Finance fetcher
-│   ├── trade_executor.py    # Uniswap V3 swap via Circle wallets
-│   ├── copy_engine.py       # Mirror trades to follower wallets
-│   ├── social.py            # Auto-generated social posts
-│   ├── wallet_manager.py    # Circle wallet creation
-│   ├── database.py          # SQLite (followers, trades, settings)
-│   ├── logger.py            # Structured logging (structlog)
-│   ├── config.py            # Env vars & contract addresses
-│   └── utils.py             # parse_ai_decision parser
+│   ├── agents.py                # 4 Gemini AI agent profiles + fallback logic
+│   ├── trade_service.py         # Shared run_trade_cycle() pipeline
+│   ├── market_data.py           # CoinGecko & Yahoo Finance fetcher
+│   ├── trade_executor.py        # Uniswap V3 swap via Circle DCW Python SDK
+│   ├── copy_engine.py           # Mirror trades to follower wallets
+│   ├── wallet_manager.py        # Circle wallet creation + Agent Service integration
+│   ├── user_wallets.py          # User wallet provisioning (policy-enforced)
+│   ├── social.py                # Auto-generated social posts
+│   ├── database.py              # SQLite (followers, trades, settings)
+│   ├── config.py                # Env vars, contract addresses, AGENT_SERVICE_URL
+│   ├── logger.py                # Structured logging (structlog)
+│   └── utils.py                 # parse_ai_decision parser
+│
 ├── server/
-│   ├── api.py               # FastAPI server with security hardening
-│   ├── bot.py               # Telegram bot
-│   ├── main.py              # CLI entry point → run_trade_cycle()
-│   └── start_server.py      # Local DB initializer helper
+│   ├── api.py                   # FastAPI — all endpoints, auth, dashboard
+│   ├── bot.py                   # Telegram bot
+│   ├── main.py                  # CLI entry point
+│   └── start_server.py          # Local DB initializer
+│
 ├── frontend/
-│   └── index.html           # Telegram Mini App UI
-├── scripts/                 # Utility scripts
-├── agents.py                # Backward-compatible import wrapper
-├── requirements.txt     # Python dependencies
+│   └── index.html               # Telegram Mini App — 5 pages, 3 step-by-step modals
+│
 ├── tests/
 │   ├── test_utils.py            # parse_ai_decision unit tests
-│   ├── test_market_data.py      # Formatting & structure tests
-│   └── test_trade_service.py    # Full trade flow tests
-└── .env                 # Secrets (git-ignored)
+│   ├── test_market_data.py      # Market data formatting tests
+│   └── test_trade_service.py    # Full trade flow integration tests
+│
+├── scripts/                     # Utility scripts
+├── start.sh                     # Launches Agent Service + FastAPI together
+├── requirements.txt             # Python dependencies
+└── .env                         # Secrets (git-ignored)
 ```
+
+---
+
+## Recent Changes
+
+### Circle Agent Stack integration
+- **New:** `agent_service/` — Node.js microservice using `@circle-fin/developer-controlled-wallets`
+- **New:** Every user wallet created via the Agent Service gets spending policy guardrails (per-tx / daily / monthly USDC caps)
+- **New:** `start.sh` — runs both services together
+- **Modified:** `backend/wallet_manager.py` — `create_wallet_with_policy()` calls Agent Service with automatic DCW fallback
+- **Modified:** `backend/user_wallets.py` — new users routed through policy-enforced wallet creation
+- **Modified:** `backend/config.py` — `AGENT_SERVICE_URL` env var
+
+### Multi-agent marketplace
+- All 4 agents fully wired into `/follow`, `/trigger-trade`, `/dashboard`
+- Live feed correctly attributes each trade to the agent that made it (name + avatar)
+- Agent metrics (win rate, trade count, followers) tracked independently per agent
+
+### Frontend improvements
+- **Deposit** — 2-step guided modal (address display + copy button → awaiting confirmation)
+- **Withdraw** — 3-step guided modal (address → amount with 25%/50%/Max buttons → review + confirm)
+- **API Token** — popup modal on 401; saves to localStorage and retries automatically
+- Localhost requests bypass Bearer token auth — no token prompt in local browser
 
 ---
 
 ## Testing
 
 ```bash
-# Install test deps
 pip install pytest pytest-asyncio
-
-# Run all tests
 pytest tests/ -v
-
-# Run specific test file
-pytest tests/test_utils.py -v
 ```
-
-### Test coverage
-
-- **`test_utils.py`** — 13 test cases for `parse_ai_decision()` (BUY/SELL/HOLD, case insensitivity, malformed input, fallback asset, reason extraction)
-- **`test_market_data.py`** — 14 test cases for `_format_change()`, `_percent_change()`, and market data dictionary structure
-- **`test_trade_service.py`** — 6 test cases for the full trade cycle (BUY flow, SELL flow, HOLD flow, execution failure, missing wallet, fallback decisions)
-
----
-
-## Security
-
-- **CORS**: Restricted to origins in `CORS_ALLOWED_ORIGINS`
-- **Auth**: `/trigger-trade`, `/follow`, `/settings/*`, `/deposit`, and `/withdraw` require `Authorization: Bearer <API_AUTH_TOKEN>` header in live mode. For easier local testing, auth is bypassed whenever `TRADE_DRY_RUN=true`.
-- **Web app auth**: If auth is required, protected actions in the local Mini App prompt once for `API_AUTH_TOKEN` and store it in browser `localStorage`.
-- **Rate limiting**: All POST endpoints and `/market-data` are rate-limited (configurable via `RATE_LIMIT_PER_MINUTE`)
-- **Kill switch**: `kill_switch=1` prevents the shared trade cycle from executing.
-- **Dry-run**: `TRADE_DRY_RUN=true` prevents real blockchain transactions. Set `TRADE_DRY_RUN=false` only when the configured Circle wallet is funded and you want Arc Testnet transactions submitted.
-- **Wallet stats**: Dashboard balance is read from the configured `AGENT_WALLET_ID` test wallet by default. In production, `/dashboard?username=<telegram-user>` can reflect the wallet created for that Telegram username after `/follow`.
-- **Trade history**: Successful agent and follower executions store the Circle transaction id in SQLite so the tx can be checked on Arc Testnet.
-- **Alerts/summaries**: `trade_alerts` and `daily_summary` are persisted settings today; outbound notifications and scheduled daily summary jobs still need bot/scheduler wiring.
-- **Deposit/withdraw**: Deposit returns the active wallet address. Withdraw requires a destination/amount UI and Circle transfer API wiring before funds should move.
-- **Structured logging**: All events logged via structlog with ISO timestamps, configurable log levels
 
 ---
 
 ## Tech Stack
 
-- **Backend**: Python, FastAPI, Uvicorn
-- **AI**: Google Gemini 2.5 Flash, LangChain
-- **Blockchain**: Circle Developer-Controlled Wallets, Uniswap V3 on Arc Testnet
-- **Market Data**: CoinGecko (crypto), Yahoo Finance (stocks)
-- **Frontend**: Telegram Mini App, vanilla HTML/CSS/JS
-- **Bot**: pyTelegramBotAPI
-- **Database**: SQLite
-- **Logging**: structlog
-- **Testing**: pytest
+| Layer | Technology |
+|---|---|
+| **AI Agents** | Google Gemini 2.5 Flash, LangChain |
+| **Agent Stack** | **Circle Agent Stack** — `@circle-fin/developer-controlled-wallets` (Node.js) |
+| **Blockchain** | Circle Developer-Controlled Wallets, Uniswap V3, Arc Testnet |
+| **Backend** | Python, FastAPI, Uvicorn |
+| **Agent Service** | Node.js, Express |
+| **Market Data** | CoinGecko (crypto), Yahoo Finance (stocks) |
+| **Frontend** | Telegram Mini App, vanilla HTML/CSS/JS |
+| **Bot** | pyTelegramBotAPI |
+| **Database** | SQLite |
+| **Logging** | structlog |
+| **Testing** | pytest |
