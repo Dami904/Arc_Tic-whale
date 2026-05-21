@@ -1,10 +1,14 @@
-# bot.py
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
-from config import BOT_TOKEN
+from backend.config import BOT_TOKEN, WEBAPP_URL
 
-# Your live Localtunnel URL
-WEBAPP_URL = " https://fair-pillows-judge.loca.lt/webapp"
+if not BOT_TOKEN:
+    raise RuntimeError("BOT_TOKEN is not configured")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 

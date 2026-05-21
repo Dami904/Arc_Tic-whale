@@ -1,11 +1,16 @@
 import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import base64
 import httpx
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Hash import SHA256
 
-from config import CIRCLE_API_KEY
+from backend.config import CIRCLE_API_KEY
 
 def generate_entity_secret():
     # 1. Generate the raw 32-byte secret (This is your ultimate master key)

@@ -1,5 +1,10 @@
 # test_setup.py
-from database import init_db, add_follower
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from backend.database import init_db, add_follower
 
 print("🔧 Setting up the test environment...")
 
