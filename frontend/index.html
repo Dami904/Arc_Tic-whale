@@ -3,9 +3,24 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Agora — Arc-Tic Whale</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arc_Tic Whale — AI Copy Trading</title>
+    <meta name="description" content="Arc_Tic Whale: AI-driven copy trading on Circle Arc Testnet. Follow automated agents and mirror their trades.">
+    <!-- App configuration: set these before deploying -->
+    <script>
+        window.API_BASE    = '';           // Railway backend URL in prod, e.g. 'https://your-app.railway.app'
+        window.PRIVY_APP_ID = '';          // Your Privy App ID from privy.io dashboard
+        window.PRIVY_CLIENT_ID = '';       // Settings → Clients in Privy dashboard
+        window.PRIVY_AUTH_ORIGIN = '';     // Optional: whitelisted origin used for Privy OAuth redirects
+        window.WC_PROJECT_ID = '';         // WalletConnect project ID from cloud.walletconnect.com
+    </script>
+    <script type="module">
+        import * as PrivyAuth from '/static/privy-bundle.mjs';
+        window.PrivyAuth = PrivyAuth;
+    </script>
+    <!-- Telegram Mini App SDK — enables window.Telegram.WebApp.initData for auth -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- WalletConnect SDK is loaded on-demand in connectWallet() — not here -->
     <link
         href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne+Mono&family=Syne:wght@700;800&display=swap"
         rel="stylesheet">
@@ -196,6 +211,7 @@
             background: var(--amber-dim);
             color: var(--amber);
             border: 1px solid rgba(245, 158, 11, 0.3);
+            cursor: pointer;
         }
 
         .btn {
@@ -271,6 +287,7 @@
             position: absolute;
             inset: 0;
             background: radial-gradient(ellipse at 50% 0%, rgba(0, 221, 180, 0.18) 0%, transparent 70%);
+            pointer-events: none;
         }
 
         .agent-avatar {
@@ -1319,6 +1336,27 @@
             margin-bottom: 16px;
         }
 
+        .login-social-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 13px 16px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .login-social-btn:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.15);
+        }
+
         .modal-steps {
             display: flex;
             gap: 6px;
@@ -1394,6 +1432,188 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
+
+        /* ══════════════════════════════════════════════
+           RESPONSIVE — TABLET & DESKTOP
+           ══════════════════════════════════════════════ */
+        @media (min-width: 768px) {
+
+            /* Body: no bottom padding, make room for left sidebar */
+            body {
+                padding-bottom: 0;
+                padding-left: 220px;
+            }
+
+            /* ── Bottom nav → Left sidebar ── */
+            .bottom-nav {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: auto;
+                width: 220px;
+                height: 100vh;
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: stretch;
+                border-top: none;
+                border-right: 1px solid var(--border);
+                padding: 0 0 24px;
+                overflow-y: auto;
+            }
+
+            /* Sidebar brand */
+            .bottom-nav::before {
+                content: '🐋  Arc_Tic Whale';
+                display: block;
+                padding: 28px 22px 22px;
+                font-family: var(--font-display);
+                font-size: 14px;
+                font-weight: 800;
+                color: var(--cyan);
+                letter-spacing: 0.3px;
+                border-bottom: 1px solid var(--border);
+                margin-bottom: 10px;
+                flex-shrink: 0;
+            }
+
+            /* Nav items: horizontal row (icon + label) */
+            .nav-item {
+                flex: 0 0 auto;
+                flex-direction: row;
+                justify-content: flex-start;
+                align-items: center;
+                padding: 13px 22px;
+                gap: 12px;
+                font-size: 12px;
+                letter-spacing: 0.3px;
+                border-top: none;
+                border-left: 3px solid transparent;
+                border-radius: 0;
+                text-align: left;
+            }
+
+            .nav-item.active {
+                border-top-color: transparent;
+                border-left-color: var(--cyan);
+                background: rgba(0, 221, 180, 0.05);
+                color: var(--cyan);
+            }
+
+            .nav-item .nav-icon {
+                font-size: 17px;
+                flex-shrink: 0;
+            }
+
+            /* ── Page content area ── */
+            .page {
+                max-width: 880px;
+                width: 100%;
+                margin: 0 auto;
+                padding: 36px 40px;
+            }
+
+            #page-home {
+                padding-top: 36px;
+            }
+
+            /* Agent hero: horizontal on desktop */
+            .agent-hero {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                text-align: left;
+                gap: 24px;
+                padding: 28px 32px;
+            }
+
+            .agent-hero::before {
+                border-radius: 16px;
+            }
+
+            .agent-avatar {
+                font-size: 56px;
+                margin-bottom: 0;
+                flex-shrink: 0;
+            }
+
+            .agent-name {
+                font-size: 26px;
+            }
+
+            .agent-tagline {
+                font-size: 13px;
+            }
+
+            .agent-meta {
+                justify-content: flex-start;
+            }
+
+            /* Balance + stats side by side */
+            .balance-amount {
+                font-size: 38px;
+            }
+
+            /* Stats row: 4 columns on desktop */
+            .stats-row {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            /* Stat boxes slightly bigger */
+            .stat-box .sb-val {
+                font-size: 17px;
+            }
+
+            /* Terminal taller */
+            .terminal-body {
+                height: 240px;
+            }
+
+            /* Cards: slightly more breathing room */
+            .card {
+                padding: 22px 24px;
+            }
+
+            /* Modal sheet: desktop-centered dialog */
+            .modal-backdrop {
+                align-items: center;
+            }
+
+            .modal-sheet {
+                width: 420px;
+                border-radius: 20px;
+            }
+
+            .modal-handle {
+                display: none;
+            }
+        }
+
+        @media (min-width: 1100px) {
+            body {
+                padding-left: 240px;
+            }
+
+            .bottom-nav {
+                width: 240px;
+            }
+
+            .page {
+                max-width: 960px;
+                padding: 40px 48px;
+            }
+
+            /* Two-column agent grid on wide screens */
+            #agentList {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 14px;
+            }
+
+            #agentList .card {
+                margin-bottom: 0;
+            }
+        }
     </style>
 </head>
 
@@ -1406,8 +1626,8 @@
 
         <div class="agent-hero">
             <span class="agent-avatar">🐋</span>
-            <div class="agent-name">Arc-Tic Whale</div>
-            <div class="agent-tagline">Macro-driven yield accumulator · Conservative profile</div>
+            <div class="agent-name">Arc_Tic Whale</div>
+            <div class="agent-tagline">AI-driven copy trading on Circle Arc Testnet</div>
             <div class="agent-meta">
                 <span class="pill pill-cyan">🟢 LIVE</span>
                 <span class="pill pill-blue">⚡ YIELD HUNT</span>
@@ -1461,7 +1681,7 @@
                 <div class="asset-pill" data-symbol="ETH" onclick="selectAsset(this,'ETH')">Ξ ETH</div>
                 <div class="asset-pill" data-symbol="AAPL" onclick="selectAsset(this,'AAPL')">🍎 AAPL</div>
                 <div class="asset-pill" data-symbol="SPY" onclick="selectAsset(this,'SPY')">📊 SPY</div>
-                <div class="asset-pill" data-symbol="SOL" onclick="selectAsset(this,'SOL')">◎ SOL</div>
+                <div class="asset-pill" data-symbol="EURC" onclick="selectAsset(this,'EURC')">€ EURC</div>
             </div>
         </div>
 
@@ -1525,11 +1745,11 @@
         <!-- Agent Cards -->
         <div id="agentList">
             <div class="agent-card risk-low" data-risk="low"
-                onclick="openCopyModal('🐋','Arc-Tic Whale','Conservative','78%','142','$2.4K')">
+                onclick="openCopyModal('🐋','Arc_Tic Whale','Conservative','78%','142','$2.4K','Conservative_Whale')">
                 <div class="agent-card-top">
                     <div class="agent-card-icon">🐋</div>
                     <div class="agent-card-info">
-                        <div class="agent-card-name">Arc-Tic Whale</div>
+                        <div class="agent-card-name">Arc_Tic Whale</div>
                         <div class="agent-card-desc">Macro-driven, patient accumulator. Targets blue-chip assets with
                             low drawdown tolerance.</div>
                     </div>
@@ -1552,7 +1772,7 @@
             </div>
 
             <div class="agent-card risk-medium" data-risk="medium"
-                onclick="openCopyModal('📈','Macro Economist','Moderate','65%','310','$1.1K')">
+                onclick="openCopyModal('📈','Macro Economist','Moderate','65%','310','$1.1K','Macro_Economist')">
                 <div class="agent-card-top">
                     <div class="agent-card-icon">📈</div>
                     <div class="agent-card-info">
@@ -1579,7 +1799,7 @@
             </div>
 
             <div class="agent-card risk-high" data-risk="high"
-                onclick="openCopyModal('⚡','Aggressive Degen','High','54%','891','$8.7K')">
+                onclick="openCopyModal('⚡','Aggressive Degen','High','54%','891','$8.7K','Aggressive_Degen')">
                 <div class="agent-card-top">
                     <div class="agent-card-icon">⚡</div>
                     <div class="agent-card-info">
@@ -1606,7 +1826,7 @@
             </div>
 
             <div class="agent-card risk-low" data-risk="low"
-                onclick="openCopyModal('🌊','Yield Farmer','Conservative','81%','204','$3.2K')">
+                onclick="openCopyModal('🌊','Yield Farmer','Conservative','81%','204','$3.2K','Yield_Farmer')">
                 <div class="agent-card-top">
                     <div class="agent-card-icon">🌊</div>
                     <div class="agent-card-info">
@@ -1650,7 +1870,7 @@
                 <div class="post-header">
                     <div class="post-avatar">🐋</div>
                     <div class="post-meta">
-                        <div class="post-agent">Arc-Tic Whale</div>
+                        <div class="post-agent">Arc_Tic Whale</div>
                         <div class="post-time">2 min ago</div>
                     </div>
                     <div class="post-action-tag tag-buy">BUY</div>
@@ -1665,7 +1885,7 @@
                         <div class="reaction-btn" onclick="react(this,'👍')">👍 24</div>
                         <div class="reaction-btn" onclick="react(this,'🔥')">🔥 11</div>
                     </div>
-                    <div class="copy-from-feed" onclick="showToast('Copying Arc-Tic Whale...')">Copy Trade →</div>
+                    <div class="copy-from-feed" onclick="showToast('Copying Arc_Tic Whale...')">Copy Trade →</div>
                 </div>
             </div>
 
@@ -1754,7 +1974,7 @@
             <div class="wallet-icon">💎</div>
             <div class="wallet-balance-main" id="walletBalanceMain">150.00 <span class="wallet-balance-unit">USDC</span>
             </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:6px;">Circle Wallet · Verified</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="walletTypeLabel">Circle Trading Wallet · Auto-created</div>
             <div class="wallet-address" id="walletAddress" onclick="copyAddress()">Loading wallet · Tap to copy</div>
         </div>
 
@@ -1917,25 +2137,254 @@
         </div>
     </div>
 
+    <!-- ════════════════════════════════════════
+     DEPOSIT MODAL
+════════════════════════════════════════ -->
+    <div class="modal-backdrop" id="depositModal" onclick="closeDepositModal(event)">
+        <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-title">⬇ Deposit USDC</div>
+            <div class="modal-steps">
+                <div class="step-dot done" id="dep-dot1"></div>
+                <div class="step-dot" id="dep-dot2"></div>
+            </div>
+            <div id="depStep1">
+                <div style="font-size:12px;color:var(--muted-mid);line-height:1.6;margin-bottom:14px;">
+                    Send <strong style="color:var(--cyan)">USDC</strong> to your Circle Wallet on
+                    <strong style="color:var(--text)">Arc Testnet</strong>. Only send USDC — other tokens may be lost.
+                </div>
+                <div style="background:rgba(0,221,180,0.06);border:1px solid var(--border-accent);border-radius:12px;padding:14px;margin-bottom:12px;">
+                    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">Your Deposit Address</div>
+                    <div id="depAddressText" style="font-family:var(--font-mono);font-size:12px;color:var(--cyan);word-break:break-all;line-height:1.6;">Loading...</div>
+                </div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Network: <strong style="color:var(--text)">Arc Testnet</strong> · Asset: <strong style="color:var(--cyan)">USDC</strong></div>
+                <button class="btn btn-primary" onclick="copyDepositAddress()" style="margin-bottom:8px;">📋 Copy Address</button>
+                <button class="btn btn-outline" onclick="goDepStep2()">I've Sent → Next</button>
+            </div>
+            <div id="depStep2" style="display:none;">
+                <div style="text-align:center;padding:12px 0 16px;">
+                    <div style="font-size:40px;margin-bottom:10px;">⏳</div>
+                    <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Awaiting Confirmation</div>
+                    <div style="font-size:12px;color:var(--muted-mid);line-height:1.7;">
+                        Arc Testnet deposits confirm in <strong style="color:var(--text)">1–3 minutes</strong>.<br>
+                        Your balance updates automatically once settled.
+                    </div>
+                </div>
+                <div class="card" style="background:var(--cyan-dim);border-color:var(--border-accent);margin-bottom:14px;">
+                    <div style="font-size:11px;color:var(--muted-mid);">💡 Tip: Use the Circle Arc Testnet faucet to get free test USDC for development.</div>
+                </div>
+                <button class="btn btn-primary" onclick="closeDepositModal()">Done ✓</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+     WITHDRAW MODAL
+════════════════════════════════════════ -->
+    <div class="modal-backdrop" id="withdrawModal" onclick="closeWithdrawModal(event)">
+        <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-title">⬆ Withdraw USDC</div>
+            <div class="modal-steps">
+                <div class="step-dot done" id="wd-dot1"></div>
+                <div class="step-dot" id="wd-dot2"></div>
+                <div class="step-dot" id="wd-dot3"></div>
+            </div>
+            <div id="wdStep1">
+                <div style="font-size:12px;color:var(--muted-mid);margin-bottom:14px;">Enter the wallet address that will receive your USDC.</div>
+                <label class="input-label">Destination Address</label>
+                <input class="input-field" id="wdAddress" type="text" placeholder="0x...">
+                <button class="btn btn-primary" onclick="goWdStep2()">Next →</button>
+            </div>
+            <div id="wdStep2" style="display:none;">
+                <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--muted-mid);">
+                    Available: <strong id="wdAvailable" style="color:var(--cyan)">0.00 USDC</strong>
+                </div>
+                <label class="input-label">Amount (USDC)</label>
+                <input class="input-field" id="wdAmount" type="number" placeholder="e.g. 50" min="0.01" step="0.01">
+                <div style="display:flex;gap:8px;margin-bottom:14px;">
+                    <button class="btn btn-outline" style="font-size:12px;padding:8px;" onclick="setWdPct(25)">25%</button>
+                    <button class="btn btn-outline" style="font-size:12px;padding:8px;" onclick="setWdPct(50)">50%</button>
+                    <button class="btn btn-outline" style="font-size:12px;padding:8px;" onclick="setWdPct(100)">Max</button>
+                </div>
+                <button class="btn btn-primary" onclick="goWdStep3()">Review →</button>
+                <button class="btn btn-outline" style="margin-top:8px;" onclick="goWdBack1()">← Back</button>
+            </div>
+            <div id="wdStep3" style="display:none;">
+                <div style="font-size:13px;color:var(--muted-mid);line-height:1.8;margin-bottom:14px;">
+                    Sending <strong id="wdConfirmAmt" style="color:var(--cyan)"></strong> USDC to<br>
+                    <span id="wdConfirmAddr" style="font-family:var(--font-mono);font-size:11px;word-break:break-all;color:var(--muted-mid);"></span>
+                </div>
+                <div class="card" style="background:var(--red-dim);border-color:rgba(255,70,85,0.3);margin-bottom:14px;">
+                    <div style="font-size:11px;color:var(--muted-mid);">⚠️ This transaction is irreversible. Double-check the address.</div>
+                </div>
+                <button class="btn btn-primary" id="wdConfirmBtn" onclick="submitWithdraw()">Confirm Withdraw</button>
+                <button class="btn btn-outline" style="margin-top:8px;" onclick="goWdBack2()">← Back</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+     PRIVY LOGIN MODAL
+     Replace with @privy-io/react-auth when migrating to Next.js
+════════════════════════════════════════ -->
+    <div class="modal-backdrop" id="loginModal" onclick="closeLoginModal(event)">
+        <div class="modal-sheet" style="max-width:440px;margin:0 auto;">
+            <div class="modal-handle"></div>
+
+            <!-- Logo + Title -->
+            <div style="text-align:center;margin-bottom:24px;">
+                <div style="font-size:22px;font-weight:700;color:var(--text-primary);letter-spacing:-0.5px;">Arc_Tic Whale</div>
+                <div style="font-size:14px;color:var(--muted-mid);margin-top:4px;">Log in or sign up</div>
+            </div>
+
+            <!-- Step 1: Email input -->
+            <div id="loginStepEmail">
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <div style="position:relative;flex:1;">
+                        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted-mid);font-size:16px;">✉</span>
+                        <input class="input-field" id="loginEmail" type="email" placeholder="your@email.com"
+                            style="padding-left:40px;"
+                            onkeydown="if(event.key==='Enter') requestOtp()">
+                    </div>
+                    <button onclick="requestOtp()" style="background:var(--cyan);border:none;border-radius:12px;width:44px;height:44px;cursor:pointer;font-size:18px;color:#0d1220;flex-shrink:0;display:flex;align-items:center;justify-content:center;">→</button>
+                </div>
+            </div>
+
+            <!-- Step 2: OTP input (hidden until email sent) -->
+            <div id="loginStepOtp" style="display:none;">
+                <div style="font-size:13px;color:var(--muted-mid);margin-bottom:8px;text-align:center;">
+                    We sent a 6-digit code to <span id="loginEmailDisplay" style="color:var(--text-primary);"></span>
+                </div>
+                <div id="loginOtpHint" style="font-size:11px;color:var(--amber);background:var(--amber-dim);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:7px 10px;margin-bottom:12px;text-align:center;display:none;"></div>
+                <input class="input-field" id="loginOtpCode" type="text" inputmode="numeric" maxlength="6"
+                    placeholder="123456" style="text-align:center;letter-spacing:8px;font-size:20px;"
+                    onkeydown="if(event.key==='Enter') verifyOtp()">
+                <button class="btn btn-primary" style="margin-top:12px;" onclick="verifyOtp()">Verify Code</button>
+                <button type="button" id="loginResendOtpBtn" class="btn btn-outline"
+                    style="margin-top:8px;font-size:12px;opacity:0.5;cursor:not-allowed;" disabled
+                    onclick="resendOtp()">Resend code</button>
+                <button class="btn btn-outline" style="margin-top:8px;" onclick="resetLoginModal()">← Use different email</button>
+            </div>
+
+            <!-- Divider -->
+            <div id="loginDivider" style="display:flex;align-items:center;gap:12px;margin:20px 0;">
+                <div style="flex:1;height:1px;background:var(--border);"></div>
+                <span style="font-size:12px;color:var(--muted-mid);">or</span>
+                <div style="flex:1;height:1px;background:var(--border);"></div>
+            </div>
+
+            <!-- Social + wallet buttons -->
+            <div id="loginSocials">
+                <button class="login-social-btn" onclick="socialLogin('google')">
+                    <span style="font-size:18px;">G</span>
+                    <span>Continue with Google</span>
+                </button>
+                <button class="login-social-btn" onclick="socialLogin('twitter')">
+                    <span style="font-size:16px;font-weight:700;">𝕏</span>
+                    <span>Continue with Twitter</span>
+                </button>
+                <button class="login-social-btn" onclick="connectWallet()">
+                    <span style="font-size:16px;">◎</span>
+                    <span>Continue with a wallet</span>
+                </button>
+            </div>
+
+            <!-- Invite code badge (shown only if ?ref= or ?start= present) -->
+            <div id="loginInviteBadge" style="display:none;text-align:center;margin-top:16px;">
+                <span style="font-size:12px;color:var(--muted-mid);">Invite code: </span>
+                <span id="loginInviteCode" style="font-size:12px;color:var(--cyan);background:rgba(0,212,255,0.1);padding:2px 10px;border-radius:20px;border:1px solid rgba(0,212,255,0.25);"></span>
+            </div>
+
+            <!-- Privy branding -->
+            <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--muted-mid);">
+                Protected by <span style="color:var(--text-primary);">● privy</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
     <script>
-        // ── Telegram Init ──
-        const tg = window.Telegram?.WebApp;
-        if (tg) {
-            tg.expand();
-            tg.setHeaderColor('#07090f');
-            const user = tg.initDataUnsafe?.user;
-            if (user) {
-                const name = user.username ? `@${user.username}` : user.first_name;
-                document.getElementById('greetPill').textContent = `✓ ${name}`;
-            } else {
-                document.getElementById('greetPill').textContent = '✓ Connected';
-            }
-        } else {
-            document.getElementById('greetPill').textContent = '✓ Preview Mode';
+        // ── Privy Auth State ──
+        // Access token + user ID are stored in localStorage after Privy login.
+        // Full Privy SDK (react-auth) can replace this when migrating to Next.js/React.
+        const _privyTokenKey  = 'privy_access_token';
+        const _privyUserKey   = 'privy_user_id';
+        const _privyEmailKey  = 'privy_user_email';
+        const _privyDisplayKey = 'privy_display_name';
+
+        let _privyToken  = localStorage.getItem(_privyTokenKey) || '';
+        let _privyUserId = localStorage.getItem(_privyUserKey)  || '';
+        let _privyEmail  = localStorage.getItem(_privyEmailKey) || '';
+        let _privyDisplayName = localStorage.getItem(_privyDisplayKey) || '';
+
+        function _shortAccountId(value) {
+            return value ? `${value.slice(0, 6)}...${value.slice(-4)}` : 'Account';
         }
+
+        function _identityLabel(userId = _privyUserId, email = _privyEmail, displayName = _privyDisplayName) {
+            if (displayName) return displayName;
+            if (email && email.includes('@')) return email;
+            if (email && email.startsWith('0x')) return `Wallet ${_shortAccountId(email)}`;
+            if (userId && userId.startsWith('wallet_')) return `Wallet ${userId.replace('wallet_', '').slice(0, 8)}`;
+            if (userId && userId.startsWith('did:privy:')) return 'Privy account';
+            return userId ? 'Signed in' : 'Sign In';
+        }
+
+        function _setPrivySession(userId, token, email, displayName = '') {
+            const safeEmail = email && email.includes('@') ? email : '';
+            _privyUserId = userId; _privyToken = token; _privyEmail = safeEmail; _privyDisplayName = displayName || '';
+            localStorage.setItem(_privyUserKey, userId);
+            localStorage.setItem(_privyTokenKey, token);
+            if (safeEmail) localStorage.setItem(_privyEmailKey, safeEmail);
+            else localStorage.removeItem(_privyEmailKey);
+            if (displayName) localStorage.setItem(_privyDisplayKey, displayName);
+            else localStorage.removeItem(_privyDisplayKey);
+            const label = _identityLabel(userId, safeEmail, displayName);
+            document.getElementById('greetPill').textContent = `✓ ${label}`;
+            document.getElementById('greetPill').className = 'pill pill-cyan';
+        }
+
+        function _clearPrivySession() {
+            _privyUserId = ''; _privyToken = ''; _privyEmail = ''; _privyDisplayName = '';
+            localStorage.removeItem(_privyUserKey);
+            localStorage.removeItem(_privyTokenKey);
+            localStorage.removeItem(_privyEmailKey);
+            localStorage.removeItem(_privyDisplayKey);
+            document.getElementById('greetPill').textContent = 'Sign In';
+            document.getElementById('greetPill').className = 'pill pill-amber';
+        }
+
+        // ── Mode detection ──
+        function isTelegramMode() {
+            return !!new URLSearchParams(window.location.search).get('username');
+        }
+
+        // Update greeting on load
+        if (isTelegramMode()) {
+            const tgUser = new URLSearchParams(window.location.search).get('username') || '';
+            document.getElementById('greetPill').textContent = `@${tgUser}`;
+            document.getElementById('greetPill').className = 'pill pill-cyan';
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.ready();
+                window.Telegram.WebApp.expand();
+            }
+        } else if (_privyEmail || _privyUserId) {
+            const label = _identityLabel();
+            document.getElementById('greetPill').textContent = `✓ ${label}`;
+            document.getElementById('greetPill').className = 'pill pill-cyan';
+        } else {
+            document.getElementById('greetPill').textContent = 'Sign In';
+        }
+
+        // Clicking the greeting pill opens the login modal — only in web mode when signed out
+        document.getElementById('greetPill').addEventListener('click', () => {
+            if (isTelegramMode()) return;
+            if (_privyUserId) { signOut(); return; }
+            openLoginModal();
+        });
 
         // ── Navigation ──
         function navigate(page, el) {
@@ -1950,16 +2399,25 @@
 	        let marketCache = {};
 	        let dashboardCache = {};
 	        let latestWalletAddress = '';
-	        const AUTH_TOKEN_KEY = 'arc_tic_whale_api_token';
-
 	        function authHeaders(extra = {}) {
-	            const token = localStorage.getItem(AUTH_TOKEN_KEY);
-	            return token ? { ...extra, Authorization: `Bearer ${token}` } : extra;
+	            // Telegram mode: send Telegram's signed initData for server verification
+	            if (isTelegramMode() && window.Telegram?.WebApp?.initData) {
+	                return { ...extra, 'X-Telegram-Init-Data': window.Telegram.WebApp.initData };
+	            }
+	            // Web mode: Privy Bearer token
+	            return _privyToken
+	                ? { ...extra, Authorization: `Bearer ${_privyToken}` }
+	                : extra;
 	        }
 
 	        async function apiFetch(url, options = {}) {
-	            const headers = authHeaders(options.headers || {});
-	            return fetch(url, { ...options, headers });
+	            const headers = { 'Content-Type': 'application/json', ...authHeaders(options.headers || {}) };
+	            const res = await fetch((window.API_BASE || '') + url, { ...options, headers });
+	            if (res.status === 401) {
+	                if (!isTelegramMode()) openLoginModal();
+	                throw new Error('Authentication required — please sign in');
+	            }
+	            return res;
 	        }
 
         function fmtUsd(value) {
@@ -1979,7 +2437,36 @@
 	        }
 
 	        function currentUsername() {
-	            return tg?.initDataUnsafe?.user?.username || tg?.initDataUnsafe?.user?.first_name || '';
+	            // Privy user ID (did:privy:…) — set after login
+	            const params = new URLSearchParams(window.location.search);
+	            return _privyUserId || params.get('username') || '';
+	        }
+
+	        function usernameQuery() {
+	            const username = currentUsername();
+	            return username ? `?username=${encodeURIComponent(username)}` : '';
+	        }
+
+	        function referralCode() {
+	            const params = new URLSearchParams(window.location.search);
+	            return params.get('ref') || params.get('start') || '';
+	        }
+
+	        async function ensureWalletForCurrentUser() {
+	            const username = currentUsername();
+	            if (!username) return;
+	            try {
+	                const res = await apiFetch('/users/ensure', {
+	                    method: 'POST',
+	                    body: JSON.stringify({ username, referral_code: referralCode() || null })
+	                });
+	                const data = await res.json();
+	                if (data.status === 'success') {
+	                    log(`Wallet ready for @${data.user.user_id}. Referral: ${data.user.referral_code}`, 'sys');
+	                }
+	            } catch (err) {
+	                log('Wallet provisioning check failed.', 'warn');
+	            }
 	        }
 
 	        function timeAgo(timestamp) {
@@ -2013,7 +2500,7 @@
 
         // Boot sequence
 	        const bootSeq = [
-	            [300, 'System boot — Arc-Tic Whale v2.1', 'sys'],
+            [300, 'System boot — Arc_Tic Whale copy-trading app', 'sys'],
 	            [700, 'Connecting to Circle Wallet RPC...', 'sys'],
 	            [1100, 'Wallet status sync queued', 'info'],
 	            [1500, 'Scanning active market: BTC/USD', 'action'],
@@ -2064,6 +2551,10 @@
 	            document.getElementById('walletAddress').textContent = latestWalletAddress
 	                ? `${latestWalletAddress.slice(0, 6)}...${latestWalletAddress.slice(-4)} · Tap to copy`
 	                : 'Wallet unavailable';
+	            const _wtl = document.getElementById('walletTypeLabel');
+	            if (_wtl) _wtl.textContent = wallet.source === 'user'
+	                ? 'Circle Trading Wallet · Auto-created for your account'
+	                : 'Circle Agent Wallet · Shared (sign in to get your own)';
 
 	            document.getElementById('totalPnl').textContent = `${fmtUsdc(0)} USDC`;
 	            document.getElementById('activeAgentSummary').textContent = `Across ${agents.length} active agent${agents.length === 1 ? '' : 's'}`;
@@ -2140,6 +2631,7 @@
 	                const pill = agent.risk === 'high' ? 'pill-red' : agent.risk === 'medium' ? 'pill-amber' : 'pill-cyan';
 	                const color = agent.risk === 'high' ? 'red' : agent.risk === 'medium' ? 'amber' : 'green';
 	                const args = [
+	                    agent.id,
 	                    agent.avatar,
 	                    agent.name,
 	                    agent.risk_label,
@@ -2149,7 +2641,7 @@
 	                ].map(v => String(v).replace(/'/g, "\\'"));
 	                return `
 	                    <div class="agent-card risk-${agent.risk}" data-risk="${agent.risk}"
-	                        onclick="openCopyModal('${args[0]}','${args[1]}','${args[2]}','${args[3]}','${args[4]}','${args[5]}')">
+	                        onclick="openCopyModal('${args[1]}','${args[2]}','${args[3]}','${args[4]}','${args[5]}','${args[6]}','${args[0]}')">
 	                        <div class="agent-card-top">
 	                            <div class="agent-card-icon">${agent.avatar}</div>
 	                            <div class="agent-card-info">
@@ -2204,15 +2696,17 @@
 	                return;
 	            }
 	            container.innerHTML = transactions.map(tx => {
-	                const positive = tx.action === 'BUY' || tx.action === 'HOLD';
+	                const positive = tx.action === 'DEPOSIT';
+	                const txIcon = tx.action === 'DEPOSIT' ? '↘' : '↗';
+	                const amount = tx.amount ? `${positive ? '+' : '-'}${tx.amount}` : (tx.tx_id ? tx.tx_id.slice(0, 10) : 'Pending');
 	                return `
 	                    <div class="tx-item">
-	                        <div class="tx-icon">${tx.action === 'SELL' ? '↗' : tx.action === 'BUY' ? '↘' : '⏸'}</div>
+	                        <div class="tx-icon">${txIcon}</div>
 	                        <div class="tx-info">
 	                            <div class="tx-desc">${tx.action} · ${tx.asset || 'N/A'}</div>
 	                            <div class="tx-time">${new Date(tx.timestamp).toLocaleString()}</div>
 	                        </div>
-	                        <div class="tx-amt ${positive ? 'pos' : 'neg'}">${tx.tx_id ? tx.tx_id.slice(0, 10) : 'No tx'}</div>
+	                        <div class="tx-amt ${positive ? 'pos' : 'neg'}">${amount}</div>
 	                    </div>
 	                `;
 	            }).join('');
@@ -2221,7 +2715,7 @@
         // ── Load History & Settings ──
         async function fetchTradeHistory() {
             try {
-                const res = await fetch('/trade-history');
+                const res = await fetch(`/trade-history${usernameQuery()}`);
                 const data = await res.json();
                 const container = document.getElementById('tradeHistoryContainer');
                 if (!container) return;
@@ -2277,33 +2771,426 @@
         function toggleAlerts() { toggleSetting('trade_alerts', document.getElementById('alertToggle')); }
         function toggleSummary() { toggleSetting('daily_summary', document.getElementById('summaryToggle')); }
 
-        // ── Deposit / Withdraw ──
+        // ── Deposit Modal ──
         async function handleDeposit() {
-            showToast('Opening deposit flow...');
             try {
-	                const res = await apiFetch('/deposit', { method: 'POST' });
-	                const data = await res.json();
-	                if (data.address) {
-	                    latestWalletAddress = data.address;
-	                    navigator.clipboard?.writeText(data.address);
-	                    showToast('Deposit address copied');
-	                    log(`Deposit address: ${data.address}`, 'info');
-	                } else {
-	                    showToast(data.message || 'Deposit initiated');
-	                }
+                const res = await apiFetch(`/deposit${usernameQuery()}`, { method: 'POST' });
+                const data = await res.json();
+                const addr = data.address || latestWalletAddress || '';
+                if (addr) latestWalletAddress = addr;
+                document.getElementById('depAddressText').textContent = addr || 'Address unavailable';
+                document.getElementById('dep-dot1').classList.add('done');
+                document.getElementById('dep-dot2').classList.remove('done');
+                document.getElementById('depStep1').style.display = 'block';
+                document.getElementById('depStep2').style.display = 'none';
+                document.getElementById('depositModal').classList.add('open');
             } catch (err) {
-                showToast('Deposit flow unavailable');
+                if (!err.message.includes('token required')) showToast(err.message || 'Deposit unavailable');
             }
         }
-        async function handleWithdraw() {
-            showToast('Opening withdraw flow...');
-            try {
-		                const res = await apiFetch('/withdraw', { method: 'POST' });
-	                const data = await res.json();
-	                showToast(data.message || 'Withdraw requires destination and amount');
-            } catch (err) {
-                showToast('Withdraw flow unavailable');
+        function copyDepositAddress() {
+            const addr = document.getElementById('depAddressText').textContent;
+            navigator.clipboard?.writeText(addr);
+            showToast('Address copied ✓');
+        }
+        function goDepStep2() {
+            document.getElementById('depStep1').style.display = 'none';
+            document.getElementById('depStep2').style.display = 'block';
+            document.getElementById('dep-dot2').classList.add('done');
+        }
+        function closeDepositModal(e) {
+            if (!e || e.target.id === 'depositModal') {
+                document.getElementById('depositModal').classList.remove('open');
+                refreshDashboard();
             }
+        }
+
+        // ── Withdraw Modal ──
+        function handleWithdraw() {
+            const balance = Number(dashboardCache?.wallet?.total_balance_usd || 0);
+            document.getElementById('wdAvailable').textContent = balance.toFixed(2) + ' USDC';
+            document.getElementById('wdAddress').value = '';
+            document.getElementById('wdAmount').value = '';
+            document.getElementById('wdStep1').style.display = 'block';
+            document.getElementById('wdStep2').style.display = 'none';
+            document.getElementById('wdStep3').style.display = 'none';
+            document.getElementById('wd-dot2').classList.remove('done');
+            document.getElementById('wd-dot3').classList.remove('done');
+            document.getElementById('withdrawModal').classList.add('open');
+        }
+        function goWdStep2() {
+            const addr = document.getElementById('wdAddress').value.trim();
+            if (!addr || !addr.startsWith('0x')) { showToast('Enter a valid 0x address'); return; }
+            document.getElementById('wdStep1').style.display = 'none';
+            document.getElementById('wdStep2').style.display = 'block';
+            document.getElementById('wd-dot2').classList.add('done');
+        }
+        function goWdStep3() {
+            const amount = parseFloat(document.getElementById('wdAmount').value);
+            if (!amount || amount <= 0) { showToast('Enter a valid amount'); return; }
+            const addr = document.getElementById('wdAddress').value.trim();
+            document.getElementById('wdConfirmAmt').textContent = amount.toFixed(2);
+            document.getElementById('wdConfirmAddr').textContent = addr;
+            document.getElementById('wdStep2').style.display = 'none';
+            document.getElementById('wdStep3').style.display = 'block';
+            document.getElementById('wd-dot3').classList.add('done');
+        }
+        function goWdBack1() {
+            document.getElementById('wdStep2').style.display = 'none';
+            document.getElementById('wdStep1').style.display = 'block';
+            document.getElementById('wd-dot2').classList.remove('done');
+        }
+        function goWdBack2() {
+            document.getElementById('wdStep3').style.display = 'none';
+            document.getElementById('wdStep2').style.display = 'block';
+            document.getElementById('wd-dot3').classList.remove('done');
+        }
+        function setWdPct(pct) {
+            const balance = Number(dashboardCache?.wallet?.total_balance_usd || 0);
+            document.getElementById('wdAmount').value = (balance * pct / 100).toFixed(2);
+        }
+        async function submitWithdraw() {
+            const destination = document.getElementById('wdAddress').value.trim();
+            const amount = parseFloat(document.getElementById('wdAmount').value);
+            const btn = document.getElementById('wdConfirmBtn');
+            btn.disabled = true; btn.textContent = 'Processing...';
+            try {
+                const tgUser = currentUsername();
+                const res = await apiFetch('/withdraw', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ destination_address: destination, amount, asset: 'USDC', username: tgUser || null })
+                });
+                const data = await res.json();
+                if (!res.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Withdraw failed');
+                document.getElementById('withdrawModal').classList.remove('open');
+                showToast('Withdraw submitted ✓');
+                log(`Withdraw Tx: ${data.tx_hash}`, 'info');
+                refreshDashboard();
+            } catch (err) {
+                if (!err.message.includes('token required')) showToast(err.message || 'Withdraw failed');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Confirm Withdraw';
+            }
+        }
+        function closeWithdrawModal(e) {
+            if (!e || e.target.id === 'withdrawModal') document.getElementById('withdrawModal').classList.remove('open');
+        }
+
+        // ── Privy Login Modal ──
+        // Full Privy SDK integration (email, Google, GitHub, wallet connect) requires
+        // migrating to React + @privy-io/react-auth. This modal handles the interim
+        // token-paste flow and will be replaced by the Privy SDK login modal.
+        function openLoginModal() {
+            resetLoginModal();
+            // Pre-fill invite badge if ref code is in URL
+            const rc = referralCode();
+            const badge = document.getElementById('loginInviteBadge');
+            if (rc) {
+                document.getElementById('loginInviteCode').textContent = rc;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+            document.getElementById('loginModal').classList.add('open');
+            setTimeout(() => document.getElementById('loginEmail').focus(), 300);
+        }
+        function closeLoginModal(e) {
+            if (!e || e.target.id === 'loginModal') document.getElementById('loginModal').classList.remove('open');
+        }
+        const OTP_RESEND_COOLDOWN_SEC = 60;
+        let _otpResendInterval = null;
+        let _otpResendEndsAt = 0;
+
+        function _clearOtpResendTimer() {
+            if (_otpResendInterval) {
+                clearInterval(_otpResendInterval);
+                _otpResendInterval = null;
+            }
+            _otpResendEndsAt = 0;
+            const btn = document.getElementById('loginResendOtpBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+                btn.textContent = 'Resend code';
+            }
+        }
+
+        function _formatResendWait(seconds) {
+            const s = Math.max(0, Math.ceil(seconds));
+            const m = Math.floor(s / 60);
+            const r = s % 60;
+            return m > 0 ? `${m}:${String(r).padStart(2, '0')}` : `${r}s`;
+        }
+
+        function startOtpResendCooldown(seconds) {
+            _clearOtpResendTimer();
+            const btn = document.getElementById('loginResendOtpBtn');
+            if (!btn) return;
+            _otpResendEndsAt = Date.now() + seconds * 1000;
+            const tick = () => {
+                const left = (_otpResendEndsAt - Date.now()) / 1000;
+                if (left <= 0) {
+                    _clearOtpResendTimer();
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                    btn.textContent = 'Resend code';
+                    return;
+                }
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+                btn.textContent = `Resend code in ${_formatResendWait(left)}`;
+            };
+            tick();
+            _otpResendInterval = setInterval(tick, 1000);
+        }
+
+        function resetLoginModal() {
+            _clearOtpResendTimer();
+            document.getElementById('loginStepEmail').style.display = 'block';
+            document.getElementById('loginStepOtp').style.display = 'none';
+            document.getElementById('loginDivider').style.display = 'flex';
+            document.getElementById('loginSocials').style.display = 'block';
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginOtpCode').value = '';
+        }
+
+        function _afterOtpSent(d) {
+            const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+            document.getElementById('loginEmailDisplay').textContent = email;
+            document.getElementById('loginStepEmail').style.display = 'none';
+            document.getElementById('loginStepOtp').style.display = 'block';
+            document.getElementById('loginDivider').style.display = 'none';
+            document.getElementById('loginSocials').style.display = 'none';
+            if (d && d.provider === 'custom') {
+                _showOtpHint('Running locally — check the <strong>server console</strong> for your OTP code.');
+                if (d.privy_error) showToast('Privy: ' + d.privy_error);
+            } else if (d && d.hint) {
+                _showOtpHint(d.hint);
+            } else {
+                _showOtpHint('Check your <strong>inbox</strong> for the 6-digit code (may take a minute).');
+            }
+            startOtpResendCooldown((d && d.resend_available_in) || OTP_RESEND_COOLDOWN_SEC);
+            setTimeout(() => document.getElementById('loginOtpCode').focus(), 100);
+        }
+
+        async function _sendLoginOtp() {
+            const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+            if (!email || !email.includes('@')) {
+                showToast('Enter a valid email address');
+                return false;
+            }
+            if (await _ensurePrivyClient()) {
+                await window.PrivyAuth.sendEmailCode(email);
+                _afterOtpSent({ resend_available_in: OTP_RESEND_COOLDOWN_SEC });
+                return true;
+            }
+            const res = await fetch('/auth/request-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+            const d = await res.json();
+            if (!res.ok) {
+                if (res.status === 429) {
+                    const match = (d.detail || '').match(/(\d+)s/);
+                    const wait = match ? parseInt(match[1], 10) : OTP_RESEND_COOLDOWN_SEC;
+                    startOtpResendCooldown(wait);
+                }
+                showToast(d.detail || 'Failed to send code');
+                return false;
+            }
+            _afterOtpSent(d);
+            return true;
+        }
+
+        async function resendOtp() {
+            const btn = document.getElementById('loginResendOtpBtn');
+            if (btn && btn.disabled) return;
+            try {
+                const ok = await _sendLoginOtp();
+                if (ok) showToast('New code sent — check your email');
+            } catch (err) {
+                showToast(err.message || 'Could not resend code');
+            }
+        }
+        function _showOtpHint(message) {
+            const hint = document.getElementById('loginOtpHint');
+            if (!message) {
+                hint.style.display = 'none';
+                hint.textContent = '';
+                return;
+            }
+            hint.style.display = 'block';
+            hint.innerHTML = message;
+        }
+
+        function _privySdkReady() {
+            return window.PrivyAuth
+                && window.PrivyAuth.isPrivyConfigured(window.PRIVY_APP_ID, window.PRIVY_CLIENT_ID);
+        }
+
+        function _privyAuthOrigin() {
+            return (window.PRIVY_AUTH_ORIGIN || window.location.origin || '').replace(/\/+$/, '');
+        }
+
+        async function _ensurePrivyClient() {
+            if (!_privySdkReady()) return false;
+            try {
+                await window.PrivyAuth.initPrivy(window.PRIVY_APP_ID, window.PRIVY_CLIENT_ID);
+                return true;
+            } catch (err) {
+                const message = String(err && err.message ? err.message : err || '');
+                if (/origin/i.test(message) || /allowed/i.test(message)) {
+                    return false;
+                }
+                throw err;
+            }
+        }
+
+        async function requestOtp() {
+            try {
+                await _sendLoginOtp();
+            } catch (err) {
+                showToast(err.message || 'Could not send code — check connection');
+            }
+        }
+        async function verifyOtp() {
+            const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+            const code  = document.getElementById('loginOtpCode').value.trim();
+            if (!code || code.length < 6) { showToast('Enter the 6-digit code'); return; }
+            try {
+                if (await _ensurePrivyClient()) {
+                    const data = await window.PrivyAuth.loginWithEmailCode(email, code);
+                    _setPrivySession(data.userId, data.token, data.email || email);
+                    document.getElementById('loginModal').classList.remove('open');
+                    showToast('Signed in ✓');
+                    await ensureWalletForCurrentUser();
+                    refreshDashboard();
+                    return;
+                }
+
+                const res = await fetch('/auth/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, code })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.detail || 'Invalid code'); return; }
+                _setPrivySession(data.user_id, data.token, data.email || email);
+                document.getElementById('loginModal').classList.remove('open');
+                showToast('Signed in ✓');
+                await ensureWalletForCurrentUser();
+                refreshDashboard();
+            } catch (err) {
+                showToast(err.message || 'Verification failed — try again');
+            }
+        }
+        async function connectWallet() {
+            try {
+                let provider;
+                if (window.ethereum) {
+                    provider = window.ethereum;
+                    await provider.request({ method: 'eth_requestAccounts' });
+                } else {
+                    // Load WalletConnect SDK on-demand (only web users, only on click)
+                    if (!window.EthereumProvider) {
+                        await new Promise((resolve, reject) => {
+                            const s = document.createElement('script');
+                            s.src = 'https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2/dist/umd/index.min.js';
+                            s.onload = resolve; s.onerror = reject;
+                            document.head.appendChild(s);
+                        });
+                    }
+                    if (!window.WC_PROJECT_ID) { showToast('WalletConnect not configured'); return; }
+                    const wc = await window.EthereumProvider.init({
+                        projectId: window.WC_PROJECT_ID,
+                        chains: [1],
+                        showQrModal: true,
+                    });
+                    await wc.connect();
+                    provider = wc;
+                }
+                const accounts = await provider.request({ method: 'eth_accounts' });
+                const address = accounts[0].toLowerCase();
+                const message = `Sign in to Arc_Tic Whale — ${Date.now()}`;
+                const signature = await provider.request({ method: 'personal_sign', params: [message, address] });
+                const res = await fetch('/auth/wallet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address, message, signature, referral_code: referralCode() || null }),
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.detail || 'Wallet login failed'); return; }
+                _setPrivySession(data.user_id, data.token, data.email, 'Trading Wallet');
+                document.getElementById('loginModal').classList.remove('open');
+                showToast('Wallet connected ✓');
+                await ensureWalletForCurrentUser();
+                refreshDashboard();
+            } catch (err) {
+                if (err.code === 4001 || err.message?.includes('User rejected')) {
+                    showToast('Wallet connection cancelled');
+                } else {
+                    showToast('Wallet login failed — ' + (err.message || 'unknown error'));
+                }
+            }
+        }
+
+        async function socialLogin(provider) {
+            const privyProvider = provider === 'google' ? 'google' : 'twitter';
+            if (!_privySdkReady()) {
+                showToast('Add PRIVY_CLIENT_ID to .env (Privy Dashboard → Settings → Clients)');
+                return;
+            }
+            try {
+                const ready = await _ensurePrivyClient();
+                if (!ready) {
+                    showToast('Privy origin is not allowed here. Set PRIVY_AUTH_ORIGIN to your whitelisted origin.');
+                    return;
+                }
+                const url = await window.PrivyAuth.startOAuth(privyProvider);
+                const popup = window.open(url, 'privy_oauth', 'width=500,height=720,left=400,top=80');
+                if (!popup) { showToast('Allow popups and try again'); return; }
+
+                const messageHandler = async function(e) {
+                    if (e.origin !== _privyAuthOrigin()) return;
+                    if (!e.data || e.data.type !== 'privy_oauth_token') return;
+                    window.removeEventListener('message', messageHandler);
+                    clearInterval(pollClosed);
+                    const { token, userId, email } = e.data;
+                    if (!token) {
+                        showToast('Social login failed — check Privy dashboard settings');
+                        return;
+                    }
+                    const displayName = provider === 'twitter' ? 'X Account' : provider === 'google' ? 'Google Account' : '';
+                    _setPrivySession(userId, token, email, displayName);
+                    document.getElementById('loginModal').classList.remove('open');
+                    showToast('Signed in ✓');
+                    await ensureWalletForCurrentUser();
+                    refreshDashboard();
+                };
+                window.addEventListener('message', messageHandler);
+
+                const pollClosed = setInterval(() => {
+                    if (popup.closed) {
+                        clearInterval(pollClosed);
+                        window.removeEventListener('message', messageHandler);
+                    }
+                }, 500);
+            } catch (err) {
+                showToast(err.message || 'Social login failed');
+            }
+        }
+
+        async function signOut() {
+            if (window.PrivyAuth) {
+                try { await window.PrivyAuth.logout(); } catch (_) { /* ignore */ }
+            }
+            _clearPrivySession();
+            showToast('Signed out');
         }
 
         // ── Copy Toggle ──
@@ -2324,7 +3211,7 @@
 	                    const response = await apiFetch('/follow', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username: tgUser, allocation: parseFloat(alloc), asset: activeAsset })
+                        body: JSON.stringify({ username: tgUser, allocation: parseFloat(alloc), asset: activeAsset, referral_code: referralCode() || null, agent_id: 'Conservative_Whale' })
                     });
 	                    const data = await response.json();
 	                    if (!response.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Follow failed');
@@ -2333,7 +3220,7 @@
 	                    showToast('Copy-trading activated ✓');
 	                    refreshDashboard();
                 } catch (err) {
-                    log('ERROR: Could not reach execution node.', 'error');
+	                    log(`ERROR: ${err.message || 'Could not reach execution node.'}`, 'error');
                     status.textContent = 'Connection Failed';
                     toggle.classList.remove('on');
                     isCopying = false;
@@ -2350,7 +3237,15 @@
             log(`Forcing market check on ${activeAsset}...`, 'action');
             showToast('AI Pipeline awakened...');
             try {
-	                const res = await apiFetch('/trigger-trade', { method: 'POST' });
+	                const tgUser = currentUsername();
+	                const options = tgUser
+	                    ? {
+	                        method: 'POST',
+	                        headers: { 'Content-Type': 'application/json' },
+	                        body: JSON.stringify({ username: tgUser, agent_id: 'Conservative_Whale' })
+	                    }
+	                    : { method: 'POST' };
+	                const res = await apiFetch('/trigger-trade', options);
                 const data = await res.json();
 	                if (data.status === 'success' || data.status === 'hold') {
 	                    if (data.status === 'hold' || data.action === "HOLD") {
@@ -2381,8 +3276,8 @@
 
         // ── Copy Modal ─
         let modalAgent = {};
-        function openCopyModal(icon, name, risk, wr, trades, followers) {
-            modalAgent = { icon, name, risk };
+        function openCopyModal(icon, name, risk, wr, trades, followers, id = 'Conservative_Whale') {
+            modalAgent = { icon, name, risk, id };
             document.getElementById('modalTitle').textContent = `Copy ${name}`;
             document.getElementById('modalIcon').textContent = icon;
             document.getElementById('modalAgentName').textContent = name;
@@ -2416,7 +3311,7 @@
 	                const res = await apiFetch('/follow', {
 	                    method: 'POST',
 	                    headers: { 'Content-Type': 'application/json' },
-	                    body: JSON.stringify({ username: tgUser, allocation: alloc, asset: activeAsset })
+	                    body: JSON.stringify({ username: tgUser, allocation: alloc, asset: activeAsset, referral_code: referralCode() || null, agent_id: modalAgent.id })
 	                });
 	                const data = await res.json();
 	                if (!res.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Copy failed');
@@ -2456,7 +3351,7 @@
             toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
         }
 
-        refreshDashboard();
+        ensureWalletForCurrentUser().finally(refreshDashboard);
         setInterval(refreshDashboard, 30000);
     </script>
 </body>

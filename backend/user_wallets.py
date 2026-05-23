@@ -1,0 +1,69 @@
+import re
+
+from backend.config import AGENT_WALLET_ADDRESS, TRADE_DRY_RUN
+from backend.database import get_user, get_user_by_referral_code, upsert_user_wallet
+from backend.wallet_manager import create_agent_wallet, create_wallet_with_policy
+from backend.wallet_funding import fund_new_user_wallet
+from backend.logger import get_logger
+
+log = get_logger("user_wallets")
+
+
+def normalize_user_id(username: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_:-]", "_", str(username or "").strip().lstrip("@"))[:64]
+
+
+def referral_code_for_user(user_id: str) -> str:
+    safe = normalize_user_id(user_id).lower()
+    return f"ref_{safe}"
+
+
+def resolve_referrer(referral_code: str | None, user_id: str) -> str | None:
+    if not referral_code:
+        return None
+
+    code = referral_code.strip().lstrip("/")
+    if not code:
+        return None
+
+    referrer = get_user_by_referral_code(code)
+    if not referrer and not code.startswith("ref_"):
+        referrer = get_user_by_referral_code(referral_code_for_user(code))
+
+    if not referrer or referrer["user_id"] == user_id:
+        return None
+    return referrer["user_id"]
+
+
+def ensure_user_wallet(username: str, referral_code: str | None = None) -> dict | None:
+    user_id = normalize_user_id(username)
+    if not user_id:
+        return None
+
+    existing = get_user(user_id)
+    if existing:
+        return existing
+
+    if TRADE_DRY_RUN:
+        wallet_id = f"dryrun-user-{user_id}"
+        wallet_address = AGENT_WALLET_ADDRESS or "0x0000000000000000000000000000000000000000"
+    else:
+        log.info("Provisioning first-access Arc Testnet wallet for @%s...", user_id)
+        wallet_record = create_wallet_with_policy(f"User_{user_id}", daily_limit=50.0, max_per_tx=2.0)
+        if not wallet_record:
+            return None
+        wallet_id = wallet_record.get("wallet_id")
+        wallet_address = wallet_record.get("address")
+
+    if not wallet_id or not wallet_address:
+        return None
+
+    user = upsert_user_wallet(
+        user_id=user_id,
+        wallet_id=wallet_id,
+        wallet_address=wallet_address,
+        referral_code=referral_code_for_user(user_id),
+        referred_by=resolve_referrer(referral_code, user_id),
+    )
+    fund_new_user_wallet(user_id=user_id, destination_address=wallet_address)
+    return user

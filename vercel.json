@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/auth/callback", "destination": "/frontend/callback.html" },
+    { "source": "/webapp", "destination": "/frontend/index.html" },
+    { "source": "/(.*)", "destination": "/frontend/index.html" }
+  ]
+}

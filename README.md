@@ -61,9 +61,9 @@ The Agent Service exposes these endpoints (port 3001):
 ```js
 // Attached to every new user wallet at creation time
 spendingLimits: [
-  { limits: [{ amount: "2.00",   currency: "USD" }], timeFrame: "TRANSACTION" },
-  { limits: [{ amount: "50.00",  currency: "USD" }], timeFrame: "DAILY"       },
-  { limits: [{ amount: "500.00", currency: "USD" }], timeFrame: "MONTHLY"     },
+  { limits: [{ amount: "10.00", currency: "USD" }], timeFrame: "TRANSACTION" },
+  { limits: [{ amount: "200.00", currency: "USD" }], timeFrame: "DAILY" },
+  { limits: [{ amount: "1000.00", currency: "USD" }], timeFrame: "MONTHLY" },
 ]
 ```
 
@@ -197,7 +197,100 @@ API_AUTH_TOKEN=change-me-to-a-secure-token
 CORS_ALLOWED_ORIGINS=http://127.0.0.1:8765,https://yourdomain.com
 RATE_LIMIT_PER_MINUTE=30
 LOG_LEVEL=INFO
+
+# Privy (web login — email + Google/Twitter)
+PRIVY_APP_ID=your_privy_app_id
+PRIVY_APP_SECRET=your_privy_app_secret
+PRIVY_CLIENT_ID=your_privy_client_id          # Dashboard → Settings → Clients
+PRIVY_AUTH_ORIGIN=http://localhost:8765       # Use the exact deployed origin in staging/production
+# Optional: paste verification key PEM (one line with \n) for JWT verify fallback
+# PRIVY_VERIFICATION_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+# Optional: Resend for server-side OTP fallback emails
+# RESEND_API_KEY=re_...
+# RESEND_FROM_EMAIL="Arc_Tic Whale <onboarding@yourdomain.com>"
 ```
+
+### Privy dashboard checklist
+
+1. **Login methods → Email** — enable one-time password.
+2. **Login methods → Socials** — enable Google and Twitter; add OAuth client ID/secret for each.
+3. **Settings → Domains** — allow your staging Vercel preview domain and your production Vercel domain.
+4. **Redirect URLs** — add the exact `/auth/callback` URL for each environment, for example:
+   - `http://127.0.0.1:8765/auth/callback`
+   - `http://localhost:8765/auth/callback`
+   - `https://your-project-git-develop-yourname.vercel.app/auth/callback`
+   - `https://your-project.vercel.app/auth/callback`
+5. Copy **App ID**, **App secret**, and **Client ID** into `.env`.
+
+Rebuild the Privy browser bundle after pulling auth changes:
+
+```bash
+cd frontend && npm install && npm run build:privy
+```
+
+## Deployment Split
+
+This repo is set up for a two-environment workflow:
+
+- `develop` is the staging branch
+- `main` is the production branch
+- Vercel hosts the frontend
+- Render hosts the API and Circle Agent Service
+- Telegram uses one production bot only
+
+### Vercel
+
+1. Connect the repo to Vercel.
+2. Set the production branch to `main`.
+3. Let `develop` produce preview deployments for staging.
+4. Set these env vars in Vercel for each environment:
+   - `API_BASE`
+   - `PRIVY_APP_ID`
+   - `PRIVY_CLIENT_ID`
+   - `PRIVY_AUTH_ORIGIN`
+   - `WC_PROJECT_ID`
+
+Use the deployed Vercel URL for `PRIVY_AUTH_ORIGIN` in each environment.
+For example:
+
+- Staging: `https://your-project-git-develop-yourname.vercel.app`
+- Production: `https://your-project.vercel.app`
+
+### Render
+
+Create two Render environments or two separate service sets:
+
+- staging services bound to `develop`
+- production services bound to `main`
+
+Use the same Render blueprint pattern from `render.yaml`, but point each environment at its own branch and env var set. Keep these values distinct between staging and production:
+
+- `WEBAPP_URL`
+- `AGENT_SERVICE_URL`
+- `CORS_ALLOWED_ORIGINS`
+- `PRIVY_APP_ID`
+- `PRIVY_CLIENT_ID`
+- `PRIVY_AUTH_ORIGIN`
+- Circle API credentials
+- wallet IDs
+- `BOT_TOKEN`
+
+### Telegram Bot
+
+Run one production bot only on Render.
+
+- Point `WEBAPP_URL` at the production web app URL
+- Keep staging testing inside the browser or directly through the staging web URL
+- Do not run a second bot token unless you later want Telegram staging
+
+### Release Flow
+
+1. Push work to `develop`.
+2. Check the Vercel preview URL.
+3. Check the Render staging API.
+4. Fix anything that breaks.
+5. Merge `develop` into `main`.
+6. Let the production deploy happen automatically.
 
 ---
 
