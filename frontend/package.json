@@ -1,0 +1,14 @@
+{
+  "name": "circle1-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:privy": "esbuild privy-auth-entry.mjs --bundle --format=esm --outfile=static/privy-bundle.mjs --platform=browser"
+  },
+  "dependencies": {
+    "@privy-io/js-sdk-core": "^0.60.5"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

@@ -8,7 +8,7 @@ COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price"
 CRYPTO_MAPPING = {
     "ethereum": "ETH",
     "bitcoin": "BTC",
-    "solana": "SOL",
+    "euro": "EURC",
 }
 
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"

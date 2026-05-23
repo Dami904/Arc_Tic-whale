@@ -9,7 +9,7 @@ from typing import Optional
 
 from backend.logger import get_logger
 from backend.market_data import get_current_market_state
-from backend.agents import ask_conservative_whale
+from backend.agents import ask_agent, ask_conservative_whale, get_agent_profile
 from backend.utils import parse_ai_decision
 from backend.trade_executor import execute_trade
 from backend.copy_engine import mirror_agent_trade
@@ -24,7 +24,9 @@ AGENT_NAME = "Conservative_Whale"
 
 def run_trade_cycle(
     wallet_id: Optional[str] = None,
+    recipient_address: Optional[str] = None,
     rate_limit_sleep: int = 5,
+    agent_name: str = AGENT_NAME,
 ) -> dict:
     """
     Execute one full AI trading cycle.
@@ -54,8 +56,12 @@ def run_trade_cycle(
     current_data = get_current_market_state()
 
     # ── 2. AI decision ──────────────────────────────────────────────────────
-    log.info("Passing data to The Conservative Whale for analysis...")
-    raw_ai_response = ask_conservative_whale(current_data)
+    profile = get_agent_profile(agent_name)
+    log.info("Passing data to %s for analysis...", profile["name"])
+    raw_ai_response = (
+        ask_conservative_whale(current_data)
+        if agent_name == AGENT_NAME else ask_agent(current_data, agent_name=agent_name)
+    )
     parsed = parse_ai_decision(raw_ai_response)
 
     action = parsed["decision"]
@@ -66,12 +72,17 @@ def run_trade_cycle(
 
     if action == "HOLD":
         log.info("Action: HOLD. No on-chain transaction required.")
-        log_trade(agent=AGENT_NAME, action="HOLD", asset=asset, tx_id=None, reason=reason)
+        log_trade(agent=agent_name, action="HOLD", asset=asset, tx_id=None, reason=reason)
         return {"status": "hold", "action": "HOLD", "asset": asset, "tx_hash": None, "reason": reason}
 
     # ── 3. Execute agent trade ───────────────────────────────────────────────
     log.info("Executing %s %s order on Circle infrastructure...", action, asset or "")
-    agent_tx = execute_trade(wallet_id=wid, action=action, target_asset_symbol=asset)
+    agent_tx = execute_trade(
+        wallet_id=wid,
+        action=action,
+        target_asset_symbol=asset,
+        recipient_address=recipient_address,
+    )
 
     if not agent_tx:
         log.error("Blockchain execution failed for %s %s.", action, asset)
@@ -79,7 +90,7 @@ def run_trade_cycle(
                 "reason": "Blockchain execution failed"}
 
     # ── 4. Mirror to followers ───────────────────────────────────────────────
-    mirror_agent_trade(agent_name=AGENT_NAME, action=action, target_asset_symbol=asset)
+    mirror_agent_trade(agent_name=agent_name, action=action, target_asset_symbol=asset)
 
     # ── 5. Rate-limit cooldown ───────────────────────────────────────────────
     if rate_limit_sleep > 0:
@@ -87,11 +98,11 @@ def run_trade_cycle(
         time.sleep(rate_limit_sleep)
 
     # ── 6. Social broadcast ──────────────────────────────────────────────────
-    post = generate_canteen_post(AGENT_NAME, action, agent_tx, reason=reason)
+    post = generate_canteen_post(profile["name"], action, agent_tx, reason=reason)
     log.info("Social post: %s", post)
 
     # ── 7. Persist to history ────────────────────────────────────────────────
-    log_trade(agent=AGENT_NAME, action=action, asset=asset, tx_id=agent_tx, reason=reason)
+    log_trade(agent=agent_name, action=action, asset=asset, tx_id=agent_tx, reason=reason)
 
     return {
         "status": "success",

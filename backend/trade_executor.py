@@ -5,12 +5,12 @@ from circle.web3 import developer_controlled_wallets
 
 from backend.config import (
     AGENT_WALLET_ADDRESS,
+    EURC_ARC_ADDRESS,
     TRADE_DRY_RUN,
     UNISWAP_ROUTER_ARC_ADDRESS,
     USDC_ARC_ADDRESS,
     WBTC_ARC_ADDRESS,
     WETH_ARC_ADDRESS,
-    WSOL_ARC_ADDRESS,
 )
 from backend.wallet_manager import initialize_circle_client
 from backend.logger import get_logger
@@ -19,16 +19,16 @@ log = get_logger("trade_executor")
 
 ASSET_CONTRACT_ADDRESSES = {
     "USDC": USDC_ARC_ADDRESS,
-    "ETH": WETH_ARC_ADDRESS,
-    "BTC": WBTC_ARC_ADDRESS,
-    "SOL": WSOL_ARC_ADDRESS,
+    "ETH":  WETH_ARC_ADDRESS,
+    "BTC":  WBTC_ARC_ADDRESS,
+    "EURC": EURC_ARC_ADDRESS,
 }
 
 ASSET_DECIMALS = {
     "USDC": 6,
-    "ETH": 18,
-    "BTC": 8,
-    "SOL": 6,
+    "ETH":  18,
+    "BTC":  8,
+    "EURC": 6,
 }
 
 UNISWAP_V3_POOL_FEE = 3000
@@ -68,6 +68,19 @@ ERC20_APPROVE_ABI = [
             {"name": "amount", "type": "uint256"},
         ],
         "name": "approve",
+        "outputs": [{"name": "", "type": "bool"}],
+        "type": "function",
+    }
+]
+
+ERC20_TRANSFER_ABI = [
+    {
+        "constant": False,
+        "inputs": [
+            {"name": "to", "type": "address"},
+            {"name": "amount", "type": "uint256"},
+        ],
+        "name": "transfer",
         "outputs": [{"name": "", "type": "bool"}],
         "type": "function",
     }
@@ -122,7 +135,7 @@ def _build_swap_calldata(action: str, target_asset_symbol: str, amount: Decimal,
         "fee": UNISWAP_V3_POOL_FEE,
         "recipient": recipient,
         "amountIn": amount_in,
-        "amountOutMinimum": 0,
+        "amountOutMinimum": int(amount_in * 0.99),  # 1% max slippage
         "sqrtPriceLimitX96": 0,
     }
     return router.functions.exactInputSingle(params)._encode_transaction_data()
@@ -136,6 +149,16 @@ def _build_approval_calldata(token_symbol: str, amount: Decimal) -> tuple[str, s
     token = Web3().eth.contract(address=token_address, abi=ERC20_APPROVE_ABI)
     token_units = _to_token_units(amount, ASSET_DECIMALS[token_symbol])
     return token_address, token.functions.approve(router_address, token_units)._encode_transaction_data()
+
+
+def _build_transfer_calldata(token_symbol: str, amount: Decimal, destination_address: str) -> tuple[str, str]:
+    from web3 import Web3
+
+    token_address = Web3.to_checksum_address(ASSET_CONTRACT_ADDRESSES[token_symbol])
+    destination = Web3.to_checksum_address(destination_address)
+    token = Web3().eth.contract(address=token_address, abi=ERC20_TRANSFER_ABI)
+    token_units = _to_token_units(amount, ASSET_DECIMALS[token_symbol])
+    return token_address, token.functions.transfer(destination, token_units)._encode_transaction_data()
 
 
 def _extract_transaction_id(response) -> str:
@@ -237,4 +260,59 @@ def execute_trade(
         return tx_id
     except Exception as exc:
         log.error("Transaction failed", error=str(exc))
+        return None
+
+
+def execute_transfer(
+    wallet_id: str,
+    destination_address: str,
+    asset_symbol: str = "USDC",
+    amount: str = "0",
+) -> str | None:
+    asset_symbol = (asset_symbol or "").upper().strip()
+
+    if asset_symbol not in ASSET_CONTRACT_ADDRESSES:
+        log.error("Invalid or unsupported transfer asset: %s.", asset_symbol)
+        return None
+
+    if not wallet_id:
+        log.error("Missing Circle wallet_id for transfer.")
+        return None
+
+    if not destination_address:
+        log.error("Missing transfer destination address.")
+        return None
+
+    try:
+        transfer_amount = Decimal(str(amount))
+    except (InvalidOperation, ValueError):
+        log.error("Invalid transfer amount: %s.", amount)
+        return None
+
+    if transfer_amount <= 0:
+        log.error("Transfer amount must be positive: %s.", amount)
+        return None
+
+    log.info("Preparing %s %s transfer from wallet %s.", transfer_amount, asset_symbol, wallet_id)
+
+    if TRADE_DRY_RUN:
+        dry_run_id = f"dryrun-transfer-{uuid.uuid4()}"
+        log.info("DRY RUN: simulated %s transfer. Tx: %s", asset_symbol, dry_run_id)
+        return dry_run_id
+
+    try:
+        client = initialize_circle_client()
+        transactions_api = developer_controlled_wallets.TransactionsApi(client)
+        token_contract, call_data = _build_transfer_calldata(asset_symbol, transfer_amount, destination_address)
+        tx_id = _submit_contract_execution(
+            transactions_api,
+            wallet_id,
+            token_contract,
+            call_data,
+            f"transfer-{asset_symbol.lower()}",
+        )
+        log.info("SUCCESS: %s transfer submitted. Tx: %s", asset_symbol, tx_id)
+        return tx_id
+    except Exception as exc:
+        log.error("Transfer failed", error=str(exc))
         return None

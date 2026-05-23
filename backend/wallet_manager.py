@@ -1,5 +1,6 @@
 from circle.web3 import utils, developer_controlled_wallets
-from backend.config import CIRCLE_API_KEY, CIRCLE_ENTITY_SECRET
+import httpx
+from backend.config import AGENT_SERVICE_SECRET, AGENT_SERVICE_URL, CIRCLE_API_KEY, CIRCLE_ENTITY_SECRET
 from backend.logger import get_logger
 
 log = get_logger("wallet_manager")
@@ -41,22 +42,73 @@ def create_agent_wallet(agent_name):
         wallet_response = wallets_api.create_wallet(wallet_request)
 
         try:
-            wallet_dict = wallet_response.data.wallets[0].to_dict()
-        except AttributeError:
-            wallet_dict = wallet_response.data.wallet.to_dict()
+            raw = wallet_response.data.wallets[0]
+        except (AttributeError, IndexError, TypeError):
+            try:
+                raw = wallet_response.data.wallet
+            except AttributeError:
+                log.error("Unexpected Circle wallet response structure", response=str(wallet_response))
+                return None
+        wallet_dict = raw.to_dict() if hasattr(raw, 'to_dict') else raw
+        if not wallet_dict.get("id") or not wallet_dict.get("address"):
+            log.error("Wallet response missing id or address", wallet=wallet_dict)
+            return None
 
         wallet_id = wallet_dict['id']
         wallet_address = wallet_dict['address']
 
         log.info("Success! Wallet created for %s: id=%s address=%s", agent_name, wallet_id, wallet_address)
 
-        return wallet_id
+        return {
+            "wallet_id": wallet_id,
+            "address": wallet_address,
+        }
 
     except Exception as e:
         log.error("Error creating wallet", error=str(e))
         if "has no attribute" in str(e):
             log.debug("Available API methods: %s", [m for m in dir(wallets_api) if 'create' in m])
         return None
+
+def create_wallet_with_policy(
+    agent_name: str,
+    daily_limit: float = 50.0,
+    max_per_tx: float = 2.0,
+    monthly_limit: float = 500.0,
+) -> dict | None:
+    """
+    Creates a wallet via the Node.js Agent Service (spending policies enforced).
+    Falls back to create_agent_wallet() if the service is unreachable.
+    """
+    if not AGENT_SERVICE_URL:
+        return create_agent_wallet(agent_name)
+    try:
+        headers = {"x-agent-secret": AGENT_SERVICE_SECRET} if AGENT_SERVICE_SECRET else {}
+        res = httpx.post(
+            f"{AGENT_SERVICE_URL}/wallets",
+            json={
+                "name": agent_name,
+                "blockchain": "ARC-TESTNET",
+                "policy": {
+                    "dailyLimit": str(daily_limit),
+                    "maxPerTx": str(max_per_tx),
+                    "monthlyLimit": str(monthly_limit),
+                },
+            },
+            headers=headers,
+            timeout=15,
+        )
+        res.raise_for_status()
+        data = res.json()
+        log.info(
+            "Agent Service wallet created for %s: id=%s policy_attached=%s",
+            agent_name, data.get("wallet_id"), data.get("policy_attached"),
+        )
+        return {"wallet_id": data["wallet_id"], "address": data["address"]}
+    except Exception as e:
+        log.warning("Agent Service unreachable (%s) — falling back to DCW.", e)
+        return create_agent_wallet(agent_name)
+
 
 if __name__ == "__main__":
     log.info("Testing Circle Wallet Creation...")

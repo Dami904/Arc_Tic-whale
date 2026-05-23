@@ -15,14 +15,18 @@ def mirror_agent_trade(agent_name, action, target_asset_symbol):
 
     log.info("Found %d active follower(s). Mirroring %s %s order...", len(followers), action, target_asset_symbol)
 
-    for follower_wallet_id, allocation in followers:
+    for follower_wallet_id, follower_wallet_address, allocation in followers:
         log.info("Mirroring trade for wallet %s with amount: %s USDC", follower_wallet_id, allocation)
+        if not follower_wallet_address:
+            log.error("Mirror trade skipped for %s: missing wallet address.", follower_wallet_id)
+            continue
 
         tx_id = execute_trade(
             wallet_id=follower_wallet_id,
             action=action,
             target_asset_symbol=target_asset_symbol,
-            amount=str(allocation)
+            amount=str(allocation),
+            recipient_address=follower_wallet_address,
         )
 
         if tx_id:

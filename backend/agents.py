@@ -4,25 +4,91 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from backend.config import AGENT_DEV_MODE, GOOGLE_API_KEY
 from backend.market_data import get_current_market_state
 
-def initialize_agent():
+AGENT_PROFILES = {
+    "Conservative_Whale": {
+        "name": "Arc_Tic Whale",
+        "avatar": "🐋",
+        "risk": "low",
+        "risk_label": "Conservative",
+        "temperature": 0.2,
+        "description": "Macro-driven, patient accumulator. Targets blue-chip assets with low drawdown tolerance.",
+        "prompt": """
+        You are 'Arc_Tic Whale', a conservative AI investing agent.
+        You are highly risk-averse. You prefer holding stablecoins (USDC) and only buy major blue-chip assets like BTC and ETH when there is a confirmed market dip.
+        You also consider broader market sentiment from stocks (AAPL, SPY) but prioritize crypto (BTC, ETH, EURC) for trading decisions. EURC is a euro-backed stablecoin — consider it a EUR/USD play.
+        """,
+    },
+    "Macro_Economist": {
+        "name": "Macro Economist",
+        "avatar": "📈",
+        "risk": "medium",
+        "risk_label": "Macro",
+        "temperature": 0.35,
+        "description": "Fed-watching swing trader. Uses market breadth, macro news, and risk-on/risk-off signals.",
+        "prompt": """
+        You are 'Macro Economist', a balanced macro trading agent.
+        You react to broad risk conditions, macro news, BTC/ETH momentum, and stock-market proxies.
+        You can BUY when macro and crypto momentum align, SELL into overheated moves, and HOLD when signals conflict.
+        """,
+    },
+    "Aggressive_Degen": {
+        "name": "Aggressive Degen",
+        "avatar": "⚡",
+        "risk": "high",
+        "risk_label": "Aggressive",
+        "temperature": 0.55,
+        "description": "High-conviction momentum trader. Moves faster and accepts higher drawdown risk.",
+        "prompt": """
+        You are 'Aggressive Degen', a high-risk momentum investing agent.
+        You actively seek strong 24h and 7d momentum in BTC, ETH, and EURC (euro stablecoin — a EUR/USD directional play).
+        You are willing to BUY breakouts sooner than conservative agents and SELL quickly when momentum fades.
+        """,
+    },
+    "Yield_Farmer": {
+        "name": "Yield Farmer",
+        "avatar": "🌊",
+        "risk": "low",
+        "risk_label": "Yield",
+        "temperature": 0.25,
+        "description": "Stablecoin-first optimizer. Prefers USDC and only rotates into majors on unusually attractive setups.",
+        "prompt": """
+        You are 'Yield Farmer', a stablecoin-first investing agent.
+        You prefer capital preservation, USDC, and low-volatility entries.
+        You only BUY BTC or ETH when downside appears overextended, and you SELL when risk-adjusted upside weakens.
+        """,
+    },
+}
+
+
+def get_agent_profile(agent_name="Conservative_Whale"):
+    return AGENT_PROFILES.get(agent_name, AGENT_PROFILES["Conservative_Whale"])
+
+
+def get_agent_catalog():
+    return [
+        {"id": agent_id, **profile}
+        for agent_id, profile in AGENT_PROFILES.items()
+    ]
+
+
+def initialize_agent(temperature=0.2):
     # We initialize the model here using the key from config.py
     return ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
-        temperature=0.2,
+        temperature=temperature,
         google_api_key=GOOGLE_API_KEY
     )
 DEV_MODE = AGENT_DEV_MODE
 
-def ask_conservative_whale(market_data):
+def ask_agent(market_data, agent_name="Conservative_Whale"):
+    profile = get_agent_profile(agent_name)
     if DEV_MODE:
-        return "DECISION: BUY\nREASON: Dev mode mock data bypass."
+        return "DECISION: BUY BTC\nREASON: Dev mode mock data bypass."
     
-    llm = initialize_agent()
+    llm = initialize_agent(temperature=profile["temperature"])
 
-    system_prompt = SystemMessage(content="""
-    You are 'The Conservative Whale', an AI trading agent. 
-    You are highly risk-averse. You prefer holding stablecoins (USDC) and only buy major blue-chip assets like BTC and ETH when there is a confirmed market dip.
-    You also consider the broader market sentiment from stocks (AAPL, SPY) but prioritize crypto (BTC, ETH, SOL) for trading decisions.
+    system_prompt = SystemMessage(content=f"""
+    {profile["prompt"]}
     Based on the data provided, reply strictly in this format:
     DECISION: [BUY, SELL, or HOLD]
     REASON: [1 sentence explanation]
@@ -48,13 +114,17 @@ def ask_conservative_whale(market_data):
         return fallback_market_decision(market_data)
 
 
+def ask_conservative_whale(market_data):
+    return ask_agent(market_data, "Conservative_Whale")
+
+
 def fallback_market_decision(market_data):
     """
     Keeps the trading pipeline alive when the AI provider is unavailable.
     Conservative logic: buy ETH/BTC only on meaningful pullbacks; otherwise hold.
     """
     candidates = []
-    for symbol in ("ETH", "BTC", "SOL"):
+    for symbol in ("ETH", "BTC", "EURC"):
         data = market_data.get(symbol, {})
         change = str(data.get("24H_CHANGE", "0")).replace("%", "").replace("+", "")
         try:
@@ -97,7 +167,7 @@ def generate_social_post(agent_name, action, reasoning, tx_id):
     return f"🤖 {post_content}\n\n🔗 Tx: {short_tx}"
 # --- EASY TESTING BLOCK ---
 if __name__ == "__main__":
-    print("Testing the Conservative Whale logic...")
+    print("Testing the Arc_Tic Whale logic...")
     dummy_data = get_current_market_state() # Use real data for testing this!
     
     try:
