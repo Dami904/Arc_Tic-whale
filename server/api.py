@@ -812,12 +812,15 @@ async def wallet_auth(body: dict):
 
 @app.get("/auth/callback")
 def auth_callback():
-    callback_path = os.path.join(os.path.dirname(__file__), "../frontend/callback.html")
-    html = Path(callback_path).read_text()
-    html = html.replace("window.PRIVY_APP_ID = '';", f"window.PRIVY_APP_ID = '{PRIVY_APP_ID}';")
-    html = html.replace("window.PRIVY_CLIENT_ID = '';", f"window.PRIVY_CLIENT_ID = '{PRIVY_CLIENT_ID}';")
-    html = html.replace("window.PRIVY_AUTH_ORIGIN = '';", f"window.PRIVY_AUTH_ORIGIN = '{os.getenv('PRIVY_AUTH_ORIGIN', '')}';")
-    return HTMLResponse(content=html)
+    callback_candidates = [
+        os.path.join(os.path.dirname(__file__), "../frontend/auth/callback.html"),
+        os.path.join(os.path.dirname(__file__), "../frontend/callback.html"),
+    ]
+    for callback_path in callback_candidates:
+        if Path(callback_path).is_file():
+            html = Path(callback_path).read_text()
+            return HTMLResponse(content=html)
+    raise HTTPException(status_code=404, detail="Callback page not found")
 
 
 @app.post("/trigger-trade")

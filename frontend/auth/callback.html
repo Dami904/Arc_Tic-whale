@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Signing in…</title>
+    <script src="/static/runtime-config.js"></script>
+    <style>
+        body { background: #07090f; color: #aaa; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; font-size: 14px; }
+        .err { color: #f87171; max-width: 320px; text-align: center; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <span id="status">Completing sign-in…</span>
+    <script type="module">
+        import * as PrivyAuth from '/static/privy-bundle.mjs';
+
+        const statusEl = document.getElementById('status');
+
+        async function finish() {
+            const appId = window.PRIVY_APP_ID;
+            const clientId = window.PRIVY_CLIENT_ID;
+            if (!PrivyAuth.isPrivyConfigured(appId, clientId)) {
+                statusEl.innerHTML = '<span class="err">Privy is not configured (missing app or client ID).</span>';
+                return;
+            }
+            try {
+                await PrivyAuth.initPrivy(appId, clientId);
+                const { userId, token, email } = await PrivyAuth.completeOAuthFromCallback();
+                if (window.opener) {
+                    window.opener.postMessage(
+                        { type: 'privy_oauth_token', token, userId, email },
+                        (window.PRIVY_AUTH_ORIGIN || window.location.origin || '*').replace(/\/+$/, ''),
+                    );
+                    window.close();
+                    return;
+                }
+                localStorage.setItem('privy_access_token', token);
+                localStorage.setItem('privy_user_id', userId);
+                if (email) localStorage.setItem('privy_user_email', email);
+                window.location.href = '/webapp';
+            } catch (err) {
+                console.error(err);
+                statusEl.innerHTML = `<span class="err">Sign-in failed: ${err.message || err}. Close this window and try again.</span>`;
+            }
+        }
+
+        finish();
+    </script>
+</body>
+</html>

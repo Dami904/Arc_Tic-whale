@@ -6,7 +6,7 @@
   "cleanUrls": true,
   "rewrites": [
     { "source": "/static/(.*)", "destination": "/static/$1" },
-    { "source": "/auth/callback", "destination": "/callback.html" },
+    { "source": "/auth/callback", "destination": "/auth/callback.html" },
     { "source": "/webapp", "destination": "/index.html" },
     { "source": "/", "destination": "/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
