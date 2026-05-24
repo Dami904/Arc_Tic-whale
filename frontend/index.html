@@ -2572,7 +2572,7 @@
 	            try {
 	                const username = currentUsername();
 	                const dashboardUrl = username ? `/dashboard?username=${encodeURIComponent(username)}` : '/dashboard';
-	                const res = await fetch(dashboardUrl);
+	                const res = await apiFetch(dashboardUrl);
 	                if (!res.ok) throw new Error(`dashboard ${res.status}`);
 	                renderDashboard(await res.json());
 	            } catch (err) {
@@ -2582,7 +2582,7 @@
 
         async function refreshMarketData() {
             try {
-                const res = await fetch('/market-data');
+                const res = await apiFetch('/market-data');
                 if (!res.ok) throw new Error(`market ${res.status}`);
                 const data = await res.json();
                 marketCache = data.assets || {};
@@ -2708,7 +2708,7 @@
         // ── Load History & Settings ──
         async function fetchTradeHistory() {
             try {
-                const res = await fetch(`/trade-history${usernameQuery()}`);
+                const res = await apiFetch(`/trade-history${usernameQuery()}`);
                 const data = await res.json();
                 const container = document.getElementById('tradeHistoryContainer');
                 if (!container) return;
@@ -2738,7 +2738,7 @@
 
         async function initSettings() {
             try {
-                const res = await fetch('/settings');
+                const res = await apiFetch('/settings');
                 const settings = await res.json();
                 const killToggle = document.getElementById('killToggle');
                 const alertToggle = document.getElementById('alertToggle');
