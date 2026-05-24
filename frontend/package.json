@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "node build-runtime-config.mjs && npm run build:privy",
     "build:privy": "esbuild privy-auth-entry.mjs --bundle --format=esm --outfile=static/privy-bundle.mjs --platform=browser"
   },
   "dependencies": {

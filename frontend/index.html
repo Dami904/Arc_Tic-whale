@@ -6,14 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Arc_Tic Whale — AI Copy Trading</title>
     <meta name="description" content="Arc_Tic Whale: AI-driven copy trading on Circle Arc Testnet. Follow automated agents and mirror their trades.">
-    <!-- App configuration: set these before deploying -->
-    <script>
-        window.API_BASE    = '';           // Railway backend URL in prod, e.g. 'https://your-app.railway.app'
-        window.PRIVY_APP_ID = '';          // Your Privy App ID from privy.io dashboard
-        window.PRIVY_CLIENT_ID = '';       // Settings → Clients in Privy dashboard
-        window.PRIVY_AUTH_ORIGIN = '';     // Optional: whitelisted origin used for Privy OAuth redirects
-        window.WC_PROJECT_ID = '';         // WalletConnect project ID from cloud.walletconnect.com
-    </script>
+    <script src="/static/runtime-config.js"></script>
     <script type="module">
         import * as PrivyAuth from '/static/privy-bundle.mjs';
         window.PrivyAuth = PrivyAuth;
@@ -2988,7 +2981,7 @@
                 _afterOtpSent({ resend_available_in: OTP_RESEND_COOLDOWN_SEC });
                 return true;
             }
-            const res = await fetch('/auth/request-otp', {
+            const res = await apiFetch('/auth/request-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email }),
@@ -3073,7 +3066,7 @@
                     return;
                 }
 
-                const res = await fetch('/auth/verify-otp', {
+                const res = await apiFetch('/auth/verify-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, code })
@@ -3118,7 +3111,7 @@
                 const address = accounts[0].toLowerCase();
                 const message = `Sign in to Arc_Tic Whale — ${Date.now()}`;
                 const signature = await provider.request({ method: 'personal_sign', params: [message, address] });
-                const res = await fetch('/auth/wallet', {
+                const res = await apiFetch('/auth/wallet', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ address, message, signature, referral_code: referralCode() || null }),
