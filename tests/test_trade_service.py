@@ -11,6 +11,7 @@ def mock_trade_cycle():
          patch("backend.trade_service.execute_trade") as mock_exec, \
          patch("backend.trade_service.mirror_agent_trade") as mock_mirror, \
          patch("backend.trade_service.generate_canteen_post") as mock_social, \
+         patch("backend.trade_service.log_social_post") as mock_social_log, \
          patch("backend.trade_service.log_trade") as mock_log, \
          patch("backend.trade_service.init_db") as mock_init_db, \
          patch("backend.trade_service.is_kill_switch_active", return_value=False) as mock_kill:
@@ -21,6 +22,7 @@ def mock_trade_cycle():
             "exec": mock_exec,
             "mirror": mock_mirror,
             "social": mock_social,
+            "social_log": mock_social_log,
             "log": mock_log,
             "init_db": mock_init_db,
             "kill": mock_kill,

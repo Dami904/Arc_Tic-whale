@@ -31,7 +31,12 @@ def send_welcome(message):
     referral_code = _start_referral_code(message)
     print(f"🔔 User {username} sent /start")
 
-    wallet = ensure_user_wallet(username, referral_code=referral_code)
+    wallet = ensure_user_wallet(
+        username,
+        referral_code=referral_code,
+        telegram_chat_id=str(message.chat.id),
+        display_name=message.from_user.first_name or message.from_user.username or "Telegram User",
+    )
     if not wallet or not wallet.get('user_id'):
         bot.send_message(
             message.chat.id,
@@ -50,7 +55,7 @@ def send_welcome(message):
     ))
 
     welcome_text = (
-        "Welcome to *Arc\_Tic Whale* — an AI-driven copy-trading app on Arc Testnet.\n\n"
+        "Welcome to *Arc\\_Tic Whale* — an AI-driven copy-trading app on Arc Testnet.\n\n"
         "Follow automated investing agents and mirror their trades from your wallet.\n\n"
         "Open the dashboard below to allocate capital and enable copy trading.\n\n"
         f"Referral code: `{wallet.get('referral_code', 'pending')}`"

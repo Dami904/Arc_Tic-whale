@@ -14,7 +14,7 @@ from backend.utils import parse_ai_decision
 from backend.trade_executor import execute_trade
 from backend.copy_engine import mirror_agent_trade
 from backend.social import generate_canteen_post
-from backend.database import init_db, is_kill_switch_active, log_trade
+from backend.database import init_db, is_kill_switch_active, log_trade, log_social_post
 from backend.config import AGENT_WALLET_ID
 
 log = get_logger("trade_service")
@@ -100,6 +100,7 @@ def run_trade_cycle(
     # ── 6. Social broadcast ──────────────────────────────────────────────────
     post = generate_canteen_post(profile["name"], action, agent_tx, reason=reason)
     log.info("Social post: %s", post)
+    log_social_post(agent=agent_name, action=action, post_text=post, tx_id=agent_tx, reason=reason)
 
     # ── 7. Persist to history ────────────────────────────────────────────────
     log_trade(agent=agent_name, action=action, asset=asset, tx_id=agent_tx, reason=reason)

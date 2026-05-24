@@ -1,7 +1,7 @@
 import re
 
 from backend.config import AGENT_WALLET_ADDRESS, TRADE_DRY_RUN
-from backend.database import get_user, get_user_by_referral_code, upsert_user_wallet
+from backend.database import get_user, get_user_by_referral_code, upsert_user_wallet, update_user_profile
 from backend.wallet_manager import create_agent_wallet, create_wallet_with_policy
 from backend.wallet_funding import fund_new_user_wallet
 from backend.logger import get_logger
@@ -35,14 +35,28 @@ def resolve_referrer(referral_code: str | None, user_id: str) -> str | None:
     return referrer["user_id"]
 
 
-def ensure_user_wallet(username: str, referral_code: str | None = None) -> dict | None:
+def ensure_user_wallet(
+    username: str,
+    referral_code: str | None = None,
+    email: str | None = None,
+    display_name: str | None = None,
+    avatar_url: str | None = None,
+    telegram_chat_id: str | None = None,
+) -> dict | None:
     user_id = normalize_user_id(username)
     if not user_id:
         return None
 
     existing = get_user(user_id)
     if existing:
-        return existing
+        update_user_profile(
+            user_id,
+            email=email if email is not None else existing.get("email"),
+            display_name=display_name if display_name is not None else existing.get("display_name"),
+            avatar_url=avatar_url if avatar_url is not None else existing.get("avatar_url"),
+            telegram_chat_id=telegram_chat_id if telegram_chat_id is not None else existing.get("telegram_chat_id"),
+        )
+        return get_user(user_id)
 
     if TRADE_DRY_RUN:
         wallet_id = f"dryrun-user-{user_id}"
@@ -64,6 +78,10 @@ def ensure_user_wallet(username: str, referral_code: str | None = None) -> dict 
         wallet_address=wallet_address,
         referral_code=referral_code_for_user(user_id),
         referred_by=resolve_referrer(referral_code, user_id),
+        email=email,
+        display_name=display_name,
+        avatar_url=avatar_url,
+        telegram_chat_id=telegram_chat_id,
     )
     fund_new_user_wallet(user_id=user_id, destination_address=wallet_address)
     return user

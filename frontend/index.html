@@ -99,6 +99,481 @@
             padding-bottom: env(safe-area-inset-bottom);
         }
 
+        .nav-toggle,
+        .utility-toggle {
+            position: fixed;
+            z-index: 190;
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            border: 1px solid var(--border-accent);
+            background: rgba(7, 9, 15, 0.92);
+            color: var(--cyan);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-toggle {
+            display: none;
+            left: 12px;
+            top: 12px;
+        }
+
+        .utility-toggle {
+            right: 12px;
+            top: 12px;
+        }
+
+        .utility-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(2px);
+            z-index: 170;
+            display: none;
+        }
+
+        .utility-backdrop.show {
+            display: block;
+        }
+
+        .utility-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 330px;
+            height: 100vh;
+            background: rgba(9, 12, 20, 0.98);
+            border-left: 1px solid var(--border);
+            z-index: 180;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            transform: translateX(0);
+            transition: transform 0.25s ease, width 0.25s ease;
+            padding: 16px 14px calc(24px + env(safe-area-inset-bottom));
+            box-shadow: -24px 0 40px rgba(0, 0, 0, 0.28);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .utility-panel.is-collapsed {
+            display: none;
+        }
+
+        .utility-panel.is-mobile-hidden {
+            display: none;
+        }
+
+        .utility-panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .utility-panel-title {
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--cyan);
+            white-space: nowrap;
+        }
+
+        .utility-panel-sub {
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+        }
+
+        .utility-panel-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .utility-panel-close:active {
+            transform: scale(0.98);
+        }
+
+        .utility-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .assistant-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .assistant-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .assistant-head-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .assistant-bot-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 221, 180, 0.1);
+            border: 1px solid var(--border-accent);
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .assistant-head-title {
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--cyan);
+            line-height: 1.1;
+        }
+
+        .assistant-head-sub {
+            margin-top: 3px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--muted-mid);
+        }
+
+        .assistant-status-pill {
+            flex-shrink: 0;
+        }
+
+        .assistant-chat-log {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+            min-height: 220px;
+            overflow-y: auto;
+            padding: 4px 2px 0;
+        }
+
+        .assistant-message {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-width: 92%;
+        }
+
+        .assistant-message.user {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .assistant-message.bot {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .assistant-message-meta {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--muted-mid);
+        }
+
+        .assistant-message-bubble {
+            padding: 11px 12px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            font-size: 13px;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .assistant-message.user .assistant-message-bubble {
+            background: rgba(0, 221, 180, 0.1);
+            border-color: var(--border-accent);
+            color: var(--text);
+        }
+
+        .assistant-message.bot .assistant-message-bubble {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+        }
+
+        .assistant-typing {
+            display: inline-flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .assistant-typing span {
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: var(--cyan);
+            opacity: 0.8;
+            animation: typingPulse 1.1s infinite ease-in-out;
+        }
+
+        .assistant-typing span:nth-child(2) { animation-delay: 0.15s; }
+        .assistant-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes typingPulse {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+            40% { transform: translateY(-2px); opacity: 1; }
+        }
+
+        .assistant-quick-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .assistant-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .assistant-composer {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-top: 1px solid var(--border);
+            padding-top: 12px;
+        }
+
+        .assistant-composer .input-field {
+            min-height: 96px;
+            resize: vertical;
+        }
+
+        .assistant-action-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .account-center-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .account-status-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .account-status-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            min-width: 0;
+        }
+
+        .account-status-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--muted-mid);
+            margin-bottom: 6px;
+        }
+
+        .account-status-value {
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--text);
+            word-break: break-word;
+        }
+
+        .utility-card-title {
+            font-size: 11px;
+            font-family: var(--font-display);
+            color: var(--muted);
+            letter-spacing: 1.6px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .utility-panel.is-collapsed .utility-card,
+        .utility-panel.is-collapsed .utility-card-title,
+        .utility-panel.is-collapsed .utility-card-body,
+        .utility-panel.is-collapsed .utility-panel-sub,
+        .utility-panel.is-collapsed .utility-panel-title,
+        .utility-panel.is-collapsed .profile-main,
+        .utility-panel.is-collapsed .avatar-upload-copy,
+        .utility-panel.is-collapsed .avatar-upload-sub,
+        .utility-panel.is-collapsed .avatar-upload-title {
+            display: none;
+        }
+
+        .utility-panel.is-collapsed .utility-panel-head {
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .utility-panel.is-collapsed .utility-panel-close {
+            width: 100%;
+        }
+
+        body.nav-collapsed {
+            padding-left: 72px;
+        }
+
+        body.utility-open {
+            padding-right: 330px;
+        }
+
+        .profile-strip-compact {
+            margin-bottom: 0;
+        }
+
+        .profile-avatar.is-image {
+            background-size: cover;
+            background-position: center;
+            color: transparent;
+        }
+
+        .avatar-upload {
+            display: grid;
+            gap: 10px;
+        }
+
+        .avatar-upload-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .avatar-preview {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background-position: center;
+            background-size: cover;
+            font-weight: 700;
+            color: var(--cyan);
+        }
+
+        .avatar-upload-copy {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .avatar-upload-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+
+        .avatar-upload-sub {
+            font-size: 11px;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+
+        .avatar-upload input[type="file"] {
+            width: 100%;
+            color: var(--muted-mid);
+            font-size: 12px;
+        }
+
+        .utility-agent-row,
+        .utility-tx-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .utility-agent-row:last-child,
+        .utility-tx-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .utility-agent-left,
+        .utility-tx-left {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .utility-agent-name,
+        .utility-tx-desc {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+
+        .utility-agent-sub,
+        .utility-tx-meta {
+            font-size: 11px;
+            color: var(--muted-mid);
+            line-height: 1.45;
+        }
+
+        .utility-agent-amt,
+        .utility-tx-amt {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .utility-agent-amt strong,
+        .utility-tx-amt strong {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .utility-agent-amt .btn {
+            width: auto;
+            padding: 8px 11px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
         .nav-item {
             flex: 1;
             display: flex;
@@ -121,9 +596,39 @@
             line-height: 1;
         }
 
+        .nav-item .nav-label {
+            display: inline;
+        }
+
         .nav-item.active {
             color: var(--cyan);
             border-top-color: var(--cyan);
+        }
+
+        body.nav-collapsed .bottom-nav {
+            width: 72px;
+        }
+
+        body.nav-collapsed .bottom-nav::before {
+            content: '🐋';
+            padding: 28px 0 22px;
+            text-align: center;
+            letter-spacing: 0;
+        }
+
+        body.nav-collapsed .nav-item {
+            justify-content: center;
+            padding: 12px 0 10px;
+            gap: 0;
+            font-size: 0;
+        }
+
+        body.nav-collapsed .nav-item .nav-label {
+            display: none;
+        }
+
+        body.nav-collapsed .nav-item .nav-icon {
+            font-size: 20px;
         }
 
         /* ── PAGE WRAPPER ── */
@@ -461,6 +966,68 @@
             margin-bottom: 14px;
         }
 
+        .agent-target-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+        }
+
+        .agent-target-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .agent-target-label {
+            font-size: 12px;
+            color: var(--muted-mid);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .agent-target-note {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .agent-target-chips {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+            scrollbar-width: none;
+        }
+
+        .agent-target-chips::-webkit-scrollbar {
+            display: none;
+        }
+
+        .agent-chip {
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--muted-mid);
+            border-radius: 999px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .agent-chip.active {
+            color: var(--text);
+            border-color: var(--border-accent);
+            background: var(--cyan-dim);
+            box-shadow: 0 0 0 1px rgba(0, 221, 180, 0.12) inset;
+        }
+
         .allocation-row {
             display: flex;
             align-items: center;
@@ -644,6 +1211,7 @@
         .agent-card-top {
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 12px;
             margin-bottom: 12px;
         }
@@ -651,22 +1219,26 @@
         .agent-card-icon {
             font-size: 28px;
             line-height: 1;
+            flex-shrink: 0;
         }
 
         .agent-card-info {
             flex: 1;
+            min-width: 0;
         }
 
         .agent-card-name {
             font-size: 14px;
             font-weight: 700;
             margin-bottom: 3px;
+            overflow-wrap: anywhere;
         }
 
         .agent-card-desc {
             font-size: 11px;
             color: var(--muted-mid);
             line-height: 1.4;
+            overflow-wrap: anywhere;
         }
 
         .agent-card-stats {
@@ -675,6 +1247,45 @@
             gap: 6px;
             padding-top: 10px;
             border-top: 1px solid var(--border);
+        }
+
+        .agent-card-allocation {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .agent-card-allocation > div {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .agent-alloc-label {
+            font-size: 11px;
+            color: var(--muted-mid);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            overflow-wrap: anywhere;
+        }
+
+        .agent-alloc-value {
+            font-size: 13px;
+            font-weight: 700;
+            margin-top: 3px;
+            overflow-wrap: anywhere;
+        }
+
+        .agent-detach-btn {
+            width: auto;
+            padding: 9px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            white-space: nowrap;
         }
 
         .acs {
@@ -1133,6 +1744,190 @@
             margin-bottom: 14px;
         }
 
+        .account-center-shell {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+        }
+
+        .account-center-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .account-center-profile {
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+        }
+
+        .account-center-profile .profile-strip {
+            margin-bottom: 0;
+        }
+
+        .profile-strip {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .profile-avatar {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 18px;
+            color: #04131a;
+            background: linear-gradient(135deg, var(--cyan), #8ef0ff);
+            border: 1px solid var(--border-accent);
+            box-shadow: 0 0 0 3px rgba(0, 221, 180, 0.08);
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .profile-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .profile-toprow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .profile-name {
+            font-size: 16px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .profile-meta {
+            font-size: 11px;
+            color: var(--muted-mid);
+            margin-top: 4px;
+            line-height: 1.5;
+        }
+
+        .profile-edit-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .profile-edit-btn:active {
+            transform: scale(0.98);
+        }
+
+        .profile-edit-panel {
+            display: none;
+        }
+
+        .profile-modal-note {
+            font-size: 12px;
+            color: var(--muted-mid);
+            line-height: 1.6;
+            margin-top: -4px;
+            margin-bottom: 12px;
+        }
+
+        .pnl-chip {
+            background: linear-gradient(135deg, rgba(0, 221, 180, 0.12), rgba(59, 139, 255, 0.08));
+            border: 1px solid var(--border-accent);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .pnl-chip-title {
+            font-size: 11px;
+            color: var(--muted-mid);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .pnl-chip-value {
+            font-family: var(--font-display);
+            font-size: 38px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -1.3px;
+        }
+
+        .pnl-chip-value.pos {
+            color: var(--cyan);
+        }
+
+        .pnl-chip-value.neg {
+            color: var(--red);
+        }
+
+        .pnl-chip-sub {
+            font-size: 11px;
+            color: var(--muted-mid);
+            margin-top: 4px;
+        }
+
+        .pnl-chip-left {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .pnl-chip-address {
+            width: 100%;
+            margin-top: 10px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.04);
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            word-break: break-all;
+            text-align: center;
+        }
+
+        .pnl-chip-right {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .wallet-reminder {
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+            font-size: 12px;
+            color: #f3d08a;
+            display: none;
+        }
+
         .wallet-icon {
             font-size: 40px;
             margin-bottom: 12px;
@@ -1426,6 +2221,146 @@
             transform: translateX(-50%) translateY(0);
         }
 
+        @media (max-width: 1099px) {
+            body.utility-open {
+                padding-right: 0;
+            }
+
+            .utility-panel {
+                top: 8px;
+                left: 8px;
+                right: 8px;
+                bottom: calc(72px + env(safe-area-inset-bottom) + 8px);
+                width: auto;
+                max-width: none;
+                height: auto;
+                border-radius: 18px;
+                box-shadow: 0 24px 48px rgba(0, 0, 0, 0.42);
+            }
+
+            .utility-panel.open {
+                width: auto;
+            }
+
+            .utility-panel.is-collapsed {
+                width: auto;
+            }
+
+            .page {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
+            .card {
+                padding: 16px 14px;
+            }
+
+            .agent-hero {
+                padding: 24px 16px 18px;
+            }
+
+            .balance-sub,
+            .wallet-action-row,
+            .kill-switch,
+            .agent-card-top,
+            .agent-card-allocation,
+            .profile-toprow,
+            .market-header,
+            .feed-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
+
+            .allocation-row {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .alloc-input {
+                width: 100%;
+                text-align: left;
+            }
+
+            .agent-target-head {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .agent-target-chips {
+                width: 100%;
+            }
+
+            .modal-sheet {
+                width: calc(100vw - 20px);
+                max-height: calc(100vh - 20px);
+                overflow-y: auto;
+            }
+
+            .agent-card-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .assistant-action-row,
+            .account-status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .agent-card-top {
+                align-items: flex-start;
+            }
+
+            .agent-card-top .pill {
+                margin-left: 0;
+                align-self: flex-start;
+            }
+
+            .agent-card-allocation {
+                align-items: flex-start;
+            }
+
+            .post-header,
+            .post-footer,
+            .pnl-banner,
+            .trade-item,
+            .ti-top,
+            .pnl-chip,
+            .alloc-bar-header {
+                align-items: flex-start;
+            }
+
+            .post-footer,
+            .pnl-banner,
+            .trade-item,
+            .pnl-chip,
+            .alloc-bar-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .reaction-row,
+            .alloc-legend,
+            .wallet-action-row {
+                flex-wrap: wrap;
+            }
+
+            .copy-from-feed {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        @media (min-width: 768px) and (max-width: 1099px) {
+            .nav-toggle {
+                display: flex;
+                left: 16px;
+                top: 16px;
+            }
+        }
+
         /* ══════════════════════════════════════════════
            RESPONSIVE — TABLET & DESKTOP
            ══════════════════════════════════════════════ */
@@ -1496,6 +2431,16 @@
             .nav-item .nav-icon {
                 font-size: 17px;
                 flex-shrink: 0;
+            }
+
+            .nav-toggle {
+                left: 168px;
+                top: 16px;
+            }
+
+            .utility-toggle {
+                right: 16px;
+                top: 16px;
             }
 
             /* ── Page content area ── */
@@ -1612,6 +2557,49 @@
 
 <body>
 
+    <button class="nav-toggle" id="navToggle" type="button" aria-label="Toggle navigation"
+        onclick="toggleNavPanel()">☰</button>
+    <button class="utility-toggle" id="utilityToggle" type="button" aria-label="Toggle MCP agent"
+        onclick="toggleUtilityPanel()">🤖</button>
+    <div class="utility-backdrop" id="utilityBackdrop" onclick="toggleUtilityPanel(false)"></div>
+    <aside class="utility-panel open" id="utilityPanel" aria-label="MCP agent chatbot">
+        <div class="utility-panel-head">
+            <div>
+                <div class="utility-panel-title">MCP Agent</div>
+                <div class="utility-panel-sub">Chatbot for portfolio context and actions</div>
+            </div>
+            <button class="utility-panel-close" type="button" onclick="toggleUtilityPanel(false)">✕</button>
+        </div>
+        <div class="card assistant-shell">
+            <div class="assistant-head">
+                <div class="assistant-head-left">
+                    <div class="assistant-bot-icon">🤖</div>
+                    <div>
+                        <div class="assistant-head-title">Arctic MCP</div>
+                        <div class="assistant-head-sub">Chat with the trading bot</div>
+                    </div>
+                </div>
+                <span class="pill pill-cyan assistant-status-pill">BOT</span>
+            </div>
+            <div class="assistant-chat-log" id="assistantResponse" role="log" aria-live="polite"></div>
+            <div class="assistant-suggestions" id="assistantSuggestions"></div>
+            <div class="assistant-quick-row">
+                <button class="pill pill-cyan" style="border:none;cursor:pointer;" type="button" onclick="fillAssistantPrompt('What is copy trading?')">Copy trading</button>
+                <button class="pill pill-amber" style="border:none;cursor:pointer;" type="button" onclick="fillAssistantPrompt('What is stop loss?')">Stop loss</button>
+                <button class="pill pill-red" style="border:none;cursor:pointer;" type="button" onclick="fillAssistantPrompt('What is P&L?')">P&L</button>
+                <button class="pill pill-blue" style="border:none;cursor:pointer;" type="button" onclick="fillAssistantPrompt('Who are you?')">About bot</button>
+            </div>
+            <div class="assistant-composer">
+                <textarea class="input-field" id="assistantCommandInput" rows="3" placeholder="Ask the MCP agent..."
+                    onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); submitAssistantCommand();}"></textarea>
+                <div class="assistant-action-row">
+                    <button class="btn btn-primary" type="button" onclick="submitAssistantCommand()">Send</button>
+                    <button class="btn btn-outline" type="button" onclick="fillAssistantPrompt('Which agent is best this week?')">Best agent</button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
     <!-- ════════════════════════════════════════
      PAGE 1 — HOME / DASHBOARD
 ════════════════════════════════════════ -->
@@ -1691,17 +2679,31 @@
 
         <!-- Follow Controls -->
         <div class="follow-controls">
+            <div class="agent-target-row">
+                <div class="agent-target-head">
+                    <div>
+                        <div class="agent-target-label">Target Agent</div>
+                        <div class="agent-target-note" id="selectedAgentLabel">Arc_Tic Whale selected</div>
+                    </div>
+                    <span class="pill pill-cyan" id="selectedAgentPill">Conservative</span>
+                </div>
+                <div class="agent-target-chips" id="agentTargetChips">
+                    <button class="agent-chip active" type="button" data-agent="Conservative_Whale" onclick="setSelectedAgent('Conservative_Whale')">🐋 Arc_Tic Whale</button>
+                    <button class="agent-chip" type="button" data-agent="Macro_Economist" onclick="setSelectedAgent('Macro_Economist')">📈 Macro Economist</button>
+                    <button class="agent-chip" type="button" data-agent="Aggressive_Degen" onclick="setSelectedAgent('Aggressive_Degen')">⚡ Aggressive Degen</button>
+                    <button class="agent-chip" type="button" data-agent="Yield_Farmer" onclick="setSelectedAgent('Yield_Farmer')">🌊 Yield Farmer</button>
+                </div>
+            </div>
             <div class="allocation-row">
                 <div class="alloc-label">Copy Allocation (USDC)</div>
                 <input class="alloc-input" type="number" id="allocInput" value="50" min="1" max="1000">
             </div>
             <div class="allocation-row">
-                <div class="alloc-label">Stop-Loss Trigger</div>
-                <input class="alloc-input" type="number" id="stopInput" value="10" min="1" max="50" placeholder="%">
+                <div class="alloc-label">Stop-Loss %</div>
+                <input class="alloc-input" type="number" id="stopLossInput" value="10" min="1" max="50" placeholder="%">
             </div>
-            <div class="allocation-row">
-                <div class="alloc-label">Max Per Trade</div>
-                <input class="alloc-input" type="number" id="maxTrade" value="20" min="1" max="100" placeholder="%">
+            <div style="font-size:11px;color:var(--muted);line-height:1.6;padding:6px 2px 0;">
+                Your allocation is mirrored proportionally to the selected agent. Stop-loss is enforced per agent and auto-detaches the copy if the asset drops too far.
             </div>
         </div>
 
@@ -1962,13 +2964,48 @@
      PAGE 5 — WALLET
 ════════════════════════════════════════ -->
     <div id="page-wallet" class="page">
+        <div class="account-center-shell">
+            <div class="section-title" style="margin-bottom:10px;">Account Center</div>
+            <div class="account-center-flow">
+                <div class="account-center-profile">
+                    <div class="profile-strip profile-strip-compact" id="profileStrip">
+                        <div class="profile-avatar" id="profileAvatar">AT</div>
+                        <div class="profile-main">
+                            <div class="profile-toprow">
+                                <div class="profile-name" id="profileDisplayName">Arc_Tic Whale Member</div>
+                                <button class="profile-edit-btn" type="button" onclick="toggleProfileEdit()">✎</button>
+                            </div>
+                            <div class="profile-meta" id="profileMemberSince">Member since —</div>
+                            <div class="profile-meta" id="profileContactEmail"></div>
+                        </div>
+                    </div>
+                </div>
 
-        <div class="wallet-hero">
-            <div class="wallet-icon">💎</div>
-            <div class="wallet-balance-main" id="walletBalanceMain">150.00 <span class="wallet-balance-unit">USDC</span>
+                <div class="pnl-chip" id="portfolioPnlChip">
+                    <div class="pnl-chip-left">
+                        <div class="pnl-chip-title">Total Portfolio P&L</div>
+                        <div class="pnl-chip-value pos" id="portfolioPnlValue">+0.00 USDC</div>
+                        <div class="pnl-chip-sub" id="portfolioPnlPct">+0.00% across all copied agents</div>
+                        <div class="pnl-chip-address" id="walletAddress" onclick="copyAddress()">Loading wallet · Tap to copy</div>
+                    </div>
+                    <div class="pnl-chip-right">
+                        <div class="pnl-chip-title">Aggregate</div>
+                        <div class="pnl-chip-sub" id="portfolioPnlAgents">0 active agents</div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top:0;">
+                    <div class="section-title" style="margin-bottom:10px;">Wallet Breakdown</div>
+                    <div id="walletTokenBreakdown" style="display:grid;gap:10px;">
+                        <div style="padding:14px 12px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:12px;">
+                            Loading token balances...
+                        </div>
+                    </div>
+                    <div style="font-size:11px;color:var(--muted);margin-top:10px;">
+                        Only USDC is used for copy-trading. Other Arc Testnet tokens are shown for visibility only.
+                    </div>
+                </div>
             </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="walletTypeLabel">Circle Trading Wallet · Auto-created</div>
-            <div class="wallet-address" id="walletAddress" onclick="copyAddress()">Loading wallet · Tap to copy</div>
         </div>
 
         <div class="allocation-bar-card">
@@ -1981,12 +3018,10 @@
             </div>
             <div class="alloc-legend">
                 <div class="al-item">
-                    <div class="al-dot" style="background:var(--cyan)"></div><span id="allocatedText">80 USDC
-                        allocated</span>
+                    <div class="al-dot" style="background:var(--cyan)"></div><span id="allocatedText">80 USDC allocated</span>
                 </div>
                 <div class="al-item">
-                    <div class="al-dot" style="background:rgba(255,255,255,0.12)"></div><span id="freeText">70 USDC
-                        free</span>
+                    <div class="al-dot" style="background:rgba(255,255,255,0.12)"></div><span id="freeText">70 USDC free</span>
                 </div>
             </div>
         </div>
@@ -1996,7 +3031,6 @@
             <button class="btn btn-outline" onclick="handleWithdraw()">⬆ Withdraw</button>
         </div>
 
-        <!-- Risk Controls -->
         <div class="card">
             <div class="section-title">Global Risk Controls</div>
 
@@ -2013,7 +3047,7 @@
                     <div class="ki-title">🔔 Trade Alerts</div>
                     <div class="ki-sub">Notify on every execution</div>
                 </div>
-                <div class="toggle on" id="alertToggle" onclick="toggleAlerts()"></div>
+                <div class="toggle" id="alertToggle" onclick="toggleAlerts()"></div>
             </div>
 
             <div class="kill-switch">
@@ -2021,38 +3055,46 @@
                     <div class="ki-title">📊 Daily Summary</div>
                     <div class="ki-sub">End-of-day PnL report</div>
                 </div>
-                <div class="toggle on" id="summaryToggle" onclick="toggleSummary()"></div>
+                <div class="toggle" id="summaryToggle" onclick="toggleSummary()"></div>
             </div>
         </div>
 
-        <!-- Tx History -->
+        <div class="wallet-reminder" id="notificationReminder"></div>
+
         <div class="card">
             <div class="section-title">Transaction History</div>
             <div id="txHistoryContainer">
-            <div class="tx-item">
-                <div class="tx-icon">⬇️</div>
-                <div class="tx-info">
-                    <div class="tx-desc">Deposit via Circle</div>
-                    <div class="tx-time">Today, 08:00 AM</div>
-                </div>
-                <div class="tx-amt pos">+150.00</div>
             </div>
-            <div class="tx-item">
-                <div class="tx-icon">⚡</div>
-                <div class="tx-info">
-                    <div class="tx-desc">Copy trade · BTC</div>
-                    <div class="tx-time">Today, 09:14 AM</div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+     PROFILE EDIT MODAL
+════════════════════════════════════════ -->
+    <div class="modal-backdrop" id="profileModal" onclick="closeProfileModal(event)">
+        <div class="modal-sheet" style="max-width:560px;margin:0 auto;">
+            <div class="modal-handle"></div>
+            <div class="modal-title">✎ Edit Profile</div>
+            <label class="input-label">Display Name</label>
+            <input class="input-field" id="profileEditName" type="text" placeholder="Display name">
+            <label class="input-label">Profile Image</label>
+            <div class="avatar-upload">
+                <div class="avatar-upload-box">
+                    <div class="avatar-preview" id="profileAvatarPreview">AT</div>
+                    <div class="avatar-upload-copy">
+                        <div class="avatar-upload-title">Choose an image</div>
+                        <div class="avatar-upload-sub">Upload a local image or keep the current one. It will be stored in your profile.</div>
+                    </div>
                 </div>
-                <div class="tx-amt pos">+2.45</div>
+                <input class="input-field" id="profileEditAvatarInput" type="file" accept="image/*"
+                    onchange="handleAvatarInput(this)">
+                <input type="hidden" id="profileEditAvatar">
             </div>
-            <div class="tx-item">
-                <div class="tx-icon">⚡</div>
-                <div class="tx-info">
-                    <div class="tx-desc">Copy trade · ETH</div>
-                    <div class="tx-time">Yesterday, 10:05 AM</div>
-                </div>
-                <div class="tx-amt neg">-1.10</div>
-            </div>
+            <label class="input-label">Contact Email</label>
+            <input class="input-field" id="profileEditEmail" type="email" placeholder="email@example.com">
+            <div class="wallet-action-row" style="margin-bottom:0;margin-top:14px;">
+                <button class="btn btn-primary" type="button" onclick="saveProfile()">Save</button>
+                <button class="btn btn-outline" type="button" onclick="cancelProfileEdit()">Cancel</button>
             </div>
         </div>
     </div>
@@ -2100,24 +3142,16 @@
                 </div>
                 <label class="input-label">USDC Allocation</label>
                 <input class="input-field" type="number" id="modalAlloc" value="50" placeholder="Enter USDC amount">
-                <div class="modal-row">
-                    <div>
-                        <label class="input-label">Stop-Loss %</label>
-                        <input class="input-field" type="number" id="modalStop" value="10" style="margin-bottom:0">
-                    </div>
-                    <div>
-                        <label class="input-label">Max Per Trade %</label>
-                        <input class="input-field" type="number" id="modalMaxTrade" value="20" style="margin-bottom:0">
-                    </div>
-                </div>
+                <label class="input-label">Stop-Loss %</label>
+                <input class="input-field" type="number" id="modalStopLoss" value="10" min="1" max="50" placeholder="%">
                 <button class="btn btn-primary" style="margin-top:14px;" onclick="nextStep()">Continue →</button>
             </div>
             <div id="modalStep2" style="display:none;">
                 <div style="font-size:13px;color:var(--muted-mid);line-height:1.7;margin-bottom:16px;">
                     You're about to allocate <strong id="confirmAlloc" style="color:var(--cyan)"></strong> USDC to copy
                     <strong id="confirmAgent" style="color:var(--text)"></strong>. Trades will execute automatically
-                    from your Circle Wallet with a <strong id="confirmStop" style="color:var(--amber)"></strong>%
-                    stop-loss.
+                    from your Circle Wallet and mirror the selected agent's moves. Stop-loss is set to
+                    <strong id="confirmStopLoss" style="color:var(--amber)"></strong>%.
                 </div>
                 <div class="card" style="background:var(--cyan-dim);border-color:var(--border-accent);">
                     <div style="font-size:11px;color:var(--muted-mid);">This connects your wallet to a smart contract
@@ -2380,11 +3414,14 @@
         });
 
         // ── Navigation ──
+        let currentPage = 'home';
         function navigate(page, el) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById(`page-${page}`).classList.add('active');
             el.classList.add('active');
+            currentPage = page;
+            renderAssistantSuggestions();
         }
 
         // ── Terminal Logger ──
@@ -2418,10 +3455,20 @@
             return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
 
-	        function fmtUsdc(value) {
-	            const num = Number(value || 0);
-	            return `${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-	        }
+        function fmtUsdc(value) {
+            const num = Number(value || 0);
+            return `${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        function fmtTokenAmount(value, decimals = 0) {
+            const num = Number(value || 0);
+            if (!Number.isFinite(num)) return '0';
+            const places = Number.isFinite(Number(decimals)) && Number(decimals) > 0 ? Math.min(8, Number(decimals)) : 0;
+            return num.toLocaleString('en-US', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: places,
+            });
+        }
 
 	        function fmtCount(value) {
 	            const num = Number(value || 0);
@@ -2445,18 +3492,25 @@
 	            return params.get('ref') || params.get('start') || '';
 	        }
 
-	        async function ensureWalletForCurrentUser() {
-	            const username = currentUsername();
-	            if (!username) return;
-	            try {
-	                const res = await apiFetch('/users/ensure', {
-	                    method: 'POST',
-	                    body: JSON.stringify({ username, referral_code: referralCode() || null })
-	                });
-	                const data = await res.json();
-	                if (data.status === 'success') {
-	                    log(`Wallet ready for @${data.user.user_id}. Referral: ${data.user.referral_code}`, 'sys');
-	                }
+        async function ensureWalletForCurrentUser() {
+            const username = currentUsername();
+            if (!username) return;
+            try {
+                const contactEmail = _safeContactEmail(_privyEmail);
+                const res = await apiFetch('/users/ensure', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        username,
+                        referral_code: referralCode() || null,
+                        email: contactEmail || null,
+                        display_name: _privyDisplayName || null,
+                        avatar_url: null,
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    log(`Wallet ready for @${data.user.user_id}. Referral: ${data.user.referral_code}`, 'sys');
+                }
 	            } catch (err) {
 	                log('Wallet provisioning check failed.', 'warn');
 	            }
@@ -2479,6 +3533,364 @@
             el.textContent = value || 'N/A';
             el.classList.toggle('positive', !String(value || '').startsWith('-'));
             el.classList.toggle('negative', String(value || '').startsWith('-'));
+        }
+
+        function _profileDisplayName(profile = {}) {
+            return profile.display_name || profile.user_id || 'Arc_Tic Whale Member';
+        }
+
+        function _profileInitials(name) {
+            const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+            if (!parts.length) return 'AT';
+            const initials = parts.slice(0, 2).map(part => part[0]).join('');
+            return initials.toUpperCase();
+        }
+
+        function _profileMemberSince(profile = {}) {
+            if (!profile.member_since) return 'Member since —';
+            const d = new Date(profile.member_since);
+            if (Number.isNaN(d.getTime())) return 'Member since —';
+            return `Member since ${d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}`;
+        }
+
+        function _safeContactEmail(value) {
+            const email = String(value || '').trim().toLowerCase();
+            return email.includes('@') ? email : '';
+        }
+
+        function _profileAvatarSource(profile = {}, fallback = '') {
+            const avatar = String(fallback || profile.avatar_url || '').trim();
+            return avatar;
+        }
+
+        function _renderAvatar(el, profile = {}, fallback = '', initialsOverride = '') {
+            if (!el) return;
+            const avatarUrl = _profileAvatarSource(profile, fallback);
+            const initials = initialsOverride || _profileInitials(_profileDisplayName(profile));
+            if (avatarUrl) {
+                el.style.backgroundImage = `url("${avatarUrl.replace(/"/g, '%22')}")`;
+                el.classList.add('is-image');
+                el.textContent = '';
+            } else {
+                el.style.backgroundImage = '';
+                el.classList.remove('is-image');
+                el.textContent = initials;
+            }
+        }
+
+        let profileAvatarDataUrl = '';
+        let navPanelCollapsed = localStorage.getItem('arc_nav_collapsed') === '1';
+        let utilityPanelOpen = (() => {
+            const stored = localStorage.getItem('arc_utility_open');
+            if (window.innerWidth < 1100) return false;
+            if (stored === null) return false;
+            return stored === '1';
+        })();
+
+        function syncLayoutShell() {
+            document.body.classList.toggle('nav-collapsed', navPanelCollapsed);
+            document.body.classList.toggle('utility-open', utilityPanelOpen);
+            const panel = document.getElementById('utilityPanel');
+            const backdrop = document.getElementById('utilityBackdrop');
+            const isCompact = window.innerWidth < 1100;
+            if (panel) {
+                panel.classList.toggle('open', utilityPanelOpen);
+                panel.classList.toggle('is-collapsed', !utilityPanelOpen && !isCompact);
+                panel.classList.toggle('is-mobile-hidden', !utilityPanelOpen && isCompact);
+            }
+            if (backdrop) backdrop.classList.toggle('show', utilityPanelOpen && isCompact);
+            document.body.style.overflow = utilityPanelOpen && isCompact ? 'hidden' : '';
+            const navToggle = document.getElementById('navToggle');
+            if (navToggle) navToggle.title = navPanelCollapsed ? 'Expand navigation' : 'Collapse navigation';
+            const utilityToggle = document.getElementById('utilityToggle');
+            if (utilityToggle) {
+                utilityToggle.textContent = utilityPanelOpen ? '✕' : '🤖';
+                utilityToggle.title = utilityPanelOpen ? 'Hide MCP agent' : 'Show MCP agent';
+            }
+        }
+
+        function toggleNavPanel(force) {
+            navPanelCollapsed = typeof force === 'boolean' ? force : !navPanelCollapsed;
+            localStorage.setItem('arc_nav_collapsed', navPanelCollapsed ? '1' : '0');
+            syncLayoutShell();
+        }
+
+        function toggleUtilityPanel(force) {
+            utilityPanelOpen = typeof force === 'boolean' ? force : !utilityPanelOpen;
+            localStorage.setItem('arc_utility_open', utilityPanelOpen ? '1' : '0');
+            syncLayoutShell();
+        }
+
+        function resetAvatarPicker() {
+            profileAvatarDataUrl = '';
+            const input = document.getElementById('profileEditAvatarInput');
+            if (input) input.value = '';
+            const hidden = document.getElementById('profileEditAvatar');
+            if (hidden) hidden.value = _profileAvatarSource(dashboardCache.profile || {}, '');
+        }
+
+        function renderProfileAvatarPreview(profile = {}) {
+            const preview = document.getElementById('profileAvatarPreview');
+            if (!preview) return;
+            _renderAvatar(preview, profile, profileAvatarDataUrl, _profileInitials(_profileDisplayName(profile)));
+            const mainAvatar = document.getElementById('profileAvatar');
+            if (mainAvatar) {
+                _renderAvatar(mainAvatar, profile, profileAvatarDataUrl, _profileInitials(_profileDisplayName(profile)));
+            }
+        }
+
+        function _selectedProfileAvatar() {
+            return profileAvatarDataUrl || '';
+        }
+
+        function _fileToDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result || ''));
+                reader.onerror = () => reject(new Error('Could not read image'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function handleAvatarInput(input) {
+            const file = input?.files?.[0];
+            if (!file) {
+                profileAvatarDataUrl = '';
+                const hidden = document.getElementById('profileEditAvatar');
+                if (hidden) hidden.value = _profileAvatarSource(dashboardCache.profile || {}, '');
+                renderProfileAvatarPreview(dashboardCache.profile || {});
+                return;
+            }
+            if (!String(file.type || '').startsWith('image/')) {
+                showToast('Choose an image file');
+                input.value = '';
+                return;
+            }
+            try {
+                profileAvatarDataUrl = await _fileToDataUrl(file);
+                const hidden = document.getElementById('profileEditAvatar');
+                if (hidden) hidden.value = profileAvatarDataUrl;
+                renderProfileAvatarPreview(dashboardCache.profile || {});
+            } catch (err) {
+                showToast(err.message || 'Could not load image');
+            }
+        }
+
+        function updateNotificationReminder(message) {
+            const reminder = document.getElementById('notificationReminder');
+            if (!reminder) return;
+            if (!message) {
+                reminder.style.display = 'none';
+                reminder.textContent = '';
+                return;
+            }
+            reminder.style.display = 'block';
+            reminder.textContent = message;
+        }
+
+        let assistantChatSeeded = false;
+
+        function _assistantChatLog() {
+            return document.getElementById('assistantResponse');
+        }
+
+        function _assistantSuggestionsBox() {
+            return document.getElementById('assistantSuggestions');
+        }
+
+        function _assistantContext() {
+            return {
+                page: currentPage,
+                selected_agent: selectedAgentId,
+            };
+        }
+
+        function renderAssistantSuggestions(items) {
+            const box = _assistantSuggestionsBox();
+            if (!box) return;
+            const suggestions = Array.isArray(items) && items.length
+                ? items
+                : _defaultAssistantSuggestions();
+            box.innerHTML = '';
+            suggestions.forEach(text => {
+                const btn = document.createElement('button');
+                btn.className = 'pill pill-cyan';
+                btn.style.border = 'none';
+                btn.style.cursor = 'pointer';
+                btn.type = 'button';
+                btn.textContent = text;
+                btn.addEventListener('click', () => fillAssistantPrompt(text));
+                box.appendChild(btn);
+            });
+        }
+
+        function _defaultAssistantSuggestions() {
+            const page = currentPage || 'home';
+            const agent = (selectedAgentId || 'Conservative_Whale').replace(/_/g, ' ');
+            switch (page) {
+                case 'market':
+                    return [`Copy ${agent}`, 'Which agent is best this week?', 'What is proportional execution?'];
+                case 'feed':
+                    return ['Explain this trade', 'Show recent trades', 'What is copy trading?'];
+                case 'trades':
+                    return ['What is P&L?', 'What is stop loss?', 'Show my copied agents'];
+                case 'wallet':
+                    return ['What is allocation?', 'What is P&L?', 'What is stop loss?'];
+                default:
+                    return [`Copy ${agent}`, 'What is copy trading?', 'What is stop loss?'];
+            }
+        }
+
+        function _assistantBubble(role, label, text) {
+            const log = _assistantChatLog();
+            if (!log) return null;
+            const wrapper = document.createElement('div');
+            wrapper.className = `assistant-message ${role}`;
+            const meta = document.createElement('div');
+            meta.className = 'assistant-message-meta';
+            meta.textContent = label;
+            const bubble = document.createElement('div');
+            bubble.className = 'assistant-message-bubble';
+            bubble.textContent = text;
+            wrapper.appendChild(meta);
+            wrapper.appendChild(bubble);
+            log.appendChild(wrapper);
+            log.scrollTop = log.scrollHeight;
+            return wrapper;
+        }
+
+        function _assistantTypingBubble() {
+            const log = _assistantChatLog();
+            if (!log) return null;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'assistant-message bot';
+            const meta = document.createElement('div');
+            meta.className = 'assistant-message-meta';
+            meta.textContent = 'MCP Agent';
+            const bubble = document.createElement('div');
+            bubble.className = 'assistant-message-bubble';
+            bubble.innerHTML = '<span class="assistant-typing"><span></span><span></span><span></span></span>';
+            wrapper.appendChild(meta);
+            wrapper.appendChild(bubble);
+            log.appendChild(wrapper);
+            log.scrollTop = log.scrollHeight;
+            return wrapper;
+        }
+
+        function ensureAssistantChat() {
+            const log = _assistantChatLog();
+            if (!log || assistantChatSeeded) return;
+            assistantChatSeeded = true;
+            if (!log.children.length) {
+                _assistantBubble('bot', 'MCP Agent', 'I’m online. Ask me about your P&L, copied agents, alerts, or tell me to detach from an agent.');
+            }
+            renderAssistantSuggestions();
+        }
+
+        function renderProfileStrip(profile = {}) {
+            const displayName = _profileDisplayName(profile);
+            const avatar = document.getElementById('profileAvatar');
+            const name = document.getElementById('profileDisplayName');
+            const memberSince = document.getElementById('profileMemberSince');
+            const email = document.getElementById('profileContactEmail');
+            _renderAvatar(avatar, profile, '', _profileInitials(displayName));
+            if (name) name.textContent = displayName;
+            if (memberSince) memberSince.textContent = _profileMemberSince(profile);
+            if (email) {
+                const contactEmail = _safeContactEmail(profile.email);
+                email.textContent = contactEmail ? `Contact email: ${contactEmail}` : 'Contact email not set';
+            }
+
+            const editName = document.getElementById('profileEditName');
+            const editEmail = document.getElementById('profileEditEmail');
+            const editAvatar = document.getElementById('profileEditAvatar');
+            if (editName && document.getElementById('profileModal')?.dataset.mode !== 'editing') editName.value = profile.display_name || '';
+            if (editEmail && document.getElementById('profileModal')?.dataset.mode !== 'editing') editEmail.value = _safeContactEmail(profile.email);
+            if (editAvatar && document.getElementById('profileModal')?.dataset.mode !== 'editing') editAvatar.value = _profileAvatarSource(profile, '');
+            if (document.getElementById('profileModal')?.dataset.mode !== 'editing') {
+                resetAvatarPicker();
+            }
+            renderProfileAvatarPreview(profile);
+        }
+
+        function toggleProfileEdit(force) {
+            const panel = document.getElementById('profileModal');
+            if (!panel) return;
+            const isEditing = panel.classList.contains('open');
+            const next = typeof force === 'boolean' ? force : !isEditing;
+            panel.classList.toggle('open', next);
+            panel.dataset.mode = next ? 'editing' : '';
+            if (next) {
+                const profile = dashboardCache.profile || {};
+                document.getElementById('profileEditName').value = profile.display_name || '';
+                document.getElementById('profileEditEmail').value = _safeContactEmail(profile.email);
+                const hidden = document.getElementById('profileEditAvatar');
+                if (hidden) hidden.value = _profileAvatarSource(profile, '');
+                resetAvatarPicker();
+                renderProfileAvatarPreview(profile);
+            }
+        }
+
+        function closeProfileModal(event) {
+            if (event && event.target && event.target.id !== 'profileModal') return;
+            toggleProfileEdit(false);
+        }
+
+        function cancelProfileEdit() {
+            toggleProfileEdit(false);
+            renderProfileStrip(dashboardCache.profile || {});
+        }
+
+        async function saveProfile() {
+            try {
+                const avatarInput = document.getElementById('profileEditAvatarInput');
+                const avatarHidden = document.getElementById('profileEditAvatar');
+                let avatarUrl = profileAvatarDataUrl || (avatarHidden ? avatarHidden.value : '') || _profileAvatarSource(dashboardCache.profile || {}, '');
+                if (!avatarUrl && avatarInput && avatarInput.files && avatarInput.files[0]) {
+                    avatarUrl = await _fileToDataUrl(avatarInput.files[0]);
+                }
+                const payload = {
+                    display_name: document.getElementById('profileEditName').value.trim(),
+                    avatar_url: avatarUrl,
+                    email: _safeContactEmail(document.getElementById('profileEditEmail').value),
+                };
+                const res = await apiFetch('/user/profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (!res.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Profile update failed');
+                dashboardCache.profile = data.profile || dashboardCache.profile;
+                toggleProfileEdit(false);
+                renderProfileStrip(dashboardCache.profile || {});
+                resetAvatarPicker();
+                updateNotificationReminder(data.reminder || '');
+                showToast('Profile updated ✓');
+                await refreshWalletStats();
+            } catch (err) {
+                showToast(err.message || 'Could not save profile');
+            }
+        }
+
+        async function detachAgent(agentId, event) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            try {
+                const res = await apiFetch('/agents/detach', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_id: agentId }),
+                });
+                const data = await res.json();
+                if (!res.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Detach failed');
+                showToast('Agent detached ✓');
+                await refreshWalletStats();
+            } catch (err) {
+                showToast(err.message || 'Could not detach agent');
+            }
         }
 
         function log(msg, type = 'info') {
@@ -2518,55 +3930,162 @@
             }
         }
 
-	        function renderDashboard(data) {
-	            dashboardCache = data || {};
-	            const wallet = dashboardCache.wallet || {};
-	            const metrics = dashboardCache.metrics || {};
-	            const followers = dashboardCache.followers || {};
-	            const allocation = dashboardCache.allocation || {};
-	            const agents = dashboardCache.agents || [];
-	            const transactions = dashboardCache.transactions || [];
+        let selectedAgentId = localStorage.getItem('arc_selected_agent') || 'Conservative_Whale';
+        function _selectedAgentProfile() {
+            return (dashboardCache.agents || []).find(agent => agent.id === selectedAgentId) || null;
+        }
+        function setSelectedAgent(agentId) {
+            selectedAgentId = agentId || 'Conservative_Whale';
+            localStorage.setItem('arc_selected_agent', selectedAgentId);
+            document.querySelectorAll('.agent-chip[data-agent]').forEach(chip => {
+                chip.classList.toggle('active', chip.dataset.agent === selectedAgentId);
+            });
+            const agent = _selectedAgentProfile();
+            const name = agent?.name || (selectedAgentId === 'Conservative_Whale' ? 'Arc_Tic Whale' : selectedAgentId.replace(/_/g, ' '));
+            const risk = agent?.risk_label || 'Conservative';
+            const label = document.getElementById('selectedAgentLabel');
+            const pill = document.getElementById('selectedAgentPill');
+            const pillClass = agent?.risk === 'high' ? 'pill-red' : agent?.risk === 'medium' ? 'pill-amber' : 'pill-cyan';
+            if (label) label.textContent = `${name} selected`;
+            if (pill) {
+                pill.textContent = risk;
+                pill.className = `pill ${pillClass}`;
+            }
+            syncCopyStatus();
+            renderAssistantSuggestions();
+        }
+        function syncCopyStatus() {
+            const toggle = document.getElementById('copyToggle');
+            const status = document.getElementById('copyStatus');
+            const agent = _selectedAgentProfile() || {};
+            const allocated = Number(agent.allocated_usdc || 0);
+            const agentName = agent.name || 'Selected agent';
+            if (toggle) toggle.classList.toggle('on', allocated > 0);
+            isCopying = allocated > 0;
+            if (status) {
+                status.textContent = allocated > 0
+                    ? `Active · ${agentName} · ${fmtUsdc(allocated)} USDC allocated`
+                    : `Ready to copy · ${agentName}`;
+            }
+        }
 
-	            const balance = fmtUsdc(wallet.total_balance_usd);
-	            document.getElementById('balDisplay').innerHTML = `${balance}<span class="balance-unit">USDC</span>`;
-	            document.getElementById('walletBalanceMain').innerHTML = `${balance} <span class="wallet-balance-unit">USDC</span>`;
-	            document.getElementById('allocTotal').textContent = `${balance} USDC total`;
-	            document.getElementById('winRateStat').textContent = `${metrics.win_rate || 0}%`;
-	            document.getElementById('tradeCountStat').textContent = fmtCount(metrics.total_trades);
-	            document.getElementById('followerCountStat').textContent = fmtCount(followers.total_followers);
-	            document.getElementById('agentCountPill').textContent = `${agents.length} Live`;
+        function renderDashboard(data) {
+            dashboardCache = data || {};
+            const profile = dashboardCache.profile || {};
+            const preferences = dashboardCache.preferences || {};
+            const wallet = dashboardCache.wallet || {};
+            const metrics = dashboardCache.metrics || {};
+            const followers = dashboardCache.followers || {};
+            const allocation = dashboardCache.allocation || {};
+            const agents = dashboardCache.agents || [];
+            const transactions = dashboardCache.transactions || [];
 
-	            document.getElementById('allocatedText').textContent = `${fmtUsdc(allocation.allocated)} USDC allocated`;
-	            document.getElementById('freeText').textContent = `${fmtUsdc(allocation.free)} USDC free`;
-	            document.getElementById('allocFill').style.width = `${Math.min(100, Number(allocation.allocated_pct || 0))}%`;
+            renderProfileStrip(profile);
+            updateNotificationReminder(dashboardCache.notification_reminder || '');
+            updateAccountStatus(preferences);
 
-	            latestWalletAddress = wallet.address || '';
-	            document.getElementById('walletAddress').textContent = latestWalletAddress
-	                ? `${latestWalletAddress.slice(0, 6)}...${latestWalletAddress.slice(-4)} · Tap to copy`
-	                : 'Wallet unavailable';
-	            const _wtl = document.getElementById('walletTypeLabel');
-	            if (_wtl) _wtl.textContent = wallet.source === 'user'
-	                ? 'Circle Trading Wallet · Auto-created for your account'
-	                : 'Circle Agent Wallet · Shared (sign in to get your own)';
+            const balance = fmtUsdc(wallet.total_balance_usd);
+            document.getElementById('balDisplay').innerHTML = `${balance}<span class="balance-unit">USDC</span>`;
+            const walletBalanceMain = document.getElementById('walletBalanceMain');
+            if (walletBalanceMain) walletBalanceMain.innerHTML = `${balance} <span class="wallet-balance-unit">USDC</span>`;
+            document.getElementById('allocTotal').textContent = `${balance} USDC total`;
+            document.getElementById('winRateStat').textContent = `${metrics.win_rate || 0}%`;
+            document.getElementById('tradeCountStat').textContent = fmtCount(metrics.total_trades);
+            document.getElementById('followerCountStat').textContent = fmtCount(followers.total_followers);
+            document.getElementById('agentCountPill').textContent = `${agents.length} Live`;
 
-	            document.getElementById('totalPnl').textContent = `${fmtUsdc(0)} USDC`;
-	            document.getElementById('activeAgentSummary').textContent = `Across ${agents.length} active agent${agents.length === 1 ? '' : 's'}`;
-	            document.getElementById('returnBadge').textContent = wallet.performance?.['24h'] || '0.00%';
+            const pnlAmount = Number(wallet.portfolio_pnl?.amount || 0);
+            const pnlPct = Number(wallet.portfolio_pnl?.pct || 0);
+            document.getElementById('portfolioPnlValue').textContent = `${pnlAmount >= 0 ? '+' : '-'}${fmtUsdc(Math.abs(pnlAmount))} USDC`;
+            document.getElementById('portfolioPnlValue').classList.toggle('pos', pnlAmount >= 0);
+            document.getElementById('portfolioPnlValue').classList.toggle('neg', pnlAmount < 0);
+            document.getElementById('portfolioPnlPct').textContent = `${pnlPct >= 0 ? '+' : '-'}${Math.abs(pnlPct).toFixed(2)}% across all copied agents`;
+            document.getElementById('portfolioPnlAgents').textContent = `${agents.filter(a => Number(a.allocated_usdc || 0) > 0).length} active agents`;
 
-	            renderAgents(agents);
-	            renderFeed(dashboardCache.feed || []);
-	            renderTransactions(transactions);
+            document.getElementById('allocatedText').textContent = `${fmtUsdc(allocation.allocated)} USDC allocated`;
+            document.getElementById('freeText').textContent = `${fmtUsdc(allocation.free)} USDC free`;
+            document.getElementById('allocFill').style.width = `${Math.min(100, Number(allocation.allocated_pct || 0))}%`;
 
-	            const activeAllocation = Number(allocation.allocated || 0);
-	            if (activeAllocation > 0) {
-	                document.getElementById('copyStatus').textContent = `Active · ${fmtUsdc(activeAllocation)} USDC allocated`;
-	                document.getElementById('copyToggle').classList.add('on');
-	                isCopying = true;
-	            }
-	            setChange(document.getElementById('pnl24h'), wallet.performance?.['24h']);
-	            setChange(document.getElementById('pnl7d'), wallet.performance?.['7d']);
-	            setChange(document.getElementById('pnlAllTime'), wallet.performance?.['1y']);
-	        }
+            latestWalletAddress = wallet.address || '';
+            const walletAddressEl = document.getElementById('walletAddress');
+            if (walletAddressEl) {
+                walletAddressEl.textContent = latestWalletAddress
+                    ? `${latestWalletAddress.slice(0, 6)}...${latestWalletAddress.slice(-4)} · Tap to copy`
+                    : 'Wallet unavailable';
+            }
+            const _wtl = document.getElementById('walletTypeLabel');
+            if (_wtl) _wtl.textContent = wallet.source === 'user'
+                ? 'Circle Trading Wallet · Auto-created for your account'
+                : 'Circle Agent Wallet · Shared (sign in to get your own)';
+
+            const contactStatus = document.getElementById('accountContactStatus');
+            if (contactStatus) {
+                const email = _safeContactEmail(profile.email);
+                const telegram = profile.telegram_chat_id ? 'Telegram connected' : 'Telegram not connected';
+                contactStatus.textContent = `${email ? `Email connected: ${email}` : 'Email not connected'} · ${telegram}`;
+            }
+            const notifStatus = document.getElementById('accountNotificationStatus');
+            if (notifStatus) {
+                notifStatus.textContent = `${preferences.trade_alerts ? 'Trade alerts on' : 'Trade alerts off'} · ${preferences.daily_summary ? 'Daily summary on' : 'Daily summary off'}`;
+            }
+
+            renderWalletBreakdown(wallet.token_balances || []);
+
+            renderAgents(agents);
+            renderFeed(dashboardCache.feed || []);
+            renderTransactions(transactions);
+            ensureAssistantChat();
+            setSelectedAgent(selectedAgentId);
+            setChange(document.getElementById('pnl24h'), wallet.performance?.['24h']);
+            setChange(document.getElementById('pnl7d'), wallet.performance?.['7d']);
+            setChange(document.getElementById('pnlAllTime'), wallet.performance?.['1y']);
+
+            if (preferences.trade_alerts || preferences.daily_summary) {
+                updateNotificationReminder(dashboardCache.notification_reminder || '');
+            }
+            renderAssistantSuggestions();
+        }
+
+        function renderWalletBreakdown(tokenBalances) {
+            const container = document.getElementById('walletTokenBreakdown');
+            if (!container) return;
+            if (!Array.isArray(tokenBalances) || !tokenBalances.length) {
+                container.innerHTML = `
+                    <div style="padding:14px 12px;color:var(--muted);border:1px dashed var(--border);border-radius:12px;">
+                        No token balances found yet.
+                    </div>
+                `;
+                return;
+            }
+
+            const rows = tokenBalances.map(token => {
+                const symbol = String(token.symbol || 'TOKEN').toUpperCase();
+                const name = token.name || symbol;
+                const amount = fmtTokenAmount(token.amount, token.decimals);
+                const isUsdc = symbol === 'USDC';
+                const badgeStyle = isUsdc
+                    ? 'background:var(--cyan-dim);color:var(--cyan);border:1px solid var(--border-accent);'
+                    : 'background:rgba(255,255,255,0.04);color:var(--text);border:1px solid var(--border);';
+
+                return `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,0.02);gap:12px;">
+                        <div style="min-width:0;">
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                <strong style="color:var(--text);font-size:13px;">${symbol}</strong>
+                                <span style="font-size:10px;padding:3px 8px;border-radius:999px;${badgeStyle}">${isUsdc ? 'Trading token' : 'Visible only'}</span>
+                            </div>
+                            <div style="font-size:11px;color:var(--muted);margin-top:4px;">${name}</div>
+                        </div>
+                        <div style="text-align:right;min-width:0;">
+                            <div style="font-size:14px;font-weight:700;color:${isUsdc ? 'var(--cyan)' : 'var(--text)'};">${amount}</div>
+                            <div style="font-size:11px;color:var(--muted);">on Arc Testnet</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = rows;
+        }
 
 	        async function refreshWalletStats() {
 	            try {
@@ -2613,21 +4132,25 @@
 	            await Promise.all([refreshWalletStats(), refreshMarketData(), fetchTradeHistory(), initSettings()]);
 	        }
 
-	        function renderAgents(agents) {
-	            const container = document.getElementById('agentList');
-	            if (!container) return;
-	            if (!agents.length) {
-	                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No live agents yet.</div>';
-	                return;
-	            }
-	            container.innerHTML = agents.map(agent => {
-	                const pill = agent.risk === 'high' ? 'pill-red' : agent.risk === 'medium' ? 'pill-amber' : 'pill-cyan';
-	                const color = agent.risk === 'high' ? 'red' : agent.risk === 'medium' ? 'amber' : 'green';
-	                const args = [
-	                    agent.id,
-	                    agent.avatar,
-	                    agent.name,
-	                    agent.risk_label,
+        function renderAgents(agents) {
+            const container = document.getElementById('agentList');
+            if (!container) return;
+            if (!agents.length) {
+                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No live agents yet.</div>';
+                return;
+            }
+            container.innerHTML = agents.map(agent => {
+                const pill = agent.risk === 'high' ? 'pill-red' : agent.risk === 'medium' ? 'pill-amber' : 'pill-cyan';
+                const color = agent.risk === 'high' ? 'red' : agent.risk === 'medium' ? 'amber' : 'green';
+	                const allocated = Number(agent.allocated_usdc || 0);
+	                const stopLoss = Number(agent.stop_loss_pct || 10);
+	                const statusText = agent.status || 'Ready to trade';
+	                const statusDetail = agent.status_detail || 'No live trades yet';
+                const args = [
+                    agent.id,
+                    agent.avatar,
+                    agent.name,
+                    agent.risk_label,
 	                    `${agent.win_rate || 0}%`,
 	                    agent.trades || 0,
 	                    fmtCount(agent.followers),
@@ -2637,34 +4160,51 @@
 	                        onclick="openCopyModal('${args[1]}','${args[2]}','${args[3]}','${args[4]}','${args[5]}','${args[6]}','${args[0]}')">
 	                        <div class="agent-card-top">
 	                            <div class="agent-card-icon">${agent.avatar}</div>
-	                            <div class="agent-card-info">
-	                                <div class="agent-card-name">${agent.name}</div>
-	                                <div class="agent-card-desc">${agent.description}</div>
-	                            </div>
-	                            <span class="pill ${pill}">${agent.risk_label}</span>
-	                        </div>
-	                        <div class="agent-card-stats">
-	                            <div class="acs"><div class="acs-val ${color}">${agent.win_rate || 0}%</div><div class="acs-lbl">Win Rate</div></div>
-	                            <div class="acs"><div class="acs-val">${agent.trades || 0}</div><div class="acs-lbl">Trades</div></div>
-	                            <div class="acs"><div class="acs-val ${color}">${agent.roi_30d || '0.00%'}</div><div class="acs-lbl">24h Signal</div></div>
-	                        </div>
-	                    </div>
-	                `;
-	            }).join('');
-	        }
+                            <div class="agent-card-info">
+                                <div class="agent-card-name">${agent.name}</div>
+                                <div class="agent-card-desc">${agent.description}</div>
+                                <div class="agent-card-desc" style="margin-top:6px;color:var(--muted-mid);font-size:11px;">Status: ${statusText} · ${statusDetail}</div>
+                            </div>
+                            <span class="pill ${pill}">${agent.risk_label}</span>
+                        </div>
+                        <div class="agent-card-stats">
+                            <div class="acs"><div class="acs-val ${color}">${agent.win_rate || 0}%</div><div class="acs-lbl">Win Rate</div></div>
+                            <div class="acs"><div class="acs-val">${agent.trades || 0}</div><div class="acs-lbl">Trades</div></div>
+                            <div class="acs"><div class="acs-val ${color}">${agent.roi_30d || '0.00%'}</div><div class="acs-lbl">24h Signal</div></div>
+                        </div>
+                        <div class="agent-card-allocation">
+                            <div>
+                                <div class="agent-alloc-label">USDC allocated</div>
+                                <div class="agent-alloc-value">${fmtUsdc(allocated)} USDC</div>
+                                <div style="font-size:11px;color:var(--muted);margin-top:4px;">Stop-loss: ${stopLoss.toFixed(1)}%</div>
+                            </div>
+                            ${allocated > 0 ? `<button class="btn btn-outline agent-detach-btn" type="button" onclick="detachAgent('${agent.id}', event)">Detach</button>` : `<span class="pill pill-amber" style="font-size:10px;">${statusText}</span>`}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
 
 	        function renderFeed(feed) {
 	            const container = document.getElementById('feedContainer');
 	            if (!container) return;
 	            container.innerHTML = feed.map(item => {
 	                const tagClass = item.action === 'BUY' ? 'tag-buy' : item.action === 'SELL' ? 'tag-sell' : 'tag-hold';
+	                const txLabel = item.tx_id ? `${String(item.tx_id).slice(0, 10)}...` : 'No tx id';
+	                const feedType = item.type === 'post' ? 'Agent Commentary' : 'Trade Execution';
+	                const timeLabel = `${timeAgo(item.timestamp)}${item.type === 'post' ? ' · social' : ''}`;
+	                const copyHandler = item.agent_id ? `copyFeedAgent('${String(item.agent_id).replace(/'/g, "\\'")}')` : `navigate('home', document.querySelector('.nav-item'))`;
 	                return `
 	                    <div class="feed-post">
+	                        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">
+	                            <span>${feedType}</span>
+	                            <span>${txLabel}</span>
+	                        </div>
 	                        <div class="post-header">
 	                            <div class="post-avatar">${item.avatar || '🐋'}</div>
 	                            <div class="post-meta">
 	                                <div class="post-agent">${item.agent}</div>
-	                                <div class="post-time">${timeAgo(item.timestamp)}</div>
+	                                <div class="post-time">${timeLabel}</div>
 	                            </div>
 	                            <div class="post-action-tag ${tagClass}">${item.action}</div>
 	                        </div>
@@ -2674,7 +4214,7 @@
 	                                <div class="reaction-btn" onclick="react(this,'👍')">👍 0</div>
 	                                <div class="reaction-btn" onclick="react(this,'🔥')">🔥 0</div>
 	                            </div>
-	                            <div class="copy-from-feed" onclick="navigate('home', document.querySelector('.nav-item'))">Copy Trade →</div>
+	                            <div class="copy-from-feed" onclick="${copyHandler}">Copy Trade →</div>
 	                        </div>
 	                    </div>
 	                `;
@@ -2746,6 +4286,8 @@
                 if (killToggle) killToggle.classList.toggle('on', settings.kill_switch === '1');
                 if (alertToggle) alertToggle.classList.toggle('on', settings.trade_alerts === '1');
                 if (summaryToggle) summaryToggle.classList.toggle('on', settings.daily_summary === '1');
+                updateNotificationReminder(settings.notification_reminder || '');
+                updateAccountStatus(settings);
             } catch (err) {
                 log('Failed to load settings', 'error');
             }
@@ -2755,14 +4297,85 @@
             const isActive = el.classList.contains('on');
             const newValue = isActive ? '0' : '1';
             el.classList.toggle('on');
-	            await apiFetch(`/settings/${key}?value=${newValue}`, { method: 'POST' });
-            showToast(`${key.replace('_', ' ')} ${newValue === '1' ? 'enabled' : 'disabled'}`);
+            try {
+                const res = await apiFetch(`/settings/${key}?value=${newValue}`, { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Setting update failed');
+                dashboardCache.preferences = dashboardCache.preferences || {};
+                dashboardCache.preferences[key] = newValue === '1';
+                updateNotificationReminder(data.notification_reminder || '');
+                showToast(`${key.replace('_', ' ')} ${newValue === '1' ? 'enabled' : 'disabled'}`);
+                if (newValue === '1' && data.notification_reminder) {
+                    showToast(data.notification_reminder);
+                }
+            } catch (err) {
+                el.classList.toggle('on');
+                showToast(err.message || 'Could not update setting');
+            }
         }
 
         // ── Updated Toggles ──
         function toggleKill() { toggleSetting('kill_switch', document.getElementById('killToggle')); }
         function toggleAlerts() { toggleSetting('trade_alerts', document.getElementById('alertToggle')); }
         function toggleSummary() { toggleSetting('daily_summary', document.getElementById('summaryToggle')); }
+
+        function updateAccountStatus(settings = {}) {
+            const profile = dashboardCache.profile || {};
+            const contactEmail = _safeContactEmail(profile.email);
+            const emailStatus = contactEmail ? `Email connected: ${contactEmail}` : 'Email not connected';
+            const telegramStatus = profile.telegram_chat_id ? 'Telegram connected' : 'Telegram not connected';
+            const notifications = [
+                settings.trade_alerts === '1' || settings.trade_alerts === true ? 'Trade alerts on' : 'Trade alerts off',
+                settings.daily_summary === '1' || settings.daily_summary === true ? 'Daily summary on' : 'Daily summary off',
+            ].join(' · ');
+            const contactEl = document.getElementById('accountContactStatus');
+            const notifEl = document.getElementById('accountNotificationStatus');
+            if (contactEl) contactEl.textContent = `${emailStatus} · ${telegramStatus}`;
+            if (notifEl) notifEl.textContent = notifications;
+        }
+
+        async function submitAssistantCommand() {
+            const input = document.getElementById('assistantCommandInput');
+            const command = String(input?.value || '').trim();
+            if (!command) {
+                showToast('Enter a question or command');
+                return;
+            }
+            ensureAssistantChat();
+            if (input) input.value = '';
+            _assistantBubble('user', 'You', command);
+            const typing = _assistantTypingBubble();
+            try {
+                const res = await apiFetch('/assistant/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command, ..._assistantContext() }),
+                });
+                const data = await res.json();
+                if (!res.ok || (!['success', 'skipped', 'unsupported', 'needs_input'].includes(data.status))) {
+                    throw new Error(data.detail || data.reply || data.message || 'Assistant request failed');
+                }
+                if (typing?.parentNode) typing.parentNode.removeChild(typing);
+                _assistantBubble('bot', 'MCP Agent', data.reply || 'Done');
+                renderAssistantSuggestions(data.suggestions || []);
+                if (data.status === 'success') {
+                    showToast('Assistant updated');
+                    await refreshWalletStats();
+                } else {
+                    showToast('Assistant replied');
+                }
+            } catch (err) {
+                if (typing?.parentNode) typing.parentNode.removeChild(typing);
+                _assistantBubble('bot', 'MCP Agent', err.message || 'Assistant request failed');
+                renderAssistantSuggestions();
+            }
+        }
+
+        function fillAssistantPrompt(text) {
+            const input = document.getElementById('assistantCommandInput');
+            if (input) input.value = text;
+            submitAssistantCommand();
+        }
 
         // ── Deposit Modal ──
         async function handleDeposit() {
@@ -3189,39 +4802,55 @@
         // ── Copy Toggle ──
         let isCopying = false;
         async function toggleFollow() {
-            isCopying = !isCopying;
             const toggle = document.getElementById('copyToggle');
             const status = document.getElementById('copyStatus');
-            toggle.classList.toggle('on', isCopying);
-
+            const activeAgent = _selectedAgentProfile();
+            const agentId = selectedAgentId || 'Conservative_Whale';
             const alloc = document.getElementById('allocInput').value;
-	            const tgUser = currentUsername() || 'BrowserTester';
+            const stopLoss = document.getElementById('stopLossInput').value;
+            const tgUser = currentUsername() || 'BrowserTester';
 
-            if (isCopying) {
-                status.textContent = `Connecting to Node...`;
+            if (!activeAgent || Number(activeAgent.allocated_usdc || 0) <= 0) {
+                if (status) status.textContent = `Connecting to Node...`;
                 log(`Establishing secure link for @${tgUser}...`, 'sys');
                 try {
-	                    const response = await apiFetch('/follow', {
+                    const response = await apiFetch('/follow', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username: tgUser, allocation: parseFloat(alloc), asset: activeAsset, referral_code: referralCode() || null, agent_id: 'Conservative_Whale' })
+                        body: JSON.stringify({
+                            username: tgUser,
+                            allocation: parseFloat(alloc),
+                            asset: activeAsset,
+                            stop_loss_pct: parseFloat(stopLoss || '10'),
+                            referral_code: referralCode() || null,
+                            agent_id: agentId
+                        })
                     });
-	                    const data = await response.json();
-	                    if (!response.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Follow failed');
-	                    status.textContent = `Active · ${alloc} USDC allocated`;
-	                    log(`Copy-trading ENABLED — ${alloc} USDC on ${activeAsset}`, 'action');
-	                    showToast('Copy-trading activated ✓');
-	                    refreshDashboard();
+                    const data = await response.json();
+                    if (!response.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Follow failed');
+                    log(`Copy-trading ENABLED — ${alloc} USDC on ${activeAsset} with ${activeAgent?.name || agentId}`, 'action');
+                    showToast(`Now copying ${activeAgent?.name || 'selected agent'} ✓`);
+                    await refreshDashboard();
                 } catch (err) {
-	                    log(`ERROR: ${err.message || 'Could not reach execution node.'}`, 'error');
-                    status.textContent = 'Connection Failed';
-                    toggle.classList.remove('on');
-                    isCopying = false;
+                    log(`ERROR: ${err.message || 'Could not reach execution node.'}`, 'error');
+                    if (status) status.textContent = 'Connection Failed';
                 }
             } else {
-                status.textContent = 'Currently paused';
-                log('Copy-trading paused. Link severed.', 'warn');
-                showToast('Copy-trading paused');
+                if (!agentId) return;
+                try {
+                    const response = await apiFetch('/agents/detach', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ agent_id: agentId })
+                    });
+                    const data = await response.json();
+                    if (!response.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Detach failed');
+                    log(`Copy-trading paused for ${activeAgent?.name || agentId}.`, 'warn');
+                    showToast(`Detached from ${activeAgent?.name || 'selected agent'}`);
+                    await refreshDashboard();
+                } catch (err) {
+                    log(`ERROR: ${err.message || 'Could not detach copy link.'}`, 'error');
+                }
             }
         }
 
@@ -3230,15 +4859,15 @@
             log(`Forcing market check on ${activeAsset}...`, 'action');
             showToast('AI Pipeline awakened...');
             try {
-	                const tgUser = currentUsername();
-	                const options = tgUser
-	                    ? {
-	                        method: 'POST',
-	                        headers: { 'Content-Type': 'application/json' },
-	                        body: JSON.stringify({ username: tgUser, agent_id: 'Conservative_Whale' })
-	                    }
-	                    : { method: 'POST' };
-	                const res = await apiFetch('/trigger-trade', options);
+		                const tgUser = currentUsername();
+		                const options = tgUser
+		                    ? {
+		                        method: 'POST',
+		                        headers: { 'Content-Type': 'application/json' },
+		                        body: JSON.stringify({ username: tgUser, agent_id: selectedAgentId || 'Conservative_Whale' })
+		                    }
+		                    : { method: 'POST' };
+		                const res = await apiFetch('/trigger-trade', options);
                 const data = await res.json();
 	                if (data.status === 'success' || data.status === 'hold') {
 	                    if (data.status === 'hold' || data.action === "HOLD") {
@@ -3271,10 +4900,14 @@
         let modalAgent = {};
         function openCopyModal(icon, name, risk, wr, trades, followers, id = 'Conservative_Whale') {
             modalAgent = { icon, name, risk, id };
+            setSelectedAgent(id);
             document.getElementById('modalTitle').textContent = `Copy ${name}`;
             document.getElementById('modalIcon').textContent = icon;
             document.getElementById('modalAgentName').textContent = name;
             document.getElementById('modalRisk').textContent = `${risk} risk · ${wr} win rate · ${trades} trades`;
+            const modalStopLoss = document.getElementById('modalStopLoss');
+            const homeStopLoss = document.getElementById('stopLossInput');
+            if (modalStopLoss && homeStopLoss) modalStopLoss.value = homeStopLoss.value || modalStopLoss.value;
             document.getElementById('modalStep1').style.display = 'block';
             document.getElementById('modalStep2').style.display = 'none';
             document.getElementById('step1').classList.add('done');
@@ -3284,10 +4917,10 @@
         function closeModal(e) { if (e.target.id === 'copyModal') document.getElementById('copyModal').classList.remove('open'); }
         function nextStep() {
             const alloc = document.getElementById('modalAlloc').value;
-            const stop = document.getElementById('modalStop').value;
+            const stopLoss = document.getElementById('modalStopLoss').value;
             document.getElementById('confirmAlloc').textContent = alloc;
             document.getElementById('confirmAgent').textContent = modalAgent.name;
-            document.getElementById('confirmStop').textContent = stop;
+            document.getElementById('confirmStopLoss').textContent = Number(stopLoss || 0).toFixed(1);
             document.getElementById('modalStep1').style.display = 'none';
             document.getElementById('modalStep2').style.display = 'block';
             document.getElementById('step2').classList.add('done');
@@ -3297,14 +4930,27 @@
             document.getElementById('modalStep2').style.display = 'none';
             document.getElementById('step2').classList.remove('done');
         }
+
+        function copyFeedAgent(agentId) {
+            const agent = (dashboardCache.agents || []).find(item => item.id === agentId);
+            if (!agent) {
+                showToast('Agent details unavailable');
+                return;
+            }
+            setSelectedAgent(agent.id);
+            openCopyModal(agent.avatar, agent.name, agent.risk_label, `${agent.win_rate || 0}%`, `${agent.trades || 0}`, fmtCount(agent.followers), agent.id);
+            navigate('market', document.querySelector('.nav-item:nth-child(2)'));
+        }
+
 	        async function confirmCopy() {
 	            const alloc = parseFloat(document.getElementById('modalAlloc').value || '0');
+	            const stopLoss = parseFloat(document.getElementById('modalStopLoss').value || '10');
 	            const tgUser = currentUsername() || 'BrowserTester';
 	            try {
 	                const res = await apiFetch('/follow', {
 	                    method: 'POST',
 	                    headers: { 'Content-Type': 'application/json' },
-	                    body: JSON.stringify({ username: tgUser, allocation: alloc, asset: activeAsset, referral_code: referralCode() || null, agent_id: modalAgent.id })
+	                    body: JSON.stringify({ username: tgUser, allocation: alloc, asset: activeAsset, stop_loss_pct: stopLoss, referral_code: referralCode() || null, agent_id: modalAgent.id })
 	                });
 	                const data = await res.json();
 	                if (!res.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Copy failed');
@@ -3344,6 +4990,8 @@
             toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
         }
 
+        syncLayoutShell();
+        window.addEventListener('resize', syncLayoutShell);
         ensureWalletForCurrentUser().finally(refreshDashboard);
         setInterval(refreshDashboard, 30000);
     </script>

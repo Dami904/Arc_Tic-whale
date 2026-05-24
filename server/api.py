@@ -2,10 +2,12 @@ import os
 import hmac
 import hashlib
 import json as _json
+import re
 import urllib.parse
 import random
 import time
 from pathlib import Path
+from contextlib import asynccontextmanager
 from typing import Optional
 
 import jwt as _jwt
@@ -17,27 +19,41 @@ from pydantic import BaseModel
 from backend.database import (
     add_follower,
     add_referral_reward,
+    deactivate_follower,
+    get_all_users,
     get_follower_by_wallet_id,
     get_follower_wallet,
     get_follower_summary,
+    get_follower_trade_history,
     get_referral_summary,
     get_setting,
     get_trade_history,
     get_trade_metrics,
+    get_latest_trade,
+    get_social_posts,
     get_user,
+    get_user_allocations,
+    get_user_preferences,
     init_db,
     log_trade,
     set_setting,
+    set_user_preferences,
+    update_user_profile,
 )
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from backend.market_data import get_current_market_state
+from backend.daily_summary import start_daily_summary_scheduler, send_daily_summary_reports
+from backend.assistant import handle_assistant_command
+from backend.notifications import build_notification_reminder, user_has_notification_channel
 from backend.trade_service import run_trade_cycle
 from backend.trade_executor import execute_transfer
+from backend.copy_engine import evaluate_stop_losses
 from backend.agents import get_agent_catalog, get_agent_profile
 from backend.user_wallets import ensure_user_wallet, normalize_user_id
+from backend.wallet_summary import get_wallet_stats_safe
 from backend.wallet_manager import initialize_circle_client
 from circle.web3.developer_controlled_wallets.api import TransactionsApi, WalletsApi
 from backend.config import (
@@ -59,11 +75,20 @@ from backend.logger import get_logger
 
 log = get_logger("api")
 
+_WALLET_ADDRESS_RE = re.compile(r"0x[a-fA-F0-9]{12,}")
+
 init_db()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_daily_summary_scheduler()
+    yield
+
 
 app = FastAPI(
     title="Arc_Tic Whale",
     description="AI-driven copy-trading app on Circle Arc Testnet.",
+    lifespan=lifespan,
 )
 
 limiter = Limiter(key_func=get_remote_address)
@@ -154,11 +179,15 @@ class FollowRequest(BaseModel):
     allocation: float
     asset: str
     referral_code: Optional[str] = None
+    stop_loss_pct: Optional[float] = 10.0
     agent_id: str = "Conservative_Whale"
 
 class EnsureUserRequest(BaseModel):
     username: str
     referral_code: Optional[str] = None
+    email: Optional[str] = None
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 class WithdrawRequest(BaseModel):
     destination_address: str
@@ -184,10 +213,34 @@ class MarketDataResponse(BaseModel):
     assets: dict
     macro_news: str
 
+class UpdateProfileRequest(BaseModel):
+    email: Optional[str] = None
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+class UpdatePreferencesRequest(BaseModel):
+    trade_alerts: Optional[bool] = None
+    daily_summary: Optional[bool] = None
+
+class DetachRequest(BaseModel):
+    agent_id: str
+
+class AssistantCommandRequest(BaseModel):
+    command: str
+    page: Optional[str] = None
+    selected_agent: Optional[str] = None
+
 # --- API Endpoints ---
 AGENT_NAME = "Conservative_Whale"
 TRADE_ACTIONS = {"BUY", "SELL", "HOLD"}
 WALLET_ACTIONS = {"DEPOSIT", "WITHDRAW"}
+
+
+def _parse_percent(value: object) -> float:
+    try:
+        return float(str(value or "0").replace("%", "").replace("+", "").strip())
+    except ValueError:
+        return 0.0
 
 
 def _wallet_from_response(response):
@@ -228,17 +281,8 @@ def _lookup_wallet_address(wallet_id: Optional[str]) -> Optional[str]:
 def get_active_wallet_context(username: Optional[str] = None) -> dict:
     user_id = normalize_user_id(username) if username else None
     user_wallet = get_user(user_id) if user_id else None
-    follower_wallet = get_follower_wallet(AGENT_NAME, user_id) if user_id else None
-    wallet_id = (
-        follower_wallet["user_wallet_id"]
-        if follower_wallet else user_wallet["wallet_id"]
-        if user_wallet else AGENT_WALLET_ID
-    )
-    wallet_address = (
-        follower_wallet.get("user_wallet_address")
-        if follower_wallet else AGENT_WALLET_ADDRESS
-        if not user_wallet else user_wallet["wallet_address"]
-    )
+    wallet_id = user_wallet["wallet_id"] if user_wallet else AGENT_WALLET_ID
+    wallet_address = user_wallet["wallet_address"] if user_wallet else AGENT_WALLET_ADDRESS
     if not wallet_address and wallet_id == AGENT_WALLET_ID:
         wallet_address = AGENT_WALLET_ADDRESS
     if not wallet_address:
@@ -247,9 +291,77 @@ def get_active_wallet_context(username: Optional[str] = None) -> dict:
     return {
         "wallet_id": wallet_id,
         "address": wallet_address,
-        "source": "user" if follower_wallet or user_wallet else "configured_agent_wallet",
-        "follower": follower_wallet,
+        "source": "user" if user_wallet else "configured_agent_wallet",
         "user": user_wallet,
+        "allocations": get_user_allocations(user_id) if user_id else [],
+    }
+
+
+def _agent_status(profile: dict) -> dict:
+    latest_trade = get_latest_trade(profile["id"])
+    if not latest_trade:
+        return {
+            "label": "Ready to trade",
+            "detail": "No live trades yet",
+            "action": None,
+            "asset": None,
+            "timestamp": None,
+        }
+
+    action = latest_trade.get("action") or "HOLD"
+    asset = latest_trade.get("asset") or "market"
+    timestamp = latest_trade.get("timestamp")
+    if action == "HOLD":
+        label = "Watching the market"
+        detail = latest_trade.get("reason") or "Waiting for a clean setup"
+    else:
+        label = f"{action} {asset}"
+        detail = latest_trade.get("reason") or "Latest executed trade"
+    return {
+        "label": label,
+        "detail": _WALLET_ADDRESS_RE.sub("0x[redacted]", str(detail or "")),
+        "action": action,
+        "asset": asset,
+        "timestamp": timestamp,
+    }
+
+
+def _build_feed_entry_from_trade(trade: dict, agent_lookup: dict[str, dict]) -> dict:
+    agent_id = trade.get("agent", AGENT_NAME)
+    profile = agent_lookup.get(agent_id, {"name": agent_id, "avatar": "🤖"})
+    action = trade.get("action") or "HOLD"
+    asset = trade.get("asset") or "market"
+    reason = _WALLET_ADDRESS_RE.sub("0x[redacted]", str(trade.get("reason") or "No reason recorded."))
+    return {
+        "type": "trade",
+        "agent_id": agent_id,
+        "agent": profile["name"],
+        "avatar": profile["avatar"],
+        "action": action,
+        "asset": asset,
+        "timestamp": trade.get("timestamp"),
+        "body": f"{action} {asset}: {reason}",
+        "tx_id": trade.get("tx_id"),
+        "reason": reason,
+    }
+
+
+def _build_feed_entry_from_social(post: dict, agent_lookup: dict[str, dict]) -> dict:
+    agent_id = post.get("agent", AGENT_NAME)
+    profile = agent_lookup.get(agent_id, {"name": agent_id, "avatar": "🤖"})
+    action = post.get("action") or "HOLD"
+    body = _WALLET_ADDRESS_RE.sub("0x[redacted]", str(post.get("post_text") or post.get("reason") or "Agent commentary unavailable."))
+    return {
+        "type": "post",
+        "agent_id": agent_id,
+        "agent": profile["name"],
+        "avatar": profile["avatar"],
+        "action": action,
+        "asset": None,
+        "timestamp": post.get("timestamp"),
+        "body": body,
+        "tx_id": post.get("tx_id"),
+        "reason": _WALLET_ADDRESS_RE.sub("0x[redacted]", str(post.get("reason") or "")),
     }
 
 
@@ -274,7 +386,11 @@ def _circle_transaction_items(response) -> list[dict]:
 
 
 def get_wallet_activity(wallet_id: Optional[str], agent: Optional[str], limit: int = 20) -> list[dict]:
-    local_activity = get_trade_history(limit=limit, agent=agent, actions=WALLET_ACTIONS)
+    local_activity = (
+        get_follower_trade_history(wallet_id, limit=limit, actions=WALLET_ACTIONS)
+        if wallet_id and agent is None
+        else get_trade_history(limit=limit, agent=agent, actions=WALLET_ACTIONS)
+    )
     circle_activity = []
 
     if wallet_id and not TRADE_DRY_RUN:
@@ -332,7 +448,13 @@ def read_root():
 @app.post("/users/ensure")
 @limiter.limit(lambda: f"{RATE_LIMIT_PER_MINUTE}/minute")
 def ensure_user(request: Request, req: EnsureUserRequest):
-    wallet = ensure_user_wallet(req.username, referral_code=req.referral_code)
+    wallet = ensure_user_wallet(
+        req.username,
+        referral_code=req.referral_code,
+        email=req.email,
+        display_name=req.display_name,
+        avatar_url=req.avatar_url,
+    )
     if not wallet:
         return {"status": "error", "message": "Failed to create or load user wallet."}
     return {
@@ -340,6 +462,45 @@ def ensure_user(request: Request, req: EnsureUserRequest):
         "user": wallet,
         "referrals": get_referral_summary(wallet["user_id"]),
         "live_transactions": not TRADE_DRY_RUN,
+    }
+
+
+@app.get("/user/profile")
+def get_profile(current_user_id: str = Depends(verify_privy_token)):
+    user_id = normalize_user_id(current_user_id)
+    user = get_user(user_id)
+    if not user:
+        return {"status": "error", "message": "User not found."}
+    return {
+        "status": "success",
+        "profile": user,
+        "reminder": build_notification_reminder(user),
+        "channels": {
+            "email": bool(user.get("email")),
+            "telegram": bool(user.get("telegram_chat_id")),
+        },
+    }
+
+
+@app.put("/user/profile")
+def update_profile(req: UpdateProfileRequest, current_user_id: str = Depends(verify_privy_token)):
+    user = update_user_profile(
+        current_user_id,
+        email=req.email.strip().lower() if req.email else None,
+        display_name=req.display_name.strip() if req.display_name else None,
+        avatar_url=req.avatar_url.strip() if req.avatar_url else None,
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    reminder = build_notification_reminder(user)
+    return {
+        "status": "success",
+        "profile": user,
+        "reminder": reminder,
+        "channels": {
+            "email": bool(user.get("email")),
+            "telegram": bool(user.get("telegram_chat_id")),
+        },
     }
 
 @app.get("/referrals")
@@ -405,27 +566,44 @@ def record_referral_profit(request: Request, req: ProfitRequest, _: str = Depend
 @app.get("/trade-history")
 def get_history(username: Optional[str] = None):
     wallet = get_active_wallet_context(username)
-    agent = f"Follower:{wallet['wallet_id']}" if wallet["source"] == "user" else None
-    return {"trades": get_trade_history(limit=10, agent=agent, actions=TRADE_ACTIONS)}
+    if wallet["source"] == "user":
+        return {"trades": get_follower_trade_history(wallet["wallet_id"], limit=10, actions=TRADE_ACTIONS)}
+    return {"trades": get_trade_history(limit=10, agent=AGENT_NAME, actions=TRADE_ACTIONS)}
 
 @app.get("/dashboard")
 def get_dashboard(username: Optional[str] = None):
+    for profile in get_agent_catalog():
+        try:
+            evaluate_stop_losses(profile["id"])
+        except Exception as exc:
+            log.warning("Stop loss evaluation failed for %s: %s", profile["id"], exc)
     wallet = get_active_wallet_context(username)
-    stats = get_wallet_stats(wallet_id=wallet["wallet_id"])
+    stats = get_wallet_stats_safe(wallet["wallet_id"])
     trades = get_trade_history(limit=20, actions=TRADE_ACTIONS)
-    history_agent = f"Follower:{wallet['wallet_id']}" if wallet["source"] == "user" else None
+    social_posts = get_social_posts(limit=20)
     wallet_trades = (
-        get_trade_history(limit=20, agent=history_agent, actions=TRADE_ACTIONS)
+        get_follower_trade_history(wallet["wallet_id"], limit=20, actions=TRADE_ACTIONS)
         if wallet["source"] == "user"
-        else trades
+        else get_trade_history(limit=20, agent=AGENT_NAME, actions=TRADE_ACTIONS)
     )
-    wallet_activity = get_wallet_activity(wallet["wallet_id"], history_agent, limit=20)
+    wallet_activity = get_wallet_activity(wallet["wallet_id"], AGENT_NAME if wallet["source"] != "user" else None, limit=20)
     metrics = get_trade_metrics(AGENT_NAME)
     followers = get_follower_summary(AGENT_NAME)
+    dashboard_user = wallet.get("user") or {}
+    user_id = dashboard_user.get("user_id")
+    preferences = get_user_preferences(user_id) if user_id else {"trade_alerts": 1, "daily_summary": 1}
     agent_cards = []
+    agent_lookup = {profile["id"]: profile for profile in get_agent_catalog()}
     for profile in get_agent_catalog():
         agent_metrics = get_trade_metrics(profile["id"])
         agent_followers = get_follower_summary(profile["id"])
+        user_allocation = 0.0
+        user_allocation_row = None
+        if user_id:
+            user_allocation_row = get_follower_wallet(profile["id"], user_id)
+            if user_allocation_row:
+                user_allocation = float(user_allocation_row.get("allocation_amount") or 0.0)
+        status = _agent_status(profile)
         agent_cards.append({
             "id": profile["id"],
             "name": profile["name"],
@@ -437,36 +615,32 @@ def get_dashboard(username: Optional[str] = None):
             "trades": agent_metrics["total_trades"],
             "followers": agent_followers["total_followers"],
             "roi_30d": stats["performance"].get("24h", "0.00%"),
+            "allocated_usdc": user_allocation,
+            "has_allocation": bool(user_allocation_row),
+            "stop_loss_pct": float(user_allocation_row.get("stop_loss_pct") or 10.0) if user_allocation_row else 10.0,
+            "status": status["label"],
+            "status_detail": status["detail"],
+            "last_action": status["action"],
+            "last_asset": status["asset"],
+            "last_trade_at": status["timestamp"],
         })
 
     total_balance = stats["total_balance_usd"]
-    if wallet["follower"]:
-        allocated = float(wallet["follower"]["allocation_amount"])
-    elif wallet["source"] == "user":
-        allocated = 0.0
+    if wallet["source"] == "user":
+        allocated = sum(float(row.get("allocation_amount") or 0.0) for row in wallet["allocations"])
     else:
         allocated = followers["total_allocation"]
     free_balance = max(0.0, total_balance - allocated)
     allocation_pct = round((allocated / total_balance) * 100, 1) if total_balance else 0.0
-
-    agent_lookup = {a["id"]: a for a in get_agent_catalog()}
+    pnl_pct = _parse_percent(stats["performance"].get("24h"))
+    pnl_amount = round(total_balance * (pnl_pct / 100.0), 2)
 
     feed = []
+    for post in social_posts[:10]:
+        feed.append(_build_feed_entry_from_social(post, agent_lookup))
     for trade in trades[:10]:
-        action = trade["action"]
-        asset = trade.get("asset") or "market"
-        reason = trade.get("reason") or "No reason recorded."
-        agent_id = trade.get("agent", AGENT_NAME)
-        profile = agent_lookup.get(agent_id, {"name": agent_id, "avatar": "🤖"})
-        feed.append({
-            "agent": profile["name"],
-            "avatar": profile["avatar"],
-            "action": action,
-            "asset": asset,
-            "timestamp": trade["timestamp"],
-            "body": f"{action} {asset}: {reason}",
-            "tx_id": trade.get("tx_id"),
-        })
+        feed.append(_build_feed_entry_from_trade(trade, agent_lookup))
+    feed = sorted(feed, key=lambda item: item.get("timestamp") or "", reverse=True)[:10]
 
     if not feed:
         feed.append({
@@ -477,17 +651,32 @@ def get_dashboard(username: Optional[str] = None):
             "timestamp": None,
             "body": "No agent decisions recorded yet. Trigger a market check to populate the live feed.",
             "tx_id": None,
+            "type": "trade",
+            "agent_id": AGENT_NAME,
         })
 
-    _dashboard_user = wallet.get("user") or {}
-    _dashboard_uid = _dashboard_user.get("user_id")
-
     return {
+        "profile": {
+            "user_id": user_id,
+            "display_name": dashboard_user.get("display_name") or dashboard_user.get("email") or dashboard_user.get("user_id") or "Member",
+            "avatar_url": dashboard_user.get("avatar_url") or "",
+            "email": dashboard_user.get("email") or "",
+            "telegram_chat_id": dashboard_user.get("telegram_chat_id") or "",
+            "member_since": dashboard_user.get("created_at") or "",
+        },
+        "preferences": {
+            "trade_alerts": bool(preferences.get("trade_alerts")),
+            "daily_summary": bool(preferences.get("daily_summary")),
+        },
         "wallet": {
             "wallet_id": wallet["wallet_id"],
             "total_balance_usd": total_balance,
             "token_balances": stats["token_balances"],
             "performance": stats["performance"],
+            "portfolio_pnl": {
+                "amount": pnl_amount,
+                "pct": pnl_pct,
+            },
             "address": wallet["address"],
             "source": wallet["source"],
             "live_transactions": not TRADE_DRY_RUN,
@@ -504,23 +693,64 @@ def get_dashboard(username: Optional[str] = None):
         "feed": feed,
         "trades": wallet_trades,
         "transactions": wallet_activity,
-        "referrals": get_referral_summary(_dashboard_uid) if _dashboard_uid else None,
+        "referrals": get_referral_summary(user_id) if user_id else None,
+        "notification_reminder": build_notification_reminder(dashboard_user),
+        "notification_channels": {
+            "email": bool(dashboard_user.get("email")),
+            "telegram": bool(dashboard_user.get("telegram_chat_id")),
+        },
     }
 
 @app.get("/settings")
-def get_app_settings():
+def get_app_settings(current_user_id: str = Depends(verify_privy_token)):
+    user = get_user(normalize_user_id(current_user_id))
+    prefs = get_user_preferences(user["user_id"]) if user else {"trade_alerts": 1, "daily_summary": 1}
     return {
         "kill_switch": get_setting("kill_switch"),
-        "trade_alerts": get_setting("trade_alerts"),
-        "daily_summary": get_setting("daily_summary")
+        "trade_alerts": str(int(prefs.get("trade_alerts") or 0)),
+        "daily_summary": str(int(prefs.get("daily_summary") or 0)),
+        "notification_reminder": build_notification_reminder(user),
+        "notification_channels": {
+            "email": bool(user and user.get("email")),
+            "telegram": bool(user and user.get("telegram_chat_id")),
+        },
     }
 
 @app.post("/settings/{key}")
-def update_setting(key: str, value: str, _: str = Depends(verify_privy_token)):
+def update_setting(key: str, value: str, current_user_id: str = Depends(verify_privy_token)):
     if key not in ["kill_switch", "trade_alerts", "daily_summary"]:
         raise HTTPException(status_code=400, detail="Invalid setting")
-    set_setting(key, value)
-    return {"status": "success"}
+    if key == "kill_switch":
+        set_setting(key, value)
+    else:
+        user_id = normalize_user_id(current_user_id)
+        set_user_preferences(user_id, **{key: value})
+    user = get_user(normalize_user_id(current_user_id))
+    return {
+        "status": "success",
+        "kill_switch": get_setting("kill_switch"),
+        "trade_alerts": str(int((user or {}).get("trade_alerts") or 0)),
+        "daily_summary": str(int((user or {}).get("daily_summary") or 0)),
+        "notification_reminder": build_notification_reminder(user),
+        "notification_channels": {
+            "email": bool(user and user.get("email")),
+            "telegram": bool(user and user.get("telegram_chat_id")),
+        },
+    }
+
+@app.post("/assistant/command")
+def assistant_command(req: AssistantCommandRequest, current_user_id: str = Depends(verify_privy_token)):
+    user_id = normalize_user_id(current_user_id)
+    ensure_user_wallet(user_id)
+    result = handle_assistant_command(
+        user_id,
+        req.command,
+        context={
+            "page": req.page,
+            "selected_agent": req.selected_agent,
+        },
+    )
+    return result
 
 @app.post("/deposit")
 def deposit(username: Optional[str] = None, _: str = Depends(verify_privy_token)):
@@ -564,7 +794,7 @@ def withdraw(req: Optional[WithdrawRequest] = None, _: str = Depends(verify_priv
         action="WITHDRAW",
         asset=req.asset.upper(),
         tx_id=tx_id,
-        reason=f"Transfer to {req.destination_address}",
+        reason="Transfer submitted",
     )
 
     return {
@@ -578,55 +808,7 @@ def withdraw(req: Optional[WithdrawRequest] = None, _: str = Depends(verify_priv
 
 @app.get("/stats", response_model=WalletStats)
 def get_wallet_stats(wallet_id: Optional[str] = None):
-    token_balances = []
-    total_balance_usd = 0.0
-    target_wallet_id = wallet_id or AGENT_WALLET_ID
-
-    try:
-        if not target_wallet_id:
-            raise ValueError("No wallet id configured")
-        client = initialize_circle_client()
-        wallets_api = WalletsApi(client)
-        balances_response = wallets_api.list_wallet_balance(id=target_wallet_id)
-
-        if balances_response.data and balances_response.data.token_balances:
-            token_balances = [
-                {
-                    "symbol": tb.token.symbol,
-                    "name": tb.token.name,
-                    "amount": tb.amount,
-                    "decimals": tb.token.decimals
-                }
-                for tb in balances_response.data.token_balances
-            ]
-            for tb in balances_response.data.token_balances:
-                if tb.token.symbol == "USDC":
-                    total_balance_usd += float(tb.amount)
-    except Exception as e:
-        log.warning("Circle API error", error=str(e))
-        if TRADE_DRY_RUN:
-            follower = get_follower_by_wallet_id(AGENT_NAME, target_wallet_id)
-            summary = get_follower_summary(AGENT_NAME)
-            total_balance_usd = float(
-                follower["allocation_amount"]
-                if follower else summary["total_allocation"] or 0.0
-            )
-            if total_balance_usd:
-                token_balances = [{
-                    "symbol": "USDC",
-                    "name": "USD Coin",
-                    "amount": str(total_balance_usd),
-                    "decimals": 6,
-                }]
-
-    eth_performance_data = get_current_market_state().get("ETH", {})
-    performance = {
-        "24h": eth_performance_data.get("24H_CHANGE", "0.00%"),
-        "7d": eth_performance_data.get("7D_CHANGE", "0.00%"),
-        "1y": eth_performance_data.get("1Y_CHANGE", "0.00%")
-    }
-
-    return {"total_balance_usd": total_balance_usd, "token_balances": token_balances, "performance": performance}
+    return get_wallet_stats_safe(wallet_id or AGENT_WALLET_ID)
 
 @app.get("/market-data", response_model=MarketDataResponse)
 @limiter.limit(lambda: f"{RATE_LIMIT_PER_MINUTE}/minute")
@@ -873,6 +1055,7 @@ def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_p
         allocation_amount=req.allocation,
         asset=req.asset,
         user_wallet_address=real_wallet_address,
+        stop_loss_pct=req.stop_loss_pct,
     )
 
     return {
@@ -881,7 +1064,23 @@ def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_p
         "wallet_id": real_wallet_id,
         "address": real_wallet_address,
         "referral_code": wallet_record.get("referral_code"),
+        "stop_loss_pct": req.stop_loss_pct,
         "agent_id": agent_id,
         "agent_name": get_agent_profile(agent_id)["name"],
         "live_transactions": not TRADE_DRY_RUN,
+    }
+
+
+@app.post("/agents/detach")
+def detach_agent(req: DetachRequest, current_user_id: str = Depends(verify_privy_token)):
+    agent_ids = {agent["id"] for agent in get_agent_catalog()}
+    if req.agent_id not in agent_ids:
+        raise HTTPException(status_code=400, detail="Invalid agent")
+    user_id = normalize_user_id(current_user_id)
+    detached = deactivate_follower(user_id, req.agent_id)
+    if not detached:
+        return {"status": "skipped", "message": "No active allocation found for this agent."}
+    return {
+        "status": "success",
+        "message": f"Detached from {req.agent_id}.",
     }
