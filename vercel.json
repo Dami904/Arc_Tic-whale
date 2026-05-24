@@ -1,10 +1,13 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "outputDirectory": "frontend",
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/static/(.*)", "destination": "/frontend/static/$1" },
-    { "source": "/auth/callback", "destination": "/frontend/callback.html" },
-    { "source": "/webapp", "destination": "/frontend/index.html" },
-    { "source": "/", "destination": "/frontend/index.html" },
-    { "source": "/(.*)", "destination": "/frontend/index.html" }
+    { "source": "/static/(.*)", "destination": "/static/$1" },
+    { "source": "/auth/callback", "destination": "/callback.html" },
+    { "source": "/webapp", "destination": "/index.html" },
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
