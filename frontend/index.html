@@ -631,6 +631,27 @@
             font-size: 20px;
         }
 
+        /* ── Prevent collapsed sidebar state from breaking mobile bottom-nav ── */
+        @media (max-width: 767px) {
+            body.nav-collapsed {
+                padding-left: 0;
+            }
+            body.nav-collapsed .bottom-nav {
+                width: 100%;
+            }
+            body.nav-collapsed .nav-item {
+                font-size: 10px;
+                gap: 4px;
+                padding: 10px 4px 8px;
+            }
+            body.nav-collapsed .nav-item .nav-label {
+                display: inline;
+            }
+            body.nav-collapsed .nav-item .nav-icon {
+                font-size: 18px;
+            }
+        }
+
         /* ── PAGE WRAPPER ── */
         .page {
             display: none;
@@ -863,7 +884,7 @@
 
         .balance-amount {
             font-family: var(--font-display);
-            font-size: 32px;
+            font-size: clamp(22px, 6vw, 32px);
             font-weight: 800;
             color: var(--cyan);
             letter-spacing: -1px;
@@ -949,6 +970,9 @@
             cursor: pointer;
             transition: all 0.2s;
             color: var(--muted-mid);
+            min-height: 36px;
+            display: inline-flex;
+            align-items: center;
         }
 
         .asset-pill.active {
@@ -1162,6 +1186,9 @@
             white-space: nowrap;
             transition: all 0.2s;
             flex-shrink: 0;
+            min-height: 36px;
+            display: inline-flex;
+            align-items: center;
         }
 
         .filter-btn.active {
@@ -1469,6 +1496,10 @@
             cursor: pointer;
             transition: all 0.2s;
             color: var(--muted-mid);
+            min-height: 36px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .reaction-btn:active {
@@ -1872,7 +1903,7 @@
 
         .pnl-chip-value {
             font-family: var(--font-display);
-            font-size: 38px;
+            font-size: clamp(26px, 8vw, 38px);
             font-weight: 800;
             line-height: 1;
             letter-spacing: -1.3px;
@@ -1935,7 +1966,7 @@
 
         .wallet-balance-main {
             font-family: var(--font-display);
-            font-size: 36px;
+            font-size: clamp(24px, 7vw, 36px);
             font-weight: 800;
             color: var(--cyan);
             letter-spacing: -1.5px;
@@ -2134,7 +2165,7 @@
             background: rgba(255,255,255,0.04);
             border: 1px solid var(--border);
             border-radius: 12px;
-            color: var(--text-primary);
+            color: var(--text);
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
@@ -2213,7 +2244,11 @@
             z-index: 300;
             opacity: 0;
             transition: all 0.3s;
-            white-space: nowrap;
+            /* prevent overflow on narrow screens */
+            max-width: calc(100vw - 32px);
+            white-space: normal;
+            word-break: break-word;
+            text-align: center;
         }
 
         .toast.show {
@@ -2358,6 +2393,21 @@
                 display: flex;
                 left: 16px;
                 top: 16px;
+            }
+
+            /* Override the narrow-screen single-column collapse now that
+               there's a sidebar giving us horizontal room */
+            .stats-row {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .agent-card-stats {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .assistant-action-row,
+            .account-status-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
 
@@ -2552,6 +2602,16 @@
                 margin-bottom: 0;
             }
         }
+
+        /* ── ACCESSIBILITY: honour reduced-motion preference ── */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
     </style>
 </head>
 
@@ -2559,13 +2619,13 @@
 
     <button class="nav-toggle" id="navToggle" type="button" aria-label="Toggle navigation"
         onclick="toggleNavPanel()">☰</button>
-    <button class="utility-toggle" id="utilityToggle" type="button" aria-label="Toggle MCP agent"
+    <button class="utility-toggle" id="utilityToggle" type="button" aria-label="Toggle Agent Wale"
         onclick="toggleUtilityPanel()">🤖</button>
     <div class="utility-backdrop" id="utilityBackdrop" onclick="toggleUtilityPanel(false)"></div>
-    <aside class="utility-panel open" id="utilityPanel" aria-label="MCP agent chatbot">
+    <aside class="utility-panel open" id="utilityPanel" aria-label="Agent Wale chatbot">
         <div class="utility-panel-head">
             <div>
-                <div class="utility-panel-title">MCP Agent</div>
+                <div class="utility-panel-title">Agent Wale</div>
                 <div class="utility-panel-sub">Chatbot for portfolio context and actions</div>
             </div>
             <button class="utility-panel-close" type="button" onclick="toggleUtilityPanel(false)">✕</button>
@@ -2573,9 +2633,9 @@
         <div class="card assistant-shell">
             <div class="assistant-head">
                 <div class="assistant-head-left">
-                    <div class="assistant-bot-icon">🤖</div>
+                    <div class="assistant-bot-icon">🐋</div>
                     <div>
-                        <div class="assistant-head-title">Arctic MCP</div>
+                        <div class="assistant-head-title">Agent Wale</div>
                         <div class="assistant-head-sub">Chat with the trading bot</div>
                     </div>
                 </div>
@@ -2586,11 +2646,9 @@
             <div class="assistant-quick-row">
                 <button class="pill pill-cyan" style="border:none;cursor:pointer;" type="button" onclick="fillAssistantPrompt('What is copy trading?')">Copy trading</button>
                 <button class="pill pill-amber" style="border:none;cursor:pointer;" type="button" onclick="fillAssistantPrompt('What is stop loss?')">Stop loss</button>
-                <button class="pill pill-red" style="border:none;cursor:pointer;" type="button" onclick="fillAssistantPrompt('What is P&L?')">P&L</button>
-                <button class="pill pill-blue" style="border:none;cursor:pointer;" type="button" onclick="fillAssistantPrompt('Who are you?')">About bot</button>
             </div>
             <div class="assistant-composer">
-                <textarea class="input-field" id="assistantCommandInput" rows="3" placeholder="Ask the MCP agent..."
+                <textarea class="input-field" id="assistantCommandInput" rows="3" placeholder="Ask Agent Wale..."
                     onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); submitAssistantCommand();}"></textarea>
                 <div class="assistant-action-row">
                     <button class="btn btn-primary" type="button" onclick="submitAssistantCommand()">Send</button>
@@ -3104,19 +3162,19 @@
 ════════════════════════════════════════ -->
     <nav class="bottom-nav">
         <div class="nav-item active" onclick="navigate('home',this)">
-            <span class="nav-icon">🏠</span>Agent
+            <span class="nav-icon">🏠</span><span class="nav-label">Agent</span>
         </div>
         <div class="nav-item" onclick="navigate('market',this)">
-            <span class="nav-icon">🤖</span>Market
+            <span class="nav-icon">🤖</span><span class="nav-label">Market</span>
         </div>
         <div class="nav-item" onclick="navigate('feed',this)">
-            <span class="nav-icon">📡</span>Feed
+            <span class="nav-icon">📡</span><span class="nav-label">Feed</span>
         </div>
         <div class="nav-item" onclick="navigate('trades',this)">
-            <span class="nav-icon">📊</span>Trades
+            <span class="nav-icon">📊</span><span class="nav-label">Trades</span>
         </div>
         <div class="nav-item" onclick="navigate('wallet',this)">
-            <span class="nav-icon">💎</span>Wallet
+            <span class="nav-icon">💎</span><span class="nav-label">Wallet</span>
         </div>
     </nav>
 
@@ -3261,7 +3319,7 @@
 
             <!-- Logo + Title -->
             <div style="text-align:center;margin-bottom:24px;">
-                <div style="font-size:22px;font-weight:700;color:var(--text-primary);letter-spacing:-0.5px;">Arc_Tic Whale</div>
+                <div style="font-size:22px;font-weight:700;color:var(--text);letter-spacing:-0.5px;">Arc_Tic Whale</div>
                 <div style="font-size:14px;color:var(--muted-mid);margin-top:4px;">Log in or sign up</div>
             </div>
 
@@ -3281,7 +3339,7 @@
             <!-- Step 2: OTP input (hidden until email sent) -->
             <div id="loginStepOtp" style="display:none;">
                 <div style="font-size:13px;color:var(--muted-mid);margin-bottom:8px;text-align:center;">
-                    We sent a 6-digit code to <span id="loginEmailDisplay" style="color:var(--text-primary);"></span>
+                    We sent a 6-digit code to <span id="loginEmailDisplay" style="color:var(--text);"></span>
                 </div>
                 <div id="loginOtpHint" style="font-size:11px;color:var(--amber);background:var(--amber-dim);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:7px 10px;margin-bottom:12px;text-align:center;display:none;"></div>
                 <input class="input-field" id="loginOtpCode" type="text" inputmode="numeric" maxlength="6"
@@ -3325,7 +3383,7 @@
 
             <!-- Privy branding -->
             <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--muted-mid);">
-                Protected by <span style="color:var(--text-primary);">● privy</span>
+                Protected by <span style="color:var(--text);">● privy</span>
             </div>
         </div>
     </div>
@@ -3605,7 +3663,7 @@
             const utilityToggle = document.getElementById('utilityToggle');
             if (utilityToggle) {
                 utilityToggle.textContent = utilityPanelOpen ? '✕' : '🤖';
-                utilityToggle.title = utilityPanelOpen ? 'Hide MCP agent' : 'Show MCP agent';
+                utilityToggle.title = utilityPanelOpen ? 'Hide Agent Wale' : 'Show Agent Wale';
             }
         }
 
@@ -3766,7 +3824,7 @@
             wrapper.className = 'assistant-message bot';
             const meta = document.createElement('div');
             meta.className = 'assistant-message-meta';
-            meta.textContent = 'MCP Agent';
+            meta.textContent = 'Agent Wale';
             const bubble = document.createElement('div');
             bubble.className = 'assistant-message-bubble';
             bubble.innerHTML = '<span class="assistant-typing"><span></span><span></span><span></span></span>';
@@ -3782,7 +3840,7 @@
             if (!log || assistantChatSeeded) return;
             assistantChatSeeded = true;
             if (!log.children.length) {
-                _assistantBubble('bot', 'MCP Agent', 'I’m online. Ask me about your P&L, copied agents, alerts, or tell me to detach from an agent.');
+                _assistantBubble(‘bot’, ‘Agent Wale’, "I’m online. Ask me about your P&L, copied agents, alerts, or tell me to detach from an agent.");
             }
             renderAssistantSuggestions();
         }
@@ -4356,7 +4414,7 @@
                     throw new Error(data.detail || data.reply || data.message || 'Assistant request failed');
                 }
                 if (typing?.parentNode) typing.parentNode.removeChild(typing);
-                _assistantBubble('bot', 'MCP Agent', data.reply || 'Done');
+                _assistantBubble('bot', 'Agent Wale', data.reply || 'Done');
                 renderAssistantSuggestions(data.suggestions || []);
                 if (data.status === 'success') {
                     showToast('Assistant updated');
@@ -4366,7 +4424,7 @@
                 }
             } catch (err) {
                 if (typing?.parentNode) typing.parentNode.removeChild(typing);
-                _assistantBubble('bot', 'MCP Agent', err.message || 'Assistant request failed');
+                _assistantBubble('bot', 'Agent Wale', err.message || 'Assistant request failed');
                 renderAssistantSuggestions();
             }
         }

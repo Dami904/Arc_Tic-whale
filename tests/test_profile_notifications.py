@@ -225,6 +225,11 @@ def test_stop_loss_triggers_auto_sell_and_detach(monkeypatch):
 
 def test_daily_summary_job_filters_by_preferences_and_channel(monkeypatch):
     import backend.daily_summary as daily_summary
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    # Pin 'now' to the same day as the mocked trade timestamp so the date filter matches.
+    fixed_now = datetime(2026, 5, 24, 19, 0, 0, tzinfo=ZoneInfo("Africa/Lagos"))
 
     sent = []
     reminders = []
@@ -257,7 +262,7 @@ def test_daily_summary_job_filters_by_preferences_and_channel(monkeypatch):
     monkeypatch.setattr(daily_summary, "user_has_notification_channel", lambda user: bool(user.get("email") or user.get("telegram_chat_id")))
     monkeypatch.setattr(daily_summary, "build_notification_reminder", lambda user: reminders.append(user["user_id"]) or "Add an email in Profile or connect Telegram to receive trade alerts and daily summaries.")
 
-    result = daily_summary.send_daily_summary_reports()
+    result = daily_summary.send_daily_summary_reports(now=fixed_now)
 
     assert len(result) == 1
     assert len(sent) == 1

@@ -5,6 +5,7 @@ import json as _json
 import re
 import urllib.parse
 import random
+import secrets
 import time
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -118,7 +119,8 @@ def _verify_telegram_init_data(init_data: str) -> str | None:
         parsed = dict(urllib.parse.parse_qsl(init_data, keep_blank_values=True))
         received_hash = parsed.pop("hash", "")
         data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(parsed.items()))
-        secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
+        # Correct order per Telegram spec: HMAC_SHA256(key=bot_token, msg="WebAppData")
+        secret_key = hmac.new(BOT_TOKEN.encode(), b"WebAppData", hashlib.sha256).digest()
         expected_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
         if hmac.compare_digest(received_hash, expected_hash):
             user = _json.loads(parsed.get("user", "{}"))
@@ -127,6 +129,13 @@ def _verify_telegram_init_data(init_data: str) -> str | None:
         return None
     except Exception:
         return None
+
+# OTP session store — maps a secure random token → (user_id, expires_at)
+# NOTE: this is in-process memory. With multiple uvicorn workers, sessions generated
+# in one worker cannot be verified by another. For production scale, migrate to Redis
+# or store sessions in the database.
+_OTP_SESSION_TTL = 86_400  # 24 hours
+_otp_session_store: dict[str, tuple[str, float]] = {}
 
 # --- Auth dependency ---
 def verify_privy_token(request: Request) -> str:
@@ -157,6 +166,16 @@ def verify_privy_token(request: Request) -> str:
     # Wallet-login pseudo-token (not a JWT)
     if token.startswith("wallet_"):
         return token
+
+    # Custom OTP session token (email fallback — see /auth/verify-otp)
+    if token.startswith("otp_"):
+        session = _otp_session_store.get(token)
+        if session:
+            sess_user_id, expires_at = session
+            if time.time() < expires_at:
+                return sess_user_id
+            _otp_session_store.pop(token, None)
+        raise HTTPException(status_code=401, detail="Invalid or expired session token")
 
     # Privy access token (JWT)
     if not PRIVY_APP_ID:
@@ -504,7 +523,7 @@ def update_profile(req: UpdateProfileRequest, current_user_id: str = Depends(ver
     }
 
 @app.get("/referrals")
-def get_referrals(username: str):
+def get_referrals(username: str, _: str = Depends(verify_privy_token)):
     user_id = normalize_user_id(username)
     user = get_user(user_id)
     if not user:
@@ -571,7 +590,7 @@ def get_history(username: Optional[str] = None):
     return {"trades": get_trade_history(limit=10, agent=AGENT_NAME, actions=TRADE_ACTIONS)}
 
 @app.get("/dashboard")
-def get_dashboard(username: Optional[str] = None):
+def get_dashboard(username: Optional[str] = None, _: str = Depends(verify_privy_token)):
     for profile in get_agent_catalog():
         try:
             evaluate_stop_losses(profile["id"])
@@ -614,7 +633,7 @@ def get_dashboard(username: Optional[str] = None):
             "win_rate": agent_metrics["win_rate"],
             "trades": agent_metrics["total_trades"],
             "followers": agent_followers["total_followers"],
-            "roi_30d": stats["performance"].get("24h", "0.00%"),
+            "roi_24h": stats["performance"].get("24h", "0.00%"),
             "allocated_usdc": user_allocation,
             "has_allocation": bool(user_allocation_row),
             "stop_loss_pct": float(user_allocation_row.get("stop_loss_pct") or 10.0) if user_allocation_row else 10.0,
@@ -964,9 +983,13 @@ async def verify_otp(body: dict):
     if not hmac.compare_digest(stored_code, code):
         raise HTTPException(status_code=401, detail="Invalid code")
     _otp_store.pop(email, None)
-    user_id = f"email_{email.split('@')[0]}"
-    token = base64.b64encode(f"{user_id}:{time.time()}".encode()).decode()
-    return {"token": token, "user_id": user_id, "email": email}
+    # Use the full email (normalised) so alice@gmail.com and alice@yahoo.com are different users
+    safe_email = email.replace("@", "_at_").replace(".", "_")
+    user_id = f"email_{safe_email}"[:64]
+    # Generate a cryptographically secure, unguessable session token
+    session_token = f"otp_{secrets.token_urlsafe(32)}"
+    _otp_session_store[session_token] = (user_id, time.time() + _OTP_SESSION_TTL)
+    return {"token": session_token, "user_id": user_id, "email": email}
 
 @app.post("/auth/wallet")
 async def wallet_auth(body: dict):

@@ -101,7 +101,7 @@ def ask_agent(market_data, agent_name="Conservative_Whale"):
         if asset == "MACRO_NEWS":
             continue # Already handled
         data_string_parts.append(
-            f"  - {asset} ({data.get('TYPE')}): Price=${data.get('PRICE'):.2f}, 24H_Change={data.get('24H_CHANGE')}, 7D_Change={data.get('7D_CHANGE')}, 1Y_Change={data.get('1Y_CHANGE')}"
+            f"  - {asset} ({data.get('TYPE')}): Price=${float(data.get('PRICE') or 0):.2f}, 24H_Change={data.get('24H_CHANGE')}, 7D_Change={data.get('7D_CHANGE')}, 1Y_Change={data.get('1Y_CHANGE')}"
         )
 
     data_string = "Current Market State:\n" + "\n".join(data_string_parts)

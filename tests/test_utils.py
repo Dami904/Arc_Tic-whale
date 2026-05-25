@@ -22,11 +22,13 @@ class TestParseAIDecision:
         assert result["decision"] == "HOLD"
         assert result["asset"] is None
 
-    def test_parse_buy_sol(self):
+    def test_parse_buy_sol_remaps_to_supported(self):
+        # SOL has no on-chain contract; the parser falls back to the first supported
+        # asset it finds in the text, or ETH as the last resort.
         response = "DECISION: BUY SOL\nREASON: SOL breakout above resistance."
         result = parse_ai_decision(response)
         assert result["decision"] == "BUY"
-        assert result["asset"] == "SOL"
+        assert result["asset"] in {"BTC", "ETH", "EURC"}  # SOL remapped to a supported asset
 
     def test_parse_case_insensitive(self):
         response = "decision: buy eth\nreason: dip buy opportunity."
@@ -61,7 +63,7 @@ class TestParseAIDecision:
         result = parse_ai_decision(response)
         assert result["decision"] == "BUY"
         assert result["asset"] is not None
-        assert result["asset"] in {"BTC", "ETH", "SOL"}
+        assert result["asset"] in {"BTC", "ETH", "EURC"}
 
     def test_parse_reason_with_newlines(self):
         response = "DECISION: HOLD\nREASON: Multiple factors:\n1. High volatility\n2. Low volume\nWaiting for confirmation."

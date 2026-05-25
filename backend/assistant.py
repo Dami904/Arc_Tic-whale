@@ -21,6 +21,11 @@ def _clean(text: str | None) -> str:
     return re.sub(r"\s+", " ", (text or "")).strip().lower()
 
 
+def _word_in(word: str, text: str) -> bool:
+    """True only when *word* appears as a whole word in *text* (not inside another word)."""
+    return bool(re.search(rf"\b{re.escape(word)}\b", text))
+
+
 def _agent_index() -> list[dict]:
     return list(get_agent_catalog())
 
@@ -138,12 +143,12 @@ def _assistant_reply_to_qa(command_text: str, normalized: str, wallet_stats: dic
             "suggestions": ["What is P&L?", "How does stop loss work?", "Show my copied agents"],
         }
 
-    if any(token in normalized for token in ["what is mcp", "what does mcp mean", "mcp"]):
+    if any(token in normalized for token in ["who is agent wale", "what is agent wale", "agent wale"]):
         return {
             "status": "success",
             "reply": (
-                "MCP is the tool layer that lets me read your dashboard data and take actions like checking P&L, "
-                "showing copied agents, or detaching from an agent."
+                "I'm Agent Wale — your AI trading assistant. I can read your dashboard data and take actions "
+                "like checking P&L, showing copied agents, or detaching from an agent."
             ),
             "suggestions": ["Who are you?", "What can you do?", "Show my copied agents"],
         }
@@ -166,11 +171,14 @@ def _assistant_reply_to_qa(command_text: str, normalized: str, wallet_stats: dic
             "suggestions": ["What is allocation?", "What is copy trading?", "What is P&L?"],
         }
 
-    if any(token in normalized for token in ["what can you do", "who are you", "hello", "hi", "help"]):
+    _qa_greeting_phrases = ["what can you do", "who are you", "hello", "help"]
+    _qa_greeting_words   = ["hi", "hey"]
+    if (any(p in normalized for p in _qa_greeting_phrases)
+            or any(_word_in(w, normalized) for w in _qa_greeting_words)):
         return {
             "status": "success",
             "reply": (
-                "I’m the MCP Agent for Arc_Tic Whale. I can explain copy trading, check your wallet and P&L, list copied agents, "
+                "I’m Agent Wale, your AI trading assistant. I can explain copy trading, check your wallet and P&L, list copied agents, "
                 "show recent trades, and help you manage alerts or detach from agents."
             ),
             "suggestions": ["What is copy trading?", "Show my copied agents", "What is stop loss?"],
@@ -241,13 +249,16 @@ def handle_assistant_command(user_id: str, command: str, context: Optional[dict]
             "reply": "Tell me what you want me to do, like 'What is my P&L?' or 'Detach me from Arc_Tic Whale'.",
         }
 
-    if any(phrase in normalized for phrase in ["who are you", "what are you", "hello", "hi", "help", "what can you do"]):
+    _greeting_phrases = ["who are you", "what are you", "what can you do"]
+    _greeting_words = ["hello", "hi", "hey", "help"]
+    if (any(phrase in normalized for phrase in _greeting_phrases)
+            or any(_word_in(w, normalized) for w in _greeting_words)):
         return {
             "status": "success",
             "reply": (
-                "I’m the MCP Agent for Arc_Tic Whale. I can check your P&L, show copied agents, "
+                "I’m Agent Wale, your AI trading assistant. I can check your P&L, show copied agents, "
                 "list recent trades, help you detach from an agent, and toggle alerts. "
-                "Try: 'What is my P&L?' or 'Show my copied agents'."
+                "Try: ‘What is my P&L?’ or ‘Show my copied agents’."
             ),
             "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
         }
@@ -257,23 +268,37 @@ def handle_assistant_command(user_id: str, command: str, context: Optional[dict]
         qa["suggestions"] = qa.get("suggestions") or _context_suggestions(context.get("page"), context.get("selected_agent"), allocations)
         return qa
 
-    if "p&l" in normalized or "pnl" in normalized or "profit" in normalized or "balance" in normalized:
-        pnl = wallet_stats.get("performance", {}).get("24h", "0.00%")
+    _pnl_signals = [
+        "p&l", "pnl", "profit", "balance", "how much", "earned", "earn",
+        "made this week", "made today", "gain", "loss", "returns", "performance",
+        "worth", "how am i doing", "doing financially", "wallet value",
+        "my money", "funds", "usdc", "what's in my wallet", "whats in my wallet",
+    ]
+    if any(s in normalized for s in _pnl_signals):
+        pnl_24h = wallet_stats.get("performance", {}).get("24h", "0.00%")
+        pnl_7d  = wallet_stats.get("performance", {}).get("7d",  "0.00%")
+        total   = float(wallet_stats.get("total_balance_usd") or 0)
+        tokens  = wallet_stats.get("token_balances") or []
+        token_lines = ", ".join(
+            f"{t.get('amount', '0')} {t.get('symbol', '')}" for t in tokens
+        ) or "none"
         return {
             "status": "success",
             "reply": (
-                f"Your wallet is at {float(wallet_stats.get('total_balance_usd') or 0):.2f} USDC. "
-                f"Recent P&L is {pnl}. "
-                f"Copied agents: {len(allocations)}."
+                f"Your wallet holds {total:.2f} USDC (tokens: {token_lines}). "
+                f"24h P&L: {pnl_24h} | 7d P&L: {pnl_7d}. "
+                f"You're copying {len(allocations)} agent(s)."
             ),
-            "data": {
-                "wallet": wallet_stats,
-                "copied_agents": allocations,
-            },
+            "data": {"wallet": wallet_stats, "copied_agents": allocations},
             "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
         }
 
-    if "best" in normalized or "top agent" in normalized or "best this week" in normalized:
+    _best_agent_signals = [
+        "best", "top agent", "best this week", "highest win", "most profitable",
+        "which agent", "who should i copy", "recommend an agent", "best performing",
+        "who is winning", "top performer",
+    ]
+    if any(s in normalized for s in _best_agent_signals):
         best = _best_agent()
         metrics = best["metrics"]
         return {
@@ -286,7 +311,12 @@ def handle_assistant_command(user_id: str, command: str, context: Optional[dict]
             "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
         }
 
-    if "copied" in normalized or "following" in normalized or "copying" in normalized:
+    _copied_signals = [
+        "copied", "following", "copying", "my agents", "agents i follow",
+        "who am i copying", "which agents", "show agents", "list agents",
+        "agents i'm copying", "current agents",
+    ]
+    if any(s in normalized for s in _copied_signals):
         return {
             "status": "success",
             "reply": _format_agent_list(allocations),
@@ -294,15 +324,25 @@ def handle_assistant_command(user_id: str, command: str, context: Optional[dict]
             "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
         }
 
-    if "recent trade" in normalized or "trade history" in normalized or "what did i trade" in normalized:
+    _trade_history_signals = [
+        "recent trade", "trade history", "what did i trade", "last trade",
+        "when did i last", "my trades", "show trades", "last transaction",
+        "trade log", "past trades", "previous trades", "latest trade",
+        "what trades", "have i traded",
+    ]
+    if any(s in normalized for s in _trade_history_signals):
         history = get_follower_trade_history(user["wallet_id"], limit=5, actions={"BUY", "SELL", "HOLD"})
         if not history:
             reply = "No trades yet for this wallet."
         else:
-            reply = "\n".join(
-                f"- {row['action']} {row.get('asset') or 'market'}: {row.get('reason') or 'No reason recorded.'}"
-                for row in history
-            )
+            lines = []
+            for row in history:
+                ts = (row.get("timestamp") or "")[:10]
+                lines.append(
+                    f"- [{ts}] {row['action']} {row.get('asset') or 'market'}: "
+                    f"{row.get('reason') or 'No reason recorded.'}"
+                )
+            reply = "\n".join(lines)
         return {
             "status": "success",
             "reply": reply,

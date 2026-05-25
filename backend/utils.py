@@ -2,7 +2,7 @@
 import re
 
 
-SUPPORTED_ASSETS = {"BTC", "ETH", "SOL"}
+SUPPORTED_ASSETS = {"BTC", "ETH", "EURC"}  # SOL has no contract address; EURC is supported by the executor
 
 
 def parse_ai_decision(raw_response: str) -> dict:

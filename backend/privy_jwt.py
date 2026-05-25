@@ -27,7 +27,7 @@ def _jwks_client() -> PyJWKClient | None:
 def _decode_with_pem(token: str) -> dict[str, Any]:
     if not PRIVY_VERIFICATION_KEY:
         raise ValueError("No verification key configured")
-    pem = PRIVY_VERIFICATION_KEY.replace("\\n", "\n")
+    pem = PRIVY_VERIFICATION_KEY  # newlines already normalised in config.py
     return pyjwt.decode(
         token,
         pem,
