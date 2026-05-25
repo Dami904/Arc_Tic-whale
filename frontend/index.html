@@ -3529,7 +3529,15 @@
 	            const headers = { 'Content-Type': 'application/json', ...authHeaders(options.headers || {}) };
 	            const res = await fetch((window.API_BASE || '') + url, { ...options, headers });
 	            if (res.status === 401) {
-	                if (!isTelegramMode()) openLoginModal();
+	                if (!isTelegramMode()) {
+	                    // Never interrupt an OTP flow — resetLoginModal() wipes the email
+	                    // field, so verifyOtp() would call loginWithEmailCode('', code)
+	                    // which Privy rejects with “incorrect email address”.
+	                    const otpStep = document.getElementById('loginStepOtp');
+	                    const isOtpVisible = otpStep && otpStep.style.display !== 'none';
+	                    // Also skip when token exists (expired token — user can sign out manually).
+	                    if (!isOtpVisible && !_privyToken) openLoginModal();
+	                }
 	                throw new Error('Authentication required — please sign in');
 	            }
 	            return res;
@@ -4194,6 +4202,8 @@
         }
 
 	        async function refreshWalletStats() {
+	            // Skip if not authenticated — avoids 401 triggering the login modal
+	            if (!_privyToken && !isTelegramMode()) return;
 	            try {
 	                const username = currentUsername();
 	                const dashboardUrl = username ? `/dashboard?username=${encodeURIComponent(username)}` : '/dashboard';
@@ -4353,6 +4363,7 @@
 
         // ── Load History & Settings ──
         async function fetchTradeHistory() {
+            if (!_privyToken && !isTelegramMode()) return;
             try {
                 const res = await apiFetch(`/trade-history${usernameQuery()}`);
                 const data = await res.json();
@@ -4383,6 +4394,7 @@
         }
 
         async function initSettings() {
+            if (!_privyToken && !isTelegramMode()) return;
             try {
                 const res = await apiFetch('/settings');
                 const settings = await res.json();
