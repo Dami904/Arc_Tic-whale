@@ -142,8 +142,6 @@ def verify_privy_token(request: Request) -> str:
     """Accepts Telegram WebApp initData (X-Telegram-Init-Data header) or Privy JWT (Bearer token)."""
     if TRADE_DRY_RUN:
         return "dryrun_user"
-    if request.client and request.client.host in ("127.0.0.1", "::1", "localhost"):
-        return "localhost_user"
 
     # Telegram Mini App mode — verify HMAC signature from Telegram
     tg_init_data = request.headers.get("X-Telegram-Init-Data", "")
@@ -164,8 +162,10 @@ def verify_privy_token(request: Request) -> str:
         return "admin"
 
     # Wallet-login pseudo-token (not a JWT)
+    # Token format is "wallet_{full_address}" but user_id is stored as "wallet_{address[:8]}"
     if token.startswith("wallet_"):
-        return token
+        address = token[len("wallet_"):]
+        return f"wallet_{address[:8]}" if len(address) > 8 else token
 
     # Custom OTP session token (email fallback — see /auth/verify-otp)
     if token.startswith("otp_"):
@@ -503,8 +503,9 @@ def get_profile(current_user_id: str = Depends(verify_privy_token)):
 
 @app.put("/user/profile")
 def update_profile(req: UpdateProfileRequest, current_user_id: str = Depends(verify_privy_token)):
+    user_id = normalize_user_id(current_user_id)
     user = update_user_profile(
-        current_user_id,
+        user_id,
         email=req.email.strip().lower() if req.email else None,
         display_name=req.display_name.strip() if req.display_name else None,
         avatar_url=req.avatar_url.strip() if req.avatar_url else None,
@@ -590,13 +591,15 @@ def get_history(username: Optional[str] = None):
     return {"trades": get_trade_history(limit=10, agent=AGENT_NAME, actions=TRADE_ACTIONS)}
 
 @app.get("/dashboard")
-def get_dashboard(username: Optional[str] = None, _: str = Depends(verify_privy_token)):
+def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends(verify_privy_token)):
     for profile in get_agent_catalog():
         try:
             evaluate_stop_losses(profile["id"])
         except Exception as exc:
             log.warning("Stop loss evaluation failed for %s: %s", profile["id"], exc)
-    wallet = get_active_wallet_context(username)
+    # Use the authenticated user_id when no explicit username is supplied
+    effective_username = username or normalize_user_id(current_user_id)
+    wallet = get_active_wallet_context(effective_username)
     stats = get_wallet_stats_safe(wallet["wallet_id"])
     trades = get_trade_history(limit=20, actions=TRADE_ACTIONS)
     social_posts = get_social_posts(limit=20)

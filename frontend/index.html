@@ -430,9 +430,7 @@
         .utility-panel.is-collapsed .utility-panel-sub,
         .utility-panel.is-collapsed .utility-panel-title,
         .utility-panel.is-collapsed .profile-main,
-        .utility-panel.is-collapsed .avatar-upload-copy,
-        .utility-panel.is-collapsed .avatar-upload-sub,
-        .utility-panel.is-collapsed .avatar-upload-title {
+        .utility-panel.is-collapsed .avatar-upload-hint {
             display: none;
         }
 
@@ -464,57 +462,89 @@
         }
 
         .avatar-upload {
-            display: grid;
-            gap: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            padding: 8px 0 4px;
         }
 
-        .avatar-upload-box {
+        .avatar-upload-tap {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 12px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 12px;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .avatar-upload-ring {
+            position: relative;
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
         }
 
         .avatar-preview {
-            width: 52px;
-            height: 52px;
+            width: 88px;
+            height: 88px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.06);
+            border: 2px solid var(--border-accent);
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
+            overflow: hidden;
             background-position: center;
             background-size: cover;
-            font-weight: 700;
+            font-size: 26px;
+            font-weight: 800;
             color: var(--cyan);
+            transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
         }
 
-        .avatar-upload-copy {
-            min-width: 0;
-            flex: 1;
+        .avatar-upload-tap:hover .avatar-preview {
+            border-color: var(--cyan);
+            transform: scale(1.04);
+            box-shadow: 0 0 0 5px rgba(0,221,180,0.15);
         }
 
-        .avatar-upload-title {
-            font-size: 13px;
+        .avatar-upload-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.52);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        .avatar-upload-tap:hover .avatar-upload-overlay {
+            opacity: 1;
+        }
+
+        .avatar-overlay-icon {
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .avatar-overlay-text {
+            font-size: 9px;
             font-weight: 700;
-            margin-bottom: 3px;
+            color: #fff;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
         }
 
-        .avatar-upload-sub {
+        .avatar-upload-hint {
             font-size: 11px;
             color: var(--muted);
-            line-height: 1.45;
-        }
-
-        .avatar-upload input[type="file"] {
-            width: 100%;
-            color: var(--muted-mid);
-            font-size: 12px;
+            letter-spacing: 0.2px;
         }
 
         .utility-agent-row,
@@ -2623,9 +2653,6 @@
         onclick="toggleUtilityPanel()">🤖</button>
     <div class="utility-backdrop" id="utilityBackdrop" onclick="toggleUtilityPanel(false)"></div>
     <aside class="utility-panel open" id="utilityPanel" aria-label="Agent Wale chatbot">
-        <div style="display:flex;justify-content:flex-start;margin-bottom:8px;">
-            <button class="utility-panel-close" type="button" onclick="toggleUtilityPanel(false); document.getElementById('utilityPanel').style.display='none';">✕</button>
-        </div>
         <div class="card assistant-shell">
             <div class="assistant-head">
                 <div class="assistant-head-left">
@@ -3036,16 +3063,17 @@
                 </div>
 
                 <div class="pnl-chip" id="portfolioPnlChip">
-                    <div class="pnl-chip-left">
-                        <div class="pnl-chip-title">Total Portfolio P&L</div>
-                        <div class="pnl-chip-value pos" id="portfolioPnlValue">+0.00 USDC</div>
-                        <div class="pnl-chip-sub" id="portfolioPnlPct">+0.00% across all copied agents</div>
-                        <div class="pnl-chip-address" id="walletAddress" onclick="copyAddress()">Loading wallet · Tap to copy</div>
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;width:100%;">
+                        <div class="pnl-chip-left">
+                            <div class="pnl-chip-title">Total Balance</div>
+                            <div class="pnl-chip-value pos" id="portfolioPnlValue">$0.00</div>
+                        </div>
+                        <div class="pnl-chip-right">
+                            <div class="pnl-chip-title">24h Change</div>
+                            <div class="pnl-chip-sub" id="portfolioPnlAgents" style="font-size:15px;font-weight:700;color:var(--cyan);">—</div>
+                        </div>
                     </div>
-                    <div class="pnl-chip-right">
-                        <div class="pnl-chip-title">Aggregate</div>
-                        <div class="pnl-chip-sub" id="portfolioPnlAgents">0 active agents</div>
-                    </div>
+                    <div class="pnl-chip-address" id="walletAddress" onclick="copyAddress()" style="width:100%;text-align:center;margin-top:10px;">Loading wallet · Tap to copy</div>
                 </div>
 
                 <div class="card" style="margin-top:0;">
@@ -3056,7 +3084,7 @@
                         </div>
                     </div>
                     <div style="font-size:11px;color:var(--muted);margin-top:10px;">
-                        Only USDC is used for copy-trading. Other Arc Testnet tokens are shown for visibility only.
+                        Real-time balances from your Circle developer-controlled wallet on Arc Testnet.
                     </div>
                 </div>
             </div>
@@ -3131,17 +3159,20 @@
             <div class="modal-title">✎ Edit Profile</div>
             <label class="input-label">Display Name</label>
             <input class="input-field" id="profileEditName" type="text" placeholder="Display name">
-            <label class="input-label">Profile Image</label>
+            <label class="input-label">Profile Photo</label>
             <div class="avatar-upload">
-                <div class="avatar-upload-box">
-                    <div class="avatar-preview" id="profileAvatarPreview">AT</div>
-                    <div class="avatar-upload-copy">
-                        <div class="avatar-upload-title">Choose an image</div>
-                        <div class="avatar-upload-sub">Upload a local image or keep the current one. It will be stored in your profile.</div>
+                <label class="avatar-upload-tap" for="profileEditAvatarInput">
+                    <div class="avatar-upload-ring">
+                        <div class="avatar-preview" id="profileAvatarPreview">AT</div>
+                        <div class="avatar-upload-overlay">
+                            <span class="avatar-overlay-icon">📷</span>
+                            <span class="avatar-overlay-text">Change</span>
+                        </div>
                     </div>
-                </div>
-                <input class="input-field" id="profileEditAvatarInput" type="file" accept="image/*"
-                    onchange="handleAvatarInput(this)">
+                    <span class="avatar-upload-hint">Tap to change photo</span>
+                </label>
+                <input id="profileEditAvatarInput" type="file" accept="image/*"
+                    style="display:none;" onchange="handleAvatarInput(this)">
                 <input type="hidden" id="profileEditAvatar">
             </div>
             <label class="input-label">Contact Email</label>
@@ -4050,13 +4081,17 @@
             document.getElementById('followerCountStat').textContent = fmtCount(followers.total_followers);
             document.getElementById('agentCountPill').textContent = `${agents.length} Live`;
 
-            const pnlAmount = Number(wallet.portfolio_pnl?.amount || 0);
-            const pnlPct = Number(wallet.portfolio_pnl?.pct || 0);
-            document.getElementById('portfolioPnlValue').textContent = `${pnlAmount >= 0 ? '+' : '-'}${fmtUsdc(Math.abs(pnlAmount))} USDC`;
-            document.getElementById('portfolioPnlValue').classList.toggle('pos', pnlAmount >= 0);
-            document.getElementById('portfolioPnlValue').classList.toggle('neg', pnlAmount < 0);
-            document.getElementById('portfolioPnlPct').textContent = `${pnlPct >= 0 ? '+' : '-'}${Math.abs(pnlPct).toFixed(2)}% across all copied agents`;
-            document.getElementById('portfolioPnlAgents').textContent = `${agents.filter(a => Number(a.allocated_usdc || 0) > 0).length} active agents`;
+            // Total balance card — wired to wallet.total_balance_usd from backend
+            const totalBal = Number(wallet.total_balance_usd || 0);
+            const perf24h = String(wallet.performance?.['24h'] || '0.00%');
+            const perf24hNum = parseFloat(perf24h.replace('%', '')) || 0;
+            const balEl = document.getElementById('portfolioPnlValue');
+            balEl.textContent = fmtUsd(totalBal);
+            balEl.classList.remove('pos', 'neg');
+            balEl.classList.add('pos');
+            const chgEl = document.getElementById('portfolioPnlAgents');
+            chgEl.textContent = perf24h;
+            chgEl.style.color = perf24hNum >= 0 ? 'var(--cyan)' : 'var(--red)';
 
             document.getElementById('allocatedText').textContent = `${fmtUsdc(allocation.allocated)} USDC allocated`;
             document.getElementById('freeText').textContent = `${fmtUsdc(allocation.free)} USDC free`;
@@ -4107,34 +4142,49 @@
             if (!container) return;
             if (!Array.isArray(tokenBalances) || !tokenBalances.length) {
                 container.innerHTML = `
-                    <div style="padding:14px 12px;color:var(--muted);border:1px dashed var(--border);border-radius:12px;">
-                        No token balances found yet.
+                    <div style="padding:16px 14px;color:var(--muted);border:1px dashed var(--border);border-radius:12px;text-align:center;">
+                        <div style="font-size:22px;margin-bottom:6px;">💳</div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;">No tokens in wallet yet</div>
+                        <div style="font-size:11px;">Deposit USDC to start copy-trading with an agent.</div>
                     </div>
                 `;
                 return;
             }
 
+            const tokenIcons = { BTC: '₿', ETH: 'Ξ', EURC: '€', USDC: '$', SOL: '◎' };
+            const tokenColors = { BTC: '#f7931a', ETH: '#627eea', EURC: '#2775ca', USDC: 'var(--cyan)', SOL: '#9945ff' };
+
             const rows = tokenBalances.map(token => {
                 const symbol = String(token.symbol || 'TOKEN').toUpperCase();
                 const name = token.name || symbol;
+                const rawAmt = Number(token.amount || 0);
                 const amount = fmtTokenAmount(token.amount, token.decimals);
                 const isUsdc = symbol === 'USDC';
-                const badgeStyle = isUsdc
-                    ? 'background:var(--cyan-dim);color:var(--cyan);border:1px solid var(--border-accent);'
-                    : 'background:rgba(255,255,255,0.04);color:var(--text);border:1px solid var(--border);';
+                const icon = tokenIcons[symbol] || '◆';
+                const color = tokenColors[symbol] || 'var(--text)';
+
+                // Compute USD equivalent from market cache
+                // Map Circle wrapped token names to our market cache keys (WETH→ETH, WBTC→BTC)
+                const baseSymbol = { WETH: 'ETH', WBTC: 'BTC', WMATIC: 'MATIC' }[symbol] || symbol;
+                let usdVal = '';
+                if (isUsdc) {
+                    usdVal = fmtUsd(rawAmt);
+                } else if (marketCache && marketCache[baseSymbol] && marketCache[baseSymbol].PRICE) {
+                    usdVal = fmtUsd(rawAmt * marketCache[baseSymbol].PRICE);
+                }
 
                 return `
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,0.02);gap:12px;">
-                        <div style="min-width:0;">
-                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                            <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:15px;color:${color};flex-shrink:0;">${icon}</div>
+                            <div style="min-width:0;">
                                 <strong style="color:var(--text);font-size:13px;">${symbol}</strong>
-                                <span style="font-size:10px;padding:3px 8px;border-radius:999px;${badgeStyle}">${isUsdc ? 'Trading token' : 'Visible only'}</span>
+                                <div style="font-size:11px;color:var(--muted);margin-top:2px;">${name}</div>
                             </div>
-                            <div style="font-size:11px;color:var(--muted);margin-top:4px;">${name}</div>
                         </div>
-                        <div style="text-align:right;min-width:0;">
-                            <div style="font-size:14px;font-weight:700;color:${isUsdc ? 'var(--cyan)' : 'var(--text)'};">${amount}</div>
-                            <div style="font-size:11px;color:var(--muted);">on Arc Testnet</div>
+                        <div style="text-align:right;flex-shrink:0;">
+                            <div style="font-size:14px;font-weight:700;color:${color};">${amount} ${symbol}</div>
+                            <div style="font-size:11px;color:var(--muted);">${usdVal ? usdVal + ' · ' : ''}Arc Testnet</div>
                         </div>
                     </div>
                 `;
