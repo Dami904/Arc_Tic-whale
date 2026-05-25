@@ -2623,12 +2623,8 @@
         onclick="toggleUtilityPanel()">🤖</button>
     <div class="utility-backdrop" id="utilityBackdrop" onclick="toggleUtilityPanel(false)"></div>
     <aside class="utility-panel open" id="utilityPanel" aria-label="Agent Wale chatbot">
-        <div class="utility-panel-head">
-            <div>
-                <div class="utility-panel-title">Agent Wale</div>
-                <div class="utility-panel-sub">Chatbot for portfolio context and actions</div>
-            </div>
-            <button class="utility-panel-close" type="button" onclick="toggleUtilityPanel(false)">✕</button>
+        <div style="display:flex;justify-content:flex-start;margin-bottom:8px;">
+            <button class="utility-panel-close" type="button" onclick="toggleUtilityPanel(false); document.getElementById('utilityPanel').style.display='none';">✕</button>
         </div>
         <div class="card assistant-shell">
             <div class="assistant-head">
@@ -3655,6 +3651,8 @@
                 panel.classList.toggle('open', utilityPanelOpen);
                 panel.classList.toggle('is-collapsed', !utilityPanelOpen && !isCompact);
                 panel.classList.toggle('is-mobile-hidden', !utilityPanelOpen && isCompact);
+                // Direct display override — guarantees hide regardless of CSS specificity
+                panel.style.display = utilityPanelOpen ? '' : 'none';
             }
             if (backdrop) backdrop.classList.toggle('show', utilityPanelOpen && isCompact);
             document.body.style.overflow = utilityPanelOpen && isCompact ? 'hidden' : '';
@@ -3840,7 +3838,7 @@
             if (!log || assistantChatSeeded) return;
             assistantChatSeeded = true;
             if (!log.children.length) {
-                _assistantBubble(‘bot’, ‘Agent Wale’, "I’m online. Ask me about your P&L, copied agents, alerts, or tell me to detach from an agent.");
+                _assistantBubble('bot', 'Agent Wale', "I'm online. Ask me about your P&L, copied agents, alerts, or tell me to detach from an agent.");
             }
             renderAssistantSuggestions();
         }
