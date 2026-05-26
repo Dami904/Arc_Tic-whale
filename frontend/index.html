@@ -4427,10 +4427,11 @@ function _assistantContext() {
 
             const tokenIcons = { BTC: '₿', ETH: 'Ξ', EURC: '€', USDC: '$', SOL: '◎' };
             const tokenColors = { BTC: '#f7931a', ETH: '#627eea', EURC: '#2775ca', USDC: 'var(--cyan)', SOL: '#9945ff' };
+            const tokenDisplayNames = { WBTC: 'cirBTC', WETH: 'cirETH', EURC: 'Euro Coin', USDC: 'USD Coin' };
 
             const rows = tokenBalances.map(token => {
                 const symbol = String(token.symbol || 'TOKEN').toUpperCase();
-                const name = token.name || symbol;
+                const name = tokenDisplayNames[symbol] || token.name || symbol;
                 const rawAmt = Number(token.amount || 0);
                 const amount = fmtTokenAmount(token.amount, token.decimals);
                 const isUsdc = symbol === 'USDC';
