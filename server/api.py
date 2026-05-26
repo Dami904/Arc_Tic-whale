@@ -65,6 +65,7 @@ from backend.config import (
     CORS_ALLOWED_ORIGINS,
     PRIVY_APP_ID,
     PRIVY_APP_SECRET,
+    PRIVY_AUTH_ORIGIN,
     PRIVY_CLIENT_ID,
     WALLETCONNECT_PROJECT_ID,
     RATE_LIMIT_PER_MINUTE,
@@ -774,9 +775,21 @@ def get_market_data(request: Request):
 def serve_telegram_webapp():
     html_path = os.path.join(os.path.dirname(__file__), "../frontend/index.html")
     html = Path(html_path).read_text()
-    html = html.replace("window.PRIVY_APP_ID = '';", f"window.PRIVY_APP_ID = '{PRIVY_APP_ID}';")
-    html = html.replace("window.PRIVY_CLIENT_ID = '';", f"window.PRIVY_CLIENT_ID = '{PRIVY_CLIENT_ID}';")
-    html = html.replace("window.WC_PROJECT_ID = '';", f"window.WC_PROJECT_ID = '{WALLETCONNECT_PROJECT_ID}';")
+    # index.html loads /static/runtime-config.js which contains empty placeholder values.
+    # We replace that tag with an inline script injecting real env vars at serve time.
+    inline_config = (
+        "<script>\n"
+        f"  window.PRIVY_APP_ID = '{PRIVY_APP_ID}';\n"
+        f"  window.PRIVY_CLIENT_ID = '{PRIVY_CLIENT_ID}';\n"
+        f"  window.PRIVY_AUTH_ORIGIN = '{PRIVY_AUTH_ORIGIN}';\n"
+        f"  window.WC_PROJECT_ID = '{WALLETCONNECT_PROJECT_ID}';\n"
+        f"  window.API_BASE = '';\n"  # same-origin: API lives on the same server
+        "</script>"
+    )
+    html = html.replace(
+        '<script src="/static/runtime-config.js"></script>',
+        inline_config,
+    )
     return HTMLResponse(content=html)
 
 
@@ -958,6 +971,21 @@ def auth_callback():
     for callback_path in callback_candidates:
         if Path(callback_path).is_file():
             html = Path(callback_path).read_text()
+            # Inject Privy credentials at serve time so the popup can complete OAuth.
+            # callback.html loads /static/runtime-config.js which has empty strings —
+            # we replace that tag with an inline script containing the real values.
+            inline_config = (
+                "<script>\n"
+                f"  window.PRIVY_APP_ID = '{PRIVY_APP_ID}';\n"
+                f"  window.PRIVY_CLIENT_ID = '{PRIVY_CLIENT_ID}';\n"
+                f"  window.PRIVY_AUTH_ORIGIN = '{PRIVY_AUTH_ORIGIN}';\n"
+                "</script>"
+            )
+            # Replace the runtime-config.js script tag with the inline version
+            html = html.replace(
+                '<script src="/static/runtime-config.js"></script>',
+                inline_config,
+            )
             return HTMLResponse(content=html)
     raise HTTPException(status_code=404, detail="Callback page not found")
 

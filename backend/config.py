@@ -27,6 +27,8 @@ DATABASE_URL = os.getenv("DATABASE_URL", "")  # PostgreSQL on Railway; falls bac
 PRIVY_APP_ID = os.getenv("PRIVY_APP_ID", "")
 PRIVY_APP_SECRET = os.getenv("PRIVY_APP_SECRET", "")
 PRIVY_CLIENT_ID = os.getenv("PRIVY_CLIENT_ID", "")
+# Allowed origin for postMessage from OAuth popup. Must match actual app URL.
+PRIVY_AUTH_ORIGIN = os.getenv("PRIVY_AUTH_ORIGIN", "").rstrip("/")
 # Optional PEM from Privy Dashboard → Configuration → App settings → Verification key
 PRIVY_VERIFICATION_KEY = os.getenv("PRIVY_VERIFICATION_KEY", "").replace("\\n", "\n")
 WALLETCONNECT_PROJECT_ID = os.getenv("WALLETCONNECT_PROJECT_ID", "")

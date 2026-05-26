@@ -98,6 +98,8 @@
             z-index: 100;
             padding-bottom: env(safe-area-inset-bottom);
         }
+        /* Brand only visible in sidebar mode (desktop) */
+        .nav-brand { display: none; }
 
         .nav-toggle,
         .utility-toggle {
@@ -639,12 +641,13 @@
             width: 72px;
         }
 
-        body.nav-collapsed .bottom-nav::before {
-            content: '🐋';
-            padding: 28px 0 22px;
-            text-align: center;
-            letter-spacing: 0;
+        body.nav-collapsed .bottom-nav::before { content: none; }
+        body.nav-collapsed .nav-brand {
+            justify-content: center;
+            padding: 20px 0 18px;
         }
+        body.nav-collapsed .nav-brand-name { display: none; }
+        body.nav-collapsed .nav-brand-logo { width: 32px; height: 32px; }
 
         body.nav-collapsed .nav-item {
             justify-content: center;
@@ -2636,18 +2639,27 @@
             }
 
             /* Sidebar brand */
-            .bottom-nav::before {
-                content: '🐋  Arc_Tic Whale';
-                display: block;
-                padding: 28px 22px 22px;
+            .bottom-nav::before { content: none; }
+            .nav-brand {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 20px 18px 18px;
+                border-bottom: 1px solid var(--border);
+                margin-bottom: 10px;
+                flex-shrink: 0;
+            }
+            .nav-brand-logo {
+                width: 36px;
+                height: 36px;
+                filter: drop-shadow(0 0 8px rgba(0,229,198,0.5));
+            }
+            .nav-brand-name {
                 font-family: var(--font-display);
                 font-size: 14px;
                 font-weight: 800;
                 color: var(--cyan);
                 letter-spacing: 0.3px;
-                border-bottom: 1px solid var(--border);
-                margin-bottom: 10px;
-                flex-shrink: 0;
             }
 
             /* Nav items: horizontal row (icon + label) */
@@ -2832,7 +2844,7 @@
         <div class="card assistant-shell">
             <div class="assistant-head">
                 <div class="assistant-head-left">
-                    <div class="assistant-bot-icon">🐋</div>
+                    <div class="assistant-bot-icon"><img src="/static/whale-logo.svg" style="width:32px;height:32px;object-fit:contain;" alt=""/></div>
                     <div>
                         <div class="assistant-head-title">Agent Wale</div>
                         <div class="assistant-head-sub">Chat with the trading bot</div>
@@ -2864,7 +2876,7 @@
 
         <div class="agent-hero">
             <div class="agent-avatar-wrap">
-                <span class="agent-avatar">🐋</span>
+                <img src="/static/whale-logo.svg" class="agent-avatar" style="width:52px;height:52px;object-fit:contain;" alt="Arc_Tic Whale"/>
             </div>
             <div class="agent-hero-text">
                 <div class="agent-name">Arc_Tic Whale</div>
@@ -2951,7 +2963,7 @@
                     <span class="pill pill-cyan" id="selectedAgentPill">Conservative</span>
                 </div>
                 <div class="agent-target-chips" id="agentTargetChips">
-                    <button class="agent-chip active" type="button" data-agent="Conservative_Whale" onclick="setSelectedAgent('Conservative_Whale')">🐋 Arc_Tic Whale</button>
+                    <button class="agent-chip active" type="button" data-agent="Conservative_Whale" onclick="setSelectedAgent('Conservative_Whale')"><img src="/static/whale-logo.svg" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:4px;" alt=""/> Arc_Tic Whale</button>
                     <button class="agent-chip" type="button" data-agent="Macro_Economist" onclick="setSelectedAgent('Macro_Economist')">📈 Macro Economist</button>
                     <button class="agent-chip" type="button" data-agent="Aggressive_Degen" onclick="setSelectedAgent('Aggressive_Degen')">⚡ Aggressive Degen</button>
                     <button class="agent-chip" type="button" data-agent="Yield_Farmer" onclick="setSelectedAgent('Yield_Farmer')">🌊 Yield Farmer</button>
@@ -3003,9 +3015,9 @@
         <!-- Agent Cards -->
         <div id="agentList">
             <div class="agent-card risk-low" data-risk="low"
-                onclick="openCopyModal('🐋','Arc_Tic Whale','Conservative','78%','142','$2.4K','Conservative_Whale')">
+                onclick="openCopyModal('img:/static/whale-logo.svg','Arc_Tic Whale','Conservative','78%','142','$2.4K','Conservative_Whale')">
                 <div class="agent-card-top">
-                    <div class="agent-card-icon">🐋</div>
+                    <div class="agent-card-icon"><img src="/static/whale-logo.svg" style="width:36px;height:36px;object-fit:contain;" alt=""/></div>
                     <div class="agent-card-info">
                         <div class="agent-card-name">Arc_Tic Whale</div>
                         <div class="agent-card-desc">Macro-driven, patient accumulator. Targets blue-chip assets with
@@ -3126,7 +3138,7 @@
 
             <div class="feed-post">
                 <div class="post-header">
-                    <div class="post-avatar">🐋</div>
+                    <div class="post-avatar"><img src="/static/whale-logo.svg" style="width:100%;height:100%;object-fit:contain;" alt=""/></div>
                     <div class="post-meta">
                         <div class="post-agent">Arc_Tic Whale</div>
                         <div class="post-time">2 min ago</div>
@@ -3395,6 +3407,10 @@
      BOTTOM NAV
 ════════════════════════════════════════ -->
     <nav class="bottom-nav">
+        <div class="nav-brand">
+            <img src="/static/whale-logo.svg" class="nav-brand-logo" alt="Arc_Tic Whale"/>
+            <span class="nav-brand-name">Arc_Tic Whale</span>
+        </div>
         <div class="nav-item active" onclick="navigate('home',this)">
             <span class="nav-icon">🏠</span><span class="nav-label">Agent</span>
         </div>
@@ -3638,6 +3654,8 @@
         let _privyUserId = localStorage.getItem(_privyUserKey)  || '';
         let _privyEmail  = localStorage.getItem(_privyEmailKey) || '';
         let _privyDisplayName = localStorage.getItem(_privyDisplayKey) || '';
+        let _sessionSetAt = _privyToken ? Date.now() : 0;  // timestamp when token was last set
+        let _authInProgress = false;  // true while an OAuth / OTP flow is in flight
 
         function _shortAccountId(value) {
             return value ? `${value.slice(0, 6)}...${value.slice(-4)}` : 'Account';
@@ -3655,6 +3673,7 @@
         function _setPrivySession(userId, token, email, displayName = '') {
             const safeEmail = email && email.includes('@') ? email : '';
             _privyUserId = userId; _privyToken = token; _privyEmail = safeEmail; _privyDisplayName = displayName || '';
+            _sessionSetAt = Date.now();
             localStorage.setItem(_privyUserKey, userId);
             localStorage.setItem(_privyTokenKey, token);
             if (safeEmail) localStorage.setItem(_privyEmailKey, safeEmail);
@@ -3742,9 +3761,13 @@
 	                if (!isTelegramMode()) {
 	                    const otpStep = document.getElementById('loginStepOtp');
 	                    const isOtpVisible = otpStep && otpStep.style.display !== 'none';
-	                    if (!isOtpVisible) {
+                        // Never interrupt an active OAuth/OTP flow, and never treat a
+                        // fresh session (< 20 s old) as "expired" — those 401s are
+                        // configuration issues, not token expiry.
+                        const sessionAge = _sessionSetAt ? Date.now() - _sessionSetAt : Infinity;
+                        const freshSession = sessionAge < 20000;
+	                    if (!isOtpVisible && !_authInProgress && !freshSession) {
 	                        if (_privyToken) {
-	                            // Token expired — clear stale session and prompt re-login
 	                            _clearPrivySession();
 	                            showToast('⚠️ Session expired — please sign in again');
 	                        }
@@ -3795,9 +3818,24 @@
 
 
 
+        function _showWalletLoading() {
+            // Show a "creating wallet" skeleton state immediately after login
+            // so the user isn't staring at 0-values while Circle provisions the wallet.
+            const balEl = document.getElementById('balDisplay');
+            if (balEl && balEl.textContent.trim() === '') {
+                balEl.innerHTML = '<span style="color:var(--muted);font-size:14px;font-weight:400">Creating wallet…</span>';
+            }
+            const greet = document.getElementById('greetPill');
+            if (greet && greet.textContent === 'Connecting...') return;
+            showToast('🔑 Setting up your wallet — usually takes 5–15 s');
+            log('Provisioning Circle wallet via API...', 'sys');
+        }
+
         async function ensureWalletForCurrentUser() {
             const username = currentUsername();
             if (!username) return;
+            // Show immediate feedback so the user knows the wallet is being created
+            _showWalletLoading();
             try {
                 const contactEmail = _safeContactEmail(_privyEmail);
                 const res = await apiFetch('/users/ensure', {
@@ -3811,10 +3849,10 @@
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
-                    log(`Wallet ready for @${data.user.user_id}.`, 'sys');
+                    log(`Wallet ready — Circle ID: ${data.user.wallet_id || 'provisioned'}`, 'sys');
                 }
 	            } catch (err) {
-	                log('Wallet provisioning check failed.', 'warn');
+	                log('Wallet provisioning check failed — retrying on next refresh.', 'warn');
 	            }
 	        }
 
@@ -4519,7 +4557,15 @@
 	                if (!res.ok) throw new Error(`dashboard ${res.status}`);
 	                renderDashboard(await res.json());
 	            } catch (err) {
-	                log('Wallet stats unavailable. Check Circle credentials.', 'warn');
+                    // If this is shortly after login, Circle wallet may still be provisioning —
+                    // schedule a silent retry in 8 s so the UI fills in automatically.
+                    const sessionAge = _sessionSetAt ? Date.now() - _sessionSetAt : Infinity;
+                    if (sessionAge < 60000 && !err.message.includes('Authentication')) {
+                        setTimeout(refreshWalletStats, 8000);
+                        log('Wallet provisioning... retrying in 8 s', 'sys');
+                    } else {
+	                    log('Wallet stats unavailable. Check Circle credentials.', 'warn');
+                    }
 	            }
 	        }
 
@@ -4639,7 +4685,7 @@
 	                            <span>${txLabel}</span>
 	                        </div>
 	                        <div class="post-header">
-	                            <div class="post-avatar">${item.avatar || '🐋'}</div>
+	                            <div class="post-avatar"><img src="/static/whale-logo.svg" style="width:100%;height:100%;object-fit:contain;" alt=""/></div>
 	                            <div class="post-meta">
 	                                <div class="post-agent">${item.agent}</div>
 	                                <div class="post-time">${timeLabel}</div>
@@ -5100,6 +5146,7 @@
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const code  = document.getElementById('loginOtpCode').value.trim();
             if (!code || code.length < 6) { showToast('Enter the 6-digit code'); return; }
+            _authInProgress = true;
             try {
                 if (await _ensurePrivyClient()) {
                     const data = await window.PrivyAuth.loginWithEmailCode(email, code);
@@ -5107,6 +5154,7 @@
                     document.getElementById('loginModal').classList.remove('open');
                     showToast('Signed in ✓');
                     await ensureWalletForCurrentUser();
+                    _authInProgress = false;
                     refreshDashboard();
                     return;
                 }
@@ -5122,8 +5170,10 @@
                 document.getElementById('loginModal').classList.remove('open');
                 showToast('Signed in ✓');
                 await ensureWalletForCurrentUser();
+                _authInProgress = false;
                 refreshDashboard();
             } catch (err) {
+                _authInProgress = false;
                 showToast(err.message || 'Verification failed — try again');
             }
         }
@@ -5183,6 +5233,9 @@
                 showToast('Add PRIVY_CLIENT_ID to .env (Privy Dashboard → Settings → Clients)');
                 return;
             }
+
+            _authInProgress = true;  // block "session expired" during entire OAuth flow
+
             try {
                 const ready = await _ensurePrivyClient();
                 if (!ready) {
@@ -5198,16 +5251,39 @@
                     if (!e.data || e.data.type !== 'privy_oauth_token') return;
                     window.removeEventListener('message', messageHandler);
                     clearInterval(pollClosed);
+
                     const { token, userId, email } = e.data;
-                    if (!token) {
+                    if (!token || !userId) {
+                        _authInProgress = false;
                         showToast('Social login failed — check Privy dashboard settings');
                         return;
                     }
+
+                    // ── Pre-validate the Privy JWT before trusting it ──────────
+                    // This catches backend config mismatches upfront rather than
+                    // letting a background refresh blow up with "session expired".
+                    try {
+                        const probe = await fetch((window.API_BASE || '') + '/settings', {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`,
+                            }
+                        });
+                        if (probe.status === 401) {
+                            _authInProgress = false;
+                            showToast('Sign-in failed: token not accepted. Try email instead or check Privy config.');
+                            return;
+                        }
+                    } catch (_) {
+                        // Network error during probe — proceed anyway; worst case dashboard fails gracefully
+                    }
+
                     const displayName = provider === 'twitter' ? 'X Account' : provider === 'google' ? 'Google Account' : '';
                     _setPrivySession(userId, token, email, displayName);
                     document.getElementById('loginModal').classList.remove('open');
                     showToast('Signed in ✓');
                     await ensureWalletForCurrentUser();
+                    _authInProgress = false;
                     refreshDashboard();
                 };
                 window.addEventListener('message', messageHandler);
@@ -5216,9 +5292,12 @@
                     if (popup.closed) {
                         clearInterval(pollClosed);
                         window.removeEventListener('message', messageHandler);
+                        // Popup closed without sending token → cancel auth flag
+                        setTimeout(() => { _authInProgress = false; }, 200);
                     }
                 }, 500);
             } catch (err) {
+                _authInProgress = false;
                 showToast(err.message || 'Social login failed');
             }
         }

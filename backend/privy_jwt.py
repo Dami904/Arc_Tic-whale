@@ -24,6 +24,9 @@ def _jwks_client() -> PyJWKClient | None:
     return PyJWKClient(JWKS_URL, cache_keys=True)
 
 
+_LEEWAY = 60  # seconds — tolerates minor server/Privy clock skew
+
+
 def _decode_with_pem(token: str) -> dict[str, Any]:
     if not PRIVY_VERIFICATION_KEY:
         raise ValueError("No verification key configured")
@@ -34,6 +37,7 @@ def _decode_with_pem(token: str) -> dict[str, Any]:
         algorithms=["ES256"],
         audience=PRIVY_APP_ID,
         issuer=PRIVY_ISSUER,
+        leeway=_LEEWAY,
         options={"require": ["exp", "sub"]},
     )
 
@@ -49,6 +53,7 @@ def _decode_with_jwks(token: str) -> dict[str, Any]:
         algorithms=["ES256"],
         audience=PRIVY_APP_ID,
         issuer=PRIVY_ISSUER,
+        leeway=_LEEWAY,
         options={"require": ["exp", "sub"]},
     )
 
@@ -57,25 +62,33 @@ def verify_privy_access_token(token: str) -> str:
     """
     Validate a Privy access token and return the user DID (sub claim).
     Raises jwt.InvalidTokenError on failure.
+
+    Strategy:
+    1. If PRIVY_VERIFICATION_KEY is set, try PEM decode first (faster, no network).
+    2. Always also try JWKS (covers OAuth tokens and handles key rotation).
+    3. Return the first successful sub claim.
     """
     if not PRIVY_APP_ID:
         raise ValueError("PRIVY_APP_ID is not configured")
 
     last_error: Exception | None = None
+
     if PRIVY_VERIFICATION_KEY:
         try:
             payload = _decode_with_pem(token)
+            log.debug("Privy token verified via PEM. sub=%s", payload.get("sub"))
             return str(payload["sub"])
         except Exception as exc:
             last_error = exc
-            log.debug("PEM JWT verify failed: %s", exc)
+            log.warning("PEM JWT verify failed (falling back to JWKS): %s", exc)
 
     try:
         payload = _decode_with_jwks(token)
+        log.debug("Privy token verified via JWKS. sub=%s", payload.get("sub"))
         return str(payload["sub"])
     except Exception as exc:
         last_error = exc
-        log.debug("JWKS JWT verify failed: %s", exc)
+        log.warning("JWKS JWT verify failed: %s", exc)
 
     if last_error:
         raise last_error
