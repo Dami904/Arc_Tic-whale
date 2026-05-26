@@ -4594,11 +4594,12 @@ function _assistantContext() {
             const container = document.getElementById('feedContainer');
             if (!container) return;
 
-            // Strip any placeholder / idle entries — only keep real trades and social posts
+            // Strip placeholders, idle noise, and HOLD scheduler entries — only BUY/SELL/social posts
             const realFeed = (feed || []).filter(item =>
                 !item.is_placeholder &&
                 item.type !== 'placeholder' &&
                 item.action !== 'IDLE' &&
+                item.action !== 'HOLD' &&
                 (item.agent_id || item.tx_id)
             );
 
@@ -5398,14 +5399,15 @@ function _assistantContext() {
 	            const stopLoss = parseFloat(document.getElementById('modalStopLoss').value || '10');
 	            if (!alloc || alloc <= 0) { showToast('Enter a valid USDC amount'); return; }
 
-	            // Balance check — find USDC token balance, fall back to total_balance_usd
-	            const tokens = dashboardCache?.wallet?.token_balances || [];
-	            const usdcToken = tokens.find(t => String(t.symbol || '').toUpperCase() === 'USDC');
-	            const usdcBalance = usdcToken
-	                ? Number(usdcToken.amount || 0)
-	                : Number(dashboardCache?.wallet?.total_balance_usd || 0);
-	            if (alloc > usdcBalance) {
-	                showToast(`Insufficient balance — you have ${usdcBalance.toFixed(2)} USDC available`);
+	            // Balance check — use free (unallocated) USDC from cache as a pre-flight guard.
+	            // Server does the authoritative check; this just gives instant feedback.
+	            const available = Number(
+	                dashboardCache?.allocation?.free ??
+	                dashboardCache?.wallet?.total_balance_usd ??
+	                0
+	            );
+	            if (available > 0 && alloc > available) {
+	                showToast(`Insufficient balance — you have ${available.toFixed(2)} USDC available`);
 	                return;
 	            }
 

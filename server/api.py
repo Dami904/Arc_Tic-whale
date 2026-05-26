@@ -253,6 +253,7 @@ class AssistantCommandRequest(BaseModel):
 # --- API Endpoints ---
 AGENT_NAME = "Conservative_Whale"
 TRADE_ACTIONS = {"BUY", "SELL", "HOLD"}
+FEED_ACTIONS   = {"BUY", "SELL"}          # HOLD is scheduler noise — not feed-worthy
 WALLET_ACTIONS = {"DEPOSIT", "WITHDRAW"}
 
 # ── Circle token-ID → symbol resolver ──────────────────────────────────────
@@ -606,7 +607,7 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
     effective_username = username or normalize_user_id(current_user_id)
     wallet = get_active_wallet_context(effective_username)
     stats = get_wallet_stats_safe(wallet["wallet_id"])
-    trades = get_trade_history(limit=20, actions=TRADE_ACTIONS)
+    trades = get_trade_history(limit=20, actions=FEED_ACTIONS)   # BUY/SELL only — no HOLD noise
     social_posts = get_social_posts(limit=20)
     wallet_trades = (
         get_follower_trade_history(wallet["wallet_id"], limit=20, actions=TRADE_ACTIONS)
@@ -1124,6 +1125,17 @@ def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_p
 
     if not real_wallet_id or not real_wallet_address:
         return {"status": "error", "message": "Failed to generate Web3 wallet for user."}
+
+    # ── Server-side balance check (authoritative — frontend cache can be stale) ──
+    wallet_stats = get_wallet_stats_safe(real_wallet_id)
+    token_list   = wallet_stats.get("token_balances") or []
+    usdc_token   = next((t for t in token_list if str(t.get("symbol", "")).upper() == "USDC"), None)
+    usdc_balance = float(usdc_token["amount"]) if usdc_token else float(wallet_stats.get("total_balance_usd") or 0)
+    if req.allocation > usdc_balance:
+        return {
+            "status": "error",
+            "message": f"Insufficient balance — you have {usdc_balance:.2f} USDC available.",
+        }
 
     add_follower(
         user_id=wallet_record["user_id"],
