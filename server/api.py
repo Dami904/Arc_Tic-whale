@@ -254,6 +254,64 @@ AGENT_NAME = "Conservative_Whale"
 TRADE_ACTIONS = {"BUY", "SELL", "HOLD"}
 WALLET_ACTIONS = {"DEPOSIT", "WITHDRAW"}
 
+# ── Circle token-ID → symbol resolver ──────────────────────────────────────
+# Circle transactions only carry a tokenId UUID — no symbol.
+# wallet balance responses carry both the UUID (token.id) and the symbol.
+# We build this map from the balances call and reuse it for transactions.
+_token_id_cache: dict[str, str] = {}  # tokenId UUID → symbol string
+
+# Known Arc Testnet address → symbol (lowercase keys)
+_ARC_ADDRESS_MAP: dict[str, str] = {
+    "0x3600000000000000000000000000000000000000": "USDC",
+    "0x4ccccd3220ac80c07a8b575a4cb494c0e77606ed": "WETH",
+    "0xf0c4a4ce82a5746abaad9425360ab04fbba432bf": "WBTC",
+    "0x89b50855aa3be2f677cd6303cec089b5f319d72a": "EURC",
+}
+
+
+def _seed_token_cache_from_balances(wallet_id: str) -> None:
+    """Populate _token_id_cache from the wallet's token balances.
+    The balance response includes tb.token.id (UUID) + tb.token.symbol — no extra API call needed."""
+    if not wallet_id:
+        return
+    try:
+        client = initialize_circle_client()
+        resp = WalletsApi(client).list_wallet_balance(id=wallet_id)
+        if resp.data and resp.data.token_balances:
+            for tb in resp.data.token_balances:
+                token_uuid = getattr(tb.token, "id", None)
+                symbol = getattr(tb.token, "symbol", None)
+                if token_uuid and symbol:
+                    _token_id_cache[str(token_uuid)] = str(symbol).upper()
+    except Exception:
+        pass  # cache stays empty; fall through to address map
+
+
+def _resolve_token_symbol(tx: dict) -> str:
+    """Return the token symbol for a Circle transaction dict."""
+    # 1. Nested token object (some SDK versions expand this)
+    token_obj = tx.get("token") or {}
+    sym = token_obj.get("symbol") or token_obj.get("name")
+    if sym:
+        return str(sym).upper()
+
+    # 2. Flat symbol fields
+    for key in ("tokenSymbol", "token_symbol", "symbol"):
+        if tx.get(key):
+            return str(tx[key]).upper()
+
+    # 3. UUID cache (populated by _seed_token_cache_from_balances)
+    token_id = tx.get("tokenId") or tx.get("token_id")
+    if token_id and str(token_id) in _token_id_cache:
+        return _token_id_cache[str(token_id)]
+
+    # 4. Token address fallback
+    addr = (tx.get("tokenAddress") or tx.get("token_address") or "").lower()
+    if addr and addr in _ARC_ADDRESS_MAP:
+        return _ARC_ADDRESS_MAP[addr]
+
+    return "USDC"  # safe default (Arc Testnet base currency)
+
 
 def _parse_percent(value: object) -> float:
     try:
@@ -413,6 +471,9 @@ def get_wallet_activity(wallet_id: Optional[str], agent: Optional[str], limit: i
     circle_activity = []
 
     if wallet_id and not TRADE_DRY_RUN:
+        # Pre-populate token UUID→symbol cache from wallet balances so
+        # _resolve_token_symbol can work without a separate API call per tx.
+        _seed_token_cache_from_balances(wallet_id)
         try:
             client = initialize_circle_client()
             transactions_api = TransactionsApi(client)
@@ -431,7 +492,7 @@ def get_wallet_activity(wallet_id: Optional[str], agent: Optional[str], limit: i
                     "id": tx.get("id"),
                     "agent": agent or AGENT_NAME,
                     "action": action,
-                    "asset": "USDC",
+                    "asset": _resolve_token_symbol(tx),
                     "tx_id": tx.get("txHash") or tx.get("id"),
                     "reason": tx.get("state") or "Circle transfer",
                     "timestamp": str(tx.get("createDate") or tx.get("updateDate") or ""),
