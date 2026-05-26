@@ -59,42 +59,23 @@
             min-height: 100vh;
             overflow-x: hidden;
             padding-bottom: 80px;
-            padding-top: 50px;  /* room for top-bar */
         }
 
-        /* ── TOP BAR ── */
-        .top-bar {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            height: 50px;
-            background: rgba(7, 9, 15, 0.97);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 110;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-        .top-bar-inner {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        /* ── Floating account pill — top-right corner ── */
         #greetPill {
-            font-size: 12px;
-            padding: 5px 14px;
+            position: fixed;
+            top: 12px;
+            right: 14px;
+            z-index: 120;
+            font-size: 11px;
+            padding: 5px 13px;
             border-radius: 20px;
             cursor: pointer;
-            transition: opacity 0.2s;
+            transition: opacity 0.2s, transform 0.15s;
             white-space: nowrap;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.4);
         }
-        #greetPill:hover { opacity: 0.8; }
-        .top-bar-hint {
-            font-size: 11px;
-            color: var(--muted);
-            display: none;  /* shown on desktop */
-        }
+        #greetPill:hover { opacity: 0.85; transform: scale(1.03); }
 
         /* Background grid */
         body::before {
@@ -133,8 +114,10 @@
             z-index: 100;
             padding-bottom: env(safe-area-inset-bottom);
         }
-        /* Brand only visible in sidebar mode (desktop) */
+        /* Brand and account only visible in sidebar mode (desktop) */
         .nav-brand { display: none; }
+        /* Account pill wrapper: hidden on mobile (pill floats top-right instead) */
+        .nav-account { display: none; }
 
 .nav-toggle,
         .utility-toggle {
@@ -2689,13 +2672,23 @@
                 padding-top: 50px;
             }
 
-            /* Top bar: shift right of sidebar on desktop */
-            .top-bar {
-                left: 220px;
-                border-left: 1px solid var(--border);
+            /* On desktop: pill hidden from floating position, shown in sidebar via nav-account */
+            #greetPill {
+                position: static;
+                box-shadow: none;
+                font-size: 11px;
+                width: 100%;
+                text-align: center;
+                margin: 0;
             }
-
-            .top-bar-hint { display: inline; }
+            .nav-account {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 12px 16px;
+                margin-top: auto;
+                border-top: 1px solid var(--border);
+            }
 
             /* ── Bottom nav → Left sidebar ── */
             .bottom-nav {
@@ -2711,7 +2704,7 @@
                 align-items: stretch;
                 border-top: none;
                 border-right: 1px solid var(--border);
-                padding: 0 0 24px;
+                padding: 0;
                 overflow-y: auto;
             }
 
@@ -3404,16 +3397,6 @@
     </div>
 
     <!-- ════════════════════════════════════════
-     TOP BAR
-════════════════════════════════════════ -->
-    <div class="top-bar">
-        <div class="top-bar-inner">
-            <span id="greetPill" class="pill pill-amber">Connecting...</span>
-            <span class="top-bar-hint">· tap to sign out</span>
-        </div>
-    </div>
-
-    <!-- ════════════════════════════════════════
      BOTTOM NAV
 ════════════════════════════════════════ -->
     <nav class="bottom-nav">
@@ -3435,6 +3418,10 @@
         </div>
         <div class="nav-item" onclick="navigate('wallet',this)">
             <span class="nav-icon">💎</span><span class="nav-label">Wallet</span>
+        </div>
+        <!-- Account pill — shown at sidebar bottom on desktop, floats top-right on mobile -->
+        <div class="nav-account">
+            <span id="greetPill" class="pill pill-amber">Connecting...</span>
         </div>
     </nav>
 
@@ -3624,10 +3611,6 @@
                 <button class="login-social-btn" onclick="socialLogin('google')">
                     <span style="font-size:18px;">G</span>
                     <span>Continue with Google</span>
-                </button>
-                <button class="login-social-btn" onclick="socialLogin('twitter')">
-                    <span style="font-size:16px;font-weight:700;">𝕏</span>
-                    <span>Continue with Twitter</span>
                 </button>
                 <button class="login-social-btn" onclick="connectWallet()">
                     <span style="font-size:16px;">◎</span>
