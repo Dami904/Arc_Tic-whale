@@ -1135,21 +1135,14 @@ def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_p
         stop_loss_pct=req.stop_loss_pct,
     )
 
-    # ── Feed entry: new copy event ──────────────────────────────────────────
+    # ── Feed entry: new copy event (single social post only — no duplicate trade log) ──
     agent_profile = get_agent_profile(agent_id)
-    _copy_reason = f"New follower allocated {req.allocation} {req.asset} to copy {agent_profile['name']}."
-    log_trade(
-        agent=agent_id,
-        action="BUY",
-        asset=req.asset,
-        tx_id=None,
-        reason=_copy_reason,
-    )
+    _copy_reason = f"New follower allocated {req.allocation} USDC to copy {agent_profile['name']}."
     log_social_post(
         agent=agent_id,
         action="BUY",
         post_text=(
-            f"New capital in the stream. A follower just allocated {req.allocation} {req.asset} "
+            f"New capital in the stream. A follower just allocated {req.allocation} USDC "
             f"to mirror my moves. The thesis holds. 🐋"
         ),
         tx_id=None,
@@ -1229,13 +1222,6 @@ def detach_agent(req: DetachRequest, current_user_id: str = Depends(verify_privy
     # ── Feed entry: detach event ────────────────────────────────────────────
     _det_profile = get_agent_profile(req.agent_id)
     _det_reason = f"A follower exited their copy position from {_det_profile['name']}."
-    log_trade(
-        agent=req.agent_id,
-        action="SELL",
-        asset="USDC",
-        tx_id=None,
-        reason=_det_reason,
-    )
     log_social_post(
         agent=req.agent_id,
         action="SELL",
