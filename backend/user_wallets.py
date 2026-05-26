@@ -49,10 +49,14 @@ def ensure_user_wallet(
 
     existing = get_user(user_id)
     if existing:
+        # Never overwrite a custom display_name with a generic login-time label.
+        # Only set display_name when the existing record has none (first-time onboarding).
+        existing_name = existing.get("display_name") or ""
+        resolved_name = display_name if (display_name and not existing_name) else existing_name or None
         update_user_profile(
             user_id,
             email=email if email is not None else existing.get("email"),
-            display_name=display_name if display_name is not None else existing.get("display_name"),
+            display_name=resolved_name,
             avatar_url=avatar_url if avatar_url is not None else existing.get("avatar_url"),
             telegram_chat_id=telegram_chat_id if telegram_chat_id is not None else existing.get("telegram_chat_id"),
         )

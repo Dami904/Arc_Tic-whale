@@ -3833,7 +3833,7 @@
                     body: JSON.stringify({
                         username,
                         email: contactEmail || null,
-                        display_name: _privyDisplayName || null,
+                        display_name: null,   // never overwrite a saved custom name on login
                         avatar_url: null,
                     })
                 });
