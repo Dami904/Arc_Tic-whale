@@ -426,6 +426,19 @@ def deactivate_follower(user_id, target_agent):
     return updated > 0
 
 
+def update_follower_stop_loss(user_id: str, target_agent: str, stop_loss_pct: float) -> bool:
+    """Update the stop-loss threshold for an active follower allocation."""
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        cursor.execute(
+            f"UPDATE followers SET stop_loss_pct = {_PH} WHERE user_id = {_PH} AND target_agent = {_PH} AND is_active = 1",
+            (stop_loss_pct, user_id, target_agent),
+        )
+        conn.commit()
+        updated = cursor.rowcount
+    return updated > 0
+
+
 # ── Referrals ─────────────────────────────────────────────────────────────────
 
 def add_referral_reward(referrer_user_id, referred_user_id, profit_amount, reward_amount, tx_id=None):

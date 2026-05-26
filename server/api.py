@@ -19,14 +19,13 @@ from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 from backend.database import (
     add_follower,
-    add_referral_reward,
     deactivate_follower,
+    update_follower_stop_loss,
     get_all_users,
     get_follower_by_wallet_id,
     get_follower_wallet,
     get_follower_summary,
     get_follower_trade_history,
-    get_referral_summary,
     get_setting,
     get_trade_history,
     get_trade_metrics,
@@ -47,6 +46,7 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.market_data import get_current_market_state
 from backend.daily_summary import start_daily_summary_scheduler, send_daily_summary_reports
+from backend.trade_scheduler import start_trade_scheduler, stop_trade_scheduler, get_scheduler_state
 from backend.assistant import handle_assistant_command
 from backend.notifications import build_notification_reminder, user_has_notification_channel
 from backend.trade_service import run_trade_cycle
@@ -83,7 +83,9 @@ init_db()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     start_daily_summary_scheduler()
+    start_trade_scheduler()          # ← auto-fires trade cycles every 2 h
     yield
+    stop_trade_scheduler()           # ← clean shutdown
 
 
 app = FastAPI(
@@ -197,16 +199,18 @@ class FollowRequest(BaseModel):
     username: str
     allocation: float
     asset: str
-    referral_code: Optional[str] = None
     stop_loss_pct: Optional[float] = 10.0
     agent_id: str = "Conservative_Whale"
 
 class EnsureUserRequest(BaseModel):
     username: str
-    referral_code: Optional[str] = None
     email: Optional[str] = None
     display_name: Optional[str] = None
     avatar_url: Optional[str] = None
+
+class UpdateStopLossRequest(BaseModel):
+    agent_id: str
+    stop_loss_pct: float
 
 class WithdrawRequest(BaseModel):
     destination_address: str
@@ -217,11 +221,6 @@ class WithdrawRequest(BaseModel):
 class TriggerTradeRequest(BaseModel):
     username: Optional[str] = None
     agent_id: str = "Conservative_Whale"
-
-class ProfitRequest(BaseModel):
-    username: str
-    profit_amount: float
-    tx_id: Optional[str] = None
 
 class WalletStats(BaseModel):
     total_balance_usd: float
@@ -469,7 +468,6 @@ def read_root():
 def ensure_user(request: Request, req: EnsureUserRequest):
     wallet = ensure_user_wallet(
         req.username,
-        referral_code=req.referral_code,
         email=req.email,
         display_name=req.display_name,
         avatar_url=req.avatar_url,
@@ -479,7 +477,6 @@ def ensure_user(request: Request, req: EnsureUserRequest):
     return {
         "status": "success",
         "user": wallet,
-        "referrals": get_referral_summary(wallet["user_id"]),
         "live_transactions": not TRADE_DRY_RUN,
     }
 
@@ -521,66 +518,6 @@ def update_profile(req: UpdateProfileRequest, current_user_id: str = Depends(ver
             "email": bool(user.get("email")),
             "telegram": bool(user.get("telegram_chat_id")),
         },
-    }
-
-@app.get("/referrals")
-def get_referrals(username: str, _: str = Depends(verify_privy_token)):
-    user_id = normalize_user_id(username)
-    user = get_user(user_id)
-    if not user:
-        return {"status": "error", "message": "User wallet not found."}
-    return {
-        "status": "success",
-        "user": user,
-        "referrals": get_referral_summary(user_id),
-    }
-
-@app.post("/referrals/record-profit")
-@limiter.limit(lambda: f"{RATE_LIMIT_PER_MINUTE}/minute")
-def record_referral_profit(request: Request, req: ProfitRequest, _: str = Depends(verify_privy_token)):
-    user = get_user(normalize_user_id(req.username))
-    if not user:
-        return {"status": "error", "message": "User wallet not found."}
-    if not user.get("referred_by"):
-        return {"status": "skipped", "message": "User has no referrer."}
-    if req.profit_amount <= 0:
-        return {"status": "skipped", "message": "Referral rewards only apply to positive profit."}
-
-    reward = round(req.profit_amount * 0.10, 6)
-    referrer = get_user(user["referred_by"])
-    if not referrer:
-        return {"status": "error", "message": "Referrer wallet not found."}
-
-    reward_tx_id = execute_transfer(
-        wallet_id=user["wallet_id"],
-        destination_address=referrer["wallet_address"],
-        asset_symbol="USDC",
-        amount=str(reward),
-    )
-    if not reward_tx_id:
-        return {"status": "error", "message": "Referral reward transfer failed."}
-
-    add_referral_reward(
-        referrer_user_id=user["referred_by"],
-        referred_user_id=user["user_id"],
-        profit_amount=req.profit_amount,
-        reward_amount=reward,
-        tx_id=reward_tx_id,
-    )
-    log_trade(
-        agent=f"Referral:{user['referred_by']}",
-        action="REFERRAL_REWARD",
-        asset="USDC",
-        tx_id=reward_tx_id,
-        reason=f"10% of {user['user_id']} profit: {reward} USDC",
-    )
-    return {
-        "status": "success",
-        "referrer": user["referred_by"],
-        "referred_user": user["user_id"],
-        "profit_amount": req.profit_amount,
-        "reward_amount": reward,
-        "tx_hash": reward_tx_id,
     }
 
 @app.get("/trade-history")
@@ -715,11 +652,9 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
         "feed": feed,
         "trades": wallet_trades,
         "transactions": wallet_activity,
-        "referrals": get_referral_summary(user_id) if user_id else None,
         "notification_reminder": build_notification_reminder(dashboard_user),
         "notification_channels": {
             "email": bool(dashboard_user.get("email")),
-            "telegram": bool(dashboard_user.get("telegram_chat_id")),
         },
     }
 
@@ -827,10 +762,6 @@ def withdraw(req: Optional[WithdrawRequest] = None, _: str = Depends(verify_priv
         "live_transactions": not TRADE_DRY_RUN,
         "request": req.model_dump(),
     }
-
-@app.get("/stats", response_model=WalletStats)
-def get_wallet_stats(wallet_id: Optional[str] = None):
-    return get_wallet_stats_safe(wallet_id or AGENT_WALLET_ID)
 
 @app.get("/market-data", response_model=MarketDataResponse)
 @limiter.limit(lambda: f"{RATE_LIMIT_PER_MINUTE}/minute")
@@ -1008,7 +939,7 @@ async def wallet_auth(body: dict):
         raise HTTPException(status_code=400, detail="Invalid signature format")
     if recovered != address:
         raise HTTPException(status_code=401, detail="Signature verification failed")
-    wallet = ensure_user_wallet(f"wallet_{address[:8]}", referral_code=body.get("referral_code"))
+    wallet = ensure_user_wallet(f"wallet_{address[:8]}")
     return {
         "token": f"wallet_{address}",
         "user_id": wallet["user_id"],
@@ -1060,6 +991,20 @@ def trigger_trade(request: Request, req: Optional[TriggerTradeRequest] = None, _
         "live_transactions": not TRADE_DRY_RUN,
     }
 
+@app.get("/scheduler/status")
+def scheduler_status(_: str = Depends(verify_privy_token)):
+    """Returns the current state of the auto-trade scheduler."""
+    state = get_scheduler_state()
+    return {
+        "interval_hours": 2.0,
+        "running":        state["running"],
+        "last_run":       state["last_run"],
+        "next_run":       state["next_run"],
+        "last_results":   state["last_results"],
+        "mode":           "dry-run" if TRADE_DRY_RUN else "live",
+    }
+
+
 @app.post("/follow")
 @limiter.limit(lambda: f"{RATE_LIMIT_PER_MINUTE}/minute")
 def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_privy_token)):
@@ -1067,7 +1012,7 @@ def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_p
     agent_id = req.agent_id if req.agent_id in agent_ids else AGENT_NAME
     log.info("Follow request from @%s for %s USDC on %s via %s", req.username, req.allocation, req.asset, agent_id)
 
-    wallet_record = ensure_user_wallet(req.username, referral_code=req.referral_code)
+    wallet_record = ensure_user_wallet(req.username)
     real_wallet_id = wallet_record.get("wallet_id") if wallet_record else None
     real_wallet_address = wallet_record.get("wallet_address") if wallet_record else None
 
@@ -1089,11 +1034,58 @@ def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_p
         "message": f"User {req.username} secured to smart contract.",
         "wallet_id": real_wallet_id,
         "address": real_wallet_address,
-        "referral_code": wallet_record.get("referral_code"),
         "stop_loss_pct": req.stop_loss_pct,
         "agent_id": agent_id,
         "agent_name": get_agent_profile(agent_id)["name"],
         "live_transactions": not TRADE_DRY_RUN,
+    }
+
+
+@app.get("/agents")
+def list_agents():
+    """Public endpoint — returns all agent profiles with live metrics. No auth required."""
+    catalog = get_agent_catalog()
+    result = []
+    for profile in catalog:
+        metrics = get_trade_metrics(profile["id"])
+        followers = get_follower_summary(profile["id"])
+        status = _agent_status(profile)
+        result.append({
+            "id":           profile["id"],
+            "name":         profile["name"],
+            "avatar":       profile["avatar"],
+            "risk":         profile["risk"],
+            "risk_label":   profile["risk_label"],
+            "description":  profile["description"],
+            "win_rate":     metrics["win_rate"],
+            "trades":       metrics["total_trades"],
+            "followers":    followers["total_followers"],
+            "status":       status["label"],
+            "status_detail":status["detail"],
+            "last_action":  status["action"],
+            "last_asset":   status["asset"],
+            "last_trade_at":status["timestamp"],
+        })
+    return {"agents": result}
+
+
+@app.post("/agents/update-stop-loss")
+def update_stop_loss(req: UpdateStopLossRequest, current_user_id: str = Depends(verify_privy_token)):
+    """Update stop-loss % on an active allocation without detaching and re-following."""
+    agent_ids = {agent["id"] for agent in get_agent_catalog()}
+    if req.agent_id not in agent_ids:
+        raise HTTPException(status_code=400, detail="Invalid agent")
+    if not (0 < req.stop_loss_pct <= 100):
+        raise HTTPException(status_code=400, detail="stop_loss_pct must be between 0 and 100")
+    user_id = normalize_user_id(current_user_id)
+    updated = update_follower_stop_loss(user_id, req.agent_id, req.stop_loss_pct)
+    if not updated:
+        return {"status": "skipped", "message": "No active allocation found for this agent."}
+    return {
+        "status": "success",
+        "agent_id":      req.agent_id,
+        "stop_loss_pct": req.stop_loss_pct,
+        "message":       f"Stop-loss updated to {req.stop_loss_pct:.1f}% for {req.agent_id}.",
     }
 
 

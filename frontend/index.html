@@ -710,21 +710,34 @@
         /* ── SHARED ── */
         .section-title {
             font-family: var(--font-display);
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
-            letter-spacing: 2px;
+            letter-spacing: 2.5px;
             text-transform: uppercase;
-            color: var(--muted);
-            margin-bottom: 12px;
+            color: var(--muted-mid);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+        .section-title::before {
+            content: '';
+            display: block;
+            width: 16px;
+            height: 2px;
+            border-radius: 1px;
+            background: linear-gradient(90deg, var(--cyan), var(--blue));
+            flex-shrink: 0;
         }
 
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 16px;
+            border-radius: 18px;
             padding: 18px;
             backdrop-filter: blur(12px);
             margin-bottom: 14px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
         }
 
         .pill {
@@ -824,56 +837,100 @@
         }
 
         /* Agent hero banner */
+        /* ── Hero header ──────────────────────────────── */
         .agent-hero {
             position: relative;
-            padding: 28px 20px 22px;
+            padding: 18px 20px 16px;
             text-align: center;
             overflow: hidden;
+            background: linear-gradient(180deg,
+                rgba(0,221,180,0.06) 0%,
+                rgba(59,139,255,0.04) 60%,
+                transparent 100%);
+            border-bottom: 1px solid rgba(0,221,180,0.12);
         }
 
+        /* Ambient aurora glow */
         .agent-hero::before {
             content: '';
             position: absolute;
             inset: 0;
-            background: radial-gradient(ellipse at 50% 0%, rgba(0, 221, 180, 0.18) 0%, transparent 70%);
+            background:
+                radial-gradient(ellipse 80% 60% at 50% -10%,
+                    rgba(0,221,180,0.22) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 40% at 80% 80%,
+                    rgba(59,139,255,0.10) 0%, transparent 60%);
             pointer-events: none;
         }
 
-        .agent-avatar {
-            font-size: 52px;
-            line-height: 1;
+        /* Gradient shimmer line at top */
+        .agent-hero::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(0,221,180,0.6) 30%,
+                rgba(59,139,255,0.6) 70%,
+                transparent 100%);
+        }
+
+        /* Avatar container with glowing gradient ring */
+        .agent-avatar-wrap {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg,
+                rgba(0,221,180,0.25) 0%,
+                rgba(59,139,255,0.20) 100%);
+            border: 1.5px solid rgba(0,221,180,0.35);
+            box-shadow:
+                0 0 18px rgba(0,221,180,0.25),
+                inset 0 1px 0 rgba(255,255,255,0.08);
             margin-bottom: 10px;
-            display: block;
-            filter: drop-shadow(0 0 20px rgba(0, 221, 180, 0.4));
             animation: float 4s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+
+        .agent-avatar {
+            font-size: 36px;
+            line-height: 1;
+            display: block;
+            filter: drop-shadow(0 0 10px rgba(0,221,180,0.5));
         }
 
         @keyframes float {
-
-            0%,
-            100% {
-                transform: translateY(0)
-            }
-
-            50% {
-                transform: translateY(-6px)
-            }
+            0%, 100% { transform: translateY(0) }
+            50%       { transform: translateY(-5px) }
         }
 
         .agent-name {
             font-family: var(--font-display);
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 800;
-            background: linear-gradient(90deg, #fff 30%, var(--cyan));
+            letter-spacing: -0.3px;
+            background: linear-gradient(100deg, #ffffff 20%, var(--cyan) 60%, #7eb8ff 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 6px;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .agent-hero-text {
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* centered on mobile */
         }
 
         .agent-tagline {
             color: var(--muted-mid);
-            font-size: 12px;
-            margin-bottom: 12px;
+            font-size: 11px;
+            letter-spacing: 0.2px;
+            margin-bottom: 10px;
         }
 
         .agent-meta {
@@ -881,43 +938,97 @@
             gap: 8px;
             justify-content: center;
             flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* Pulsing LIVE pill */
+        .live-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: rgba(0,221,180,0.12);
+            color: var(--cyan);
+            border: 1px solid rgba(0,221,180,0.3);
+            box-shadow: 0 0 10px rgba(0,221,180,0.15);
+        }
+
+        .live-dot-pulse {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--cyan);
+            box-shadow: 0 0 6px var(--cyan);
+            animation: pulse-dot 1.8s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1);   }
+            50%       { opacity: 0.5; transform: scale(0.7); }
         }
 
         /* Balance card */
         .balance-card {
-            background: linear-gradient(135deg, rgba(0, 221, 180, 0.1) 0%, rgba(59, 139, 255, 0.08) 100%);
-            border: 1px solid var(--border-accent);
-            border-radius: 16px;
-            padding: 18px 20px;
+            background: linear-gradient(135deg,
+                rgba(0,221,180,0.13) 0%,
+                rgba(59,139,255,0.08) 55%,
+                rgba(7,9,15,0.6) 100%);
+            border: 1px solid rgba(0,221,180,0.22);
+            border-radius: 20px;
+            padding: 24px 22px 20px;
             margin-bottom: 14px;
             position: relative;
             overflow: hidden;
+            box-shadow:
+                0 0 48px rgba(0,221,180,0.07),
+                0 8px 32px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(255,255,255,0.07);
         }
 
+        /* Top-right ambient glow orb */
         .balance-card::before {
             content: '';
             position: absolute;
-            top: -30px;
-            right: -30px;
-            width: 100px;
-            height: 100px;
-            background: radial-gradient(circle, rgba(0, 221, 180, 0.2) 0%, transparent 70%);
+            top: -50px; right: -50px;
+            width: 180px; height: 180px;
+            background: radial-gradient(circle,
+                rgba(0,221,180,0.22) 0%, transparent 65%);
+            pointer-events: none;
+        }
+
+        /* Bottom-left blue accent orb */
+        .balance-card::after {
+            content: '';
+            position: absolute;
+            bottom: -30px; left: 15%;
+            width: 220px; height: 120px;
+            background: radial-gradient(ellipse,
+                rgba(59,139,255,0.10) 0%, transparent 70%);
+            pointer-events: none;
         }
 
         .balance-label {
-            font-size: 11px;
-            color: var(--muted-mid);
-            letter-spacing: 1px;
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: 2px;
             text-transform: uppercase;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
+            font-weight: 600;
         }
 
         .balance-amount {
             font-family: var(--font-display);
-            font-size: clamp(22px, 6vw, 32px);
+            font-size: clamp(30px, 7vw, 42px);
             font-weight: 800;
             color: var(--cyan);
-            letter-spacing: -1px;
+            letter-spacing: -2px;
+            text-shadow: 0 0 28px rgba(0,221,180,0.35);
+            line-height: 1;
         }
 
         .balance-amount .balance-unit {
@@ -928,22 +1039,34 @@
         }
 
         .balance-sub {
-            margin-top: 12px;
+            margin-top: 18px;
             display: flex;
-            gap: 16px;
+            gap: 0;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.07);
+        }
+        .balance-stat {
+            flex: 1;
+            padding: 0 16px;
+            border-left: 1px solid rgba(255,255,255,0.07);
+        }
+        .balance-stat:first-child {
+            padding-left: 0;
+            border-left: none;
         }
 
         .balance-stat .bs-label {
-            font-size: 10px;
+            font-size: 9px;
             color: var(--muted);
             text-transform: uppercase;
-            letter-spacing: 0.8px;
+            letter-spacing: 1px;
+            font-weight: 600;
         }
 
         .balance-stat .bs-val {
-            font-size: 13px;
-            font-weight: 600;
-            margin-top: 2px;
+            font-size: 14px;
+            font-weight: 700;
+            margin-top: 4px;
         }
 
         .bs-val.positive {
@@ -965,22 +1088,54 @@
         .stat-box {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 12px 10px;
+            border-radius: 16px;
+            padding: 16px 12px 14px;
             text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+
+        /* Gradient top accent bar per color variant */
+        .stat-box::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            border-radius: 2px 2px 0 0;
+        }
+        .stat-box--cyan { border-color: rgba(0,221,180,0.18); }
+        .stat-box--cyan::before { background: linear-gradient(90deg, transparent, var(--cyan) 50%, transparent); }
+        .stat-box--cyan .sb-val { color: var(--cyan); }
+        .stat-box--blue { border-color: rgba(59,139,255,0.18); }
+        .stat-box--blue::before { background: linear-gradient(90deg, transparent, var(--blue) 50%, transparent); }
+        .stat-box--blue .sb-val { color: var(--blue); }
+        .stat-box--amber { border-color: rgba(245,158,11,0.18); }
+        .stat-box--amber::before { background: linear-gradient(90deg, transparent, var(--amber) 50%, transparent); }
+        .stat-box--amber .sb-val { color: var(--amber); }
+
+        .stat-box .sb-icon {
+            font-size: 20px;
+            margin-bottom: 7px;
+            display: block;
+            line-height: 1;
+            filter: drop-shadow(0 0 6px currentColor);
         }
 
         .stat-box .sb-val {
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 3px;
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 5px;
+            letter-spacing: -0.5px;
         }
 
         .stat-box .sb-lbl {
-            font-size: 10px;
+            font-size: 9px;
             color: var(--muted);
             text-transform: uppercase;
-            letter-spacing: 0.6px;
+            letter-spacing: 1.2px;
+            font-weight: 600;
         }
 
         /* Asset pills */
@@ -991,25 +1146,35 @@
         }
 
         .asset-pill {
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255,255,255,0.03);
             border: 1px solid var(--border);
-            padding: 8px 14px;
-            border-radius: 20px;
+            padding: 8px 16px;
+            border-radius: 22px;
             font-size: 12px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             color: var(--muted-mid);
             min-height: 36px;
             display: inline-flex;
             align-items: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+
+        .asset-pill:hover {
+            border-color: rgba(0,221,180,0.2);
+            color: var(--text);
+            background: rgba(0,221,180,0.05);
         }
 
         .asset-pill.active {
-            background: var(--cyan-dim);
-            border-color: var(--border-accent);
+            background: rgba(0,221,180,0.14);
+            border-color: rgba(0,221,180,0.35);
             color: var(--cyan);
-            box-shadow: 0 0 12px var(--cyan-glow);
+            box-shadow:
+                0 0 16px rgba(0,221,180,0.18),
+                0 1px 4px rgba(0,0,0,0.2);
+            font-weight: 700;
         }
 
         /* Follow section */
@@ -2321,7 +2486,7 @@
             }
 
             .agent-hero {
-                padding: 24px 16px 18px;
+                padding: 16px 14px 14px;
             }
 
             .balance-sub,
@@ -2541,35 +2706,46 @@
                 flex-direction: row;
                 align-items: center;
                 text-align: left;
-                gap: 24px;
-                padding: 28px 32px;
+                gap: 20px;
+                padding: 20px 32px;
             }
 
             .agent-hero::before {
-                border-radius: 16px;
+                border-radius: 0;
+            }
+
+            .agent-avatar-wrap {
+                width: 56px;
+                height: 56px;
+                margin-bottom: 0;
             }
 
             .agent-avatar {
-                font-size: 56px;
+                font-size: 30px;
                 margin-bottom: 0;
-                flex-shrink: 0;
             }
 
             .agent-name {
-                font-size: 26px;
+                font-size: 22px;
             }
 
             .agent-tagline {
-                font-size: 13px;
+                font-size: 12px;
+                margin-bottom: 8px;
             }
 
             .agent-meta {
                 justify-content: flex-start;
             }
 
+            .agent-hero-text {
+                align-items: flex-start; /* left-align text on desktop */
+            }
+
             /* Balance + stats side by side */
             .balance-amount {
-                font-size: 38px;
+                font-size: 46px;
+                letter-spacing: -3px;
             }
 
             /* Stats row: 4 columns on desktop */
@@ -2687,13 +2863,16 @@
     <div id="page-home" class="page active">
 
         <div class="agent-hero">
-            <span class="agent-avatar">🐋</span>
-            <div class="agent-name">Arc_Tic Whale</div>
-            <div class="agent-tagline">AI-driven copy trading on Circle Arc Testnet</div>
-            <div class="agent-meta">
-                <span class="pill pill-cyan">🟢 LIVE</span>
-                <span class="pill pill-blue">⚡ YIELD HUNT</span>
-                <span id="greetPill" class="pill pill-amber">Connecting...</span>
+            <div class="agent-avatar-wrap">
+                <span class="agent-avatar">🐋</span>
+            </div>
+            <div class="agent-hero-text">
+                <div class="agent-name">Arc_Tic Whale</div>
+                <div class="agent-tagline">AI-driven copy trading · Circle Arc Testnet</div>
+                <div class="agent-meta">
+                    <span class="live-pill"><span class="live-dot-pulse"></span>LIVE</span>
+                    <span id="greetPill" class="pill pill-amber">Connecting...</span>
+                </div>
             </div>
         </div>
 
@@ -2721,16 +2900,19 @@
 
         <!-- Quick Stats -->
         <div class="stats-row">
-            <div class="stat-box">
-                <div class="sb-val" id="winRateStat" style="color:var(--cyan)">0%</div>
+            <div class="stat-box stat-box--cyan">
+                <span class="sb-icon">🎯</span>
+                <div class="sb-val" id="winRateStat">0%</div>
                 <div class="sb-lbl">Win Rate</div>
             </div>
-            <div class="stat-box">
+            <div class="stat-box stat-box--blue">
+                <span class="sb-icon">⚡</span>
                 <div class="sb-val" id="tradeCountStat">0</div>
                 <div class="sb-lbl">Trades</div>
             </div>
-            <div class="stat-box">
-                <div class="sb-val" id="followerCountStat" style="color:var(--amber)">0</div>
+            <div class="stat-box stat-box--amber">
+                <span class="sb-icon">👥</span>
+                <div class="sb-val" id="followerCountStat">0</div>
                 <div class="sb-lbl">Followers</div>
             </div>
         </div>
@@ -3143,6 +3325,31 @@
 
         <div class="wallet-reminder" id="notificationReminder"></div>
 
+        <!-- Auto-Trade Scheduler Status -->
+        <div class="card" id="schedulerCard">
+            <div class="section-title">⏱ Auto-Trade Scheduler</div>
+            <div id="schedulerStatusPanel" style="display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div id="schedulerDot" style="width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0;"></div>
+                    <div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text)" id="schedulerLabel">Loading...</div>
+                        <div style="font-size:11px;color:var(--muted)" id="schedulerMode"></div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div style="background:var(--card-inner,rgba(255,255,255,0.04));border-radius:10px;padding:10px;">
+                        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Last Run</div>
+                        <div style="font-size:12px;font-weight:600;color:var(--text)" id="schedulerLastRun">—</div>
+                    </div>
+                    <div style="background:var(--card-inner,rgba(255,255,255,0.04));border-radius:10px;padding:10px;">
+                        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Next Run</div>
+                        <div style="font-size:12px;font-weight:600;color:var(--cyan)" id="schedulerNextRun">—</div>
+                    </div>
+                </div>
+                <div id="schedulerAgentResults" style="display:none;gap:6px;flex-direction:column;"></div>
+            </div>
+        </div>
+
         <div class="card">
             <div class="section-title">Transaction History</div>
             <div id="txHistoryContainer">
@@ -3507,6 +3714,9 @@
             el.classList.add('active');
             currentPage = page;
             renderAssistantSuggestions();
+            // Start/stop scheduler polling when wallet settings tab is visible
+            if (page === 'wallet') startSchedulerPolling();
+            else stopSchedulerPolling();
         }
 
         // ── Terminal Logger ──
@@ -3530,13 +3740,16 @@
 	            const res = await fetch((window.API_BASE || '') + url, { ...options, headers });
 	            if (res.status === 401) {
 	                if (!isTelegramMode()) {
-	                    // Never interrupt an OTP flow — resetLoginModal() wipes the email
-	                    // field, so verifyOtp() would call loginWithEmailCode('', code)
-	                    // which Privy rejects with “incorrect email address”.
 	                    const otpStep = document.getElementById('loginStepOtp');
 	                    const isOtpVisible = otpStep && otpStep.style.display !== 'none';
-	                    // Also skip when token exists (expired token — user can sign out manually).
-	                    if (!isOtpVisible && !_privyToken) openLoginModal();
+	                    if (!isOtpVisible) {
+	                        if (_privyToken) {
+	                            // Token expired — clear stale session and prompt re-login
+	                            _clearPrivySession();
+	                            showToast('⚠️ Session expired — please sign in again');
+	                        }
+	                        openLoginModal();
+	                    }
 	                }
 	                throw new Error('Authentication required — please sign in');
 	            }
@@ -3580,10 +3793,7 @@
 	            return username ? `?username=${encodeURIComponent(username)}` : '';
 	        }
 
-	        function referralCode() {
-	            const params = new URLSearchParams(window.location.search);
-	            return params.get('ref') || params.get('start') || '';
-	        }
+
 
         async function ensureWalletForCurrentUser() {
             const username = currentUsername();
@@ -3594,7 +3804,6 @@
                     method: 'POST',
                     body: JSON.stringify({
                         username,
-                        referral_code: referralCode() || null,
                         email: contactEmail || null,
                         display_name: _privyDisplayName || null,
                         avatar_url: null,
@@ -3602,7 +3811,7 @@
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
-                    log(`Wallet ready for @${data.user.user_id}. Referral: ${data.user.referral_code}`, 'sys');
+                    log(`Wallet ready for @${data.user.user_id}.`, 'sys');
                 }
 	            } catch (err) {
 	                log('Wallet provisioning check failed.', 'warn');
@@ -3988,6 +4197,106 @@
             }
         }
 
+        // ── Stop-loss inline editor ──────────────────────────────────────────
+        function openStopLossEdit(agentId, event) {
+            if (event) { event.stopPropagation(); event.preventDefault(); }
+            document.getElementById(`sl-display-${agentId}`).style.display = 'none';
+            const editEl = document.getElementById(`sl-edit-${agentId}`);
+            editEl.style.display = 'flex';
+            editEl.querySelector('input').focus();
+        }
+        function cancelStopLossEdit(agentId, event) {
+            if (event) { event.stopPropagation(); event.preventDefault(); }
+            document.getElementById(`sl-display-${agentId}`).style.display = 'flex';
+            document.getElementById(`sl-edit-${agentId}`).style.display = 'none';
+        }
+        async function saveStopLoss(agentId, event) {
+            if (event) { event.stopPropagation(); event.preventDefault(); }
+            const input = document.getElementById(`sl-input-${agentId}`);
+            const pct = parseFloat(input.value);
+            if (!pct || pct <= 0 || pct > 99) { showToast('Enter a valid % (1–99)'); return; }
+            try {
+                const res = await apiFetch('/agents/update-stop-loss', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_id: agentId, stop_loss_pct: pct }),
+                });
+                const data = await res.json();
+                if (!res.ok || data.status !== 'success') throw new Error(data.message || 'Update failed');
+                // update displayed value without full re-render
+                const valEl = document.getElementById(`sl-val-${agentId}`);
+                if (valEl) valEl.textContent = `${pct.toFixed(1)}%`;
+                cancelStopLossEdit(agentId);
+                showToast(`Stop-loss set to ${pct.toFixed(1)}% ✓`);
+                // also update cache so modal defaults pick it up
+                const agent = (dashboardCache.agents || []).find(a => a.id === agentId);
+                if (agent) agent.stop_loss_pct = pct;
+            } catch (err) {
+                showToast(err.message || 'Could not update stop-loss');
+            }
+        }
+
+        // ── Scheduler status panel ───────────────────────────────────────────
+        let _schedulerPollTimer = null;
+        function _formatSchedulerTime(iso) {
+            if (!iso) return '—';
+            try {
+                const d = new Date(iso);
+                return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            } catch { return iso; }
+        }
+        function _renderSchedulerResults(results) {
+            const el = document.getElementById('schedulerAgentResults');
+            if (!el || !results || !Object.keys(results).length) { if (el) el.style.display = 'none'; return; }
+            el.style.display = 'flex';
+            el.innerHTML = Object.entries(results).map(([name, r]) => {
+                const action = (r.action || 'IDLE').toUpperCase();
+                const cls = action === 'BUY' ? 'tag-buy' : action === 'SELL' ? 'tag-sell' : 'tag-hold';
+                const label = `${action}${r.asset ? ' ' + r.asset : ''}`;
+                return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:8px;">
+                    <span style="font-size:11px;color:var(--muted);">${name.replace(/_/g,' ')}</span>
+                    <span class="trade-tag ${cls}" style="font-size:10px;">${label}</span>
+                </div>`;
+            }).join('');
+        }
+        async function refreshSchedulerStatus() {
+            if (!_privyToken && !isTelegramMode()) return;
+            try {
+                const res = await apiFetch('/scheduler/status');
+                const data = await res.json();
+                const dot = document.getElementById('schedulerDot');
+                const label = document.getElementById('schedulerLabel');
+                const mode = document.getElementById('schedulerMode');
+                const lastRun = document.getElementById('schedulerLastRun');
+                const nextRun = document.getElementById('schedulerNextRun');
+                if (!dot) return;
+                if (data.running) {
+                    dot.style.background = 'var(--amber,#f59e0b)';
+                    dot.style.boxShadow = '0 0 6px var(--amber,#f59e0b)';
+                    label.textContent = '⚡ Cycle running now…';
+                } else {
+                    dot.style.background = 'var(--cyan)';
+                    dot.style.boxShadow = '0 0 6px var(--cyan)';
+                    label.textContent = 'Idle — next cycle scheduled';
+                }
+                mode.textContent = `Mode: ${data.mode || 'unknown'} · Every ${data.interval_hours || 2}h`;
+                lastRun.textContent = _formatSchedulerTime(data.last_run);
+                nextRun.textContent = _formatSchedulerTime(data.next_run);
+                _renderSchedulerResults(data.last_results);
+            } catch (e) {
+                // silently fail — panel just stays loading
+            }
+        }
+        function startSchedulerPolling() {
+            refreshSchedulerStatus();
+            if (_schedulerPollTimer) clearInterval(_schedulerPollTimer);
+            _schedulerPollTimer = setInterval(refreshSchedulerStatus, 60000); // refresh every 60s
+        }
+        function stopSchedulerPolling() {
+            if (_schedulerPollTimer) clearInterval(_schedulerPollTimer);
+            _schedulerPollTimer = null;
+        }
+
         function log(msg, type = 'info') {
             const body = document.getElementById('terminalBody');
             const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -4120,8 +4429,7 @@
             const contactStatus = document.getElementById('accountContactStatus');
             if (contactStatus) {
                 const email = _safeContactEmail(profile.email);
-                const telegram = profile.telegram_chat_id ? 'Telegram connected' : 'Telegram not connected';
-                contactStatus.textContent = `${email ? `Email connected: ${email}` : 'Email not connected'} · ${telegram}`;
+                contactStatus.textContent = email ? `Email: ${email}` : 'No email linked — add one in settings';
             }
             const notifStatus = document.getElementById('accountNotificationStatus');
             if (notifStatus) {
@@ -4246,6 +4554,8 @@
 
 	        async function refreshDashboard() {
 	            await Promise.all([refreshWalletStats(), refreshMarketData(), fetchTradeHistory(), initSettings()]);
+                // Keep scheduler panel fresh whenever dashboard refreshes on wallet page
+                if (currentPage === 'wallet') refreshSchedulerStatus();
 	        }
 
         function renderAgents(agents) {
@@ -4289,10 +4599,22 @@
                             <div class="acs"><div class="acs-val ${color}">${agent.roi_30d || '0.00%'}</div><div class="acs-lbl">24h Signal</div></div>
                         </div>
                         <div class="agent-card-allocation">
-                            <div>
+                            <div style="flex:1;">
                                 <div class="agent-alloc-label">USDC allocated</div>
                                 <div class="agent-alloc-value">${fmtUsdc(allocated)} USDC</div>
-                                <div style="font-size:11px;color:var(--muted);margin-top:4px;">Stop-loss: ${stopLoss.toFixed(1)}%</div>
+                                ${allocated > 0 ? `
+                                <div class="stop-loss-row" id="sl-display-${agent.id}" style="display:flex;align-items:center;gap:6px;margin-top:5px;">
+                                    <span style="font-size:11px;color:var(--muted);">Stop-loss:</span>
+                                    <span style="font-size:11px;font-weight:600;color:var(--amber,#f59e0b);" id="sl-val-${agent.id}">${stopLoss.toFixed(1)}%</span>
+                                    <button type="button" onclick="openStopLossEdit('${agent.id}', event)" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:11px;color:var(--muted);" title="Edit stop-loss">✎</button>
+                                </div>
+                                <div class="stop-loss-edit" id="sl-edit-${agent.id}" style="display:none;align-items:center;gap:6px;margin-top:5px;" onclick="event.stopPropagation()">
+                                    <input type="number" min="1" max="99" step="0.5" value="${stopLoss.toFixed(1)}" id="sl-input-${agent.id}"
+                                        style="width:60px;padding:3px 6px;font-size:12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input,#1a1a2e);color:var(--text);">
+                                    <span style="font-size:11px;color:var(--muted);">%</span>
+                                    <button type="button" onclick="saveStopLoss('${agent.id}', event)" style="font-size:11px;padding:3px 8px;border-radius:6px;border:none;background:var(--cyan);color:#000;cursor:pointer;font-weight:600;">Save</button>
+                                    <button type="button" onclick="cancelStopLossEdit('${agent.id}', event)" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;">✕</button>
+                                </div>` : ''}
                             </div>
                             ${allocated > 0 ? `<button class="btn btn-outline agent-detach-btn" type="button" onclick="detachAgent('${agent.id}', event)">Detach</button>` : `<span class="pill pill-amber" style="font-size:10px;">${statusText}</span>`}
                         </div>
@@ -4440,15 +4762,14 @@
         function updateAccountStatus(settings = {}) {
             const profile = dashboardCache.profile || {};
             const contactEmail = _safeContactEmail(profile.email);
-            const emailStatus = contactEmail ? `Email connected: ${contactEmail}` : 'Email not connected';
-            const telegramStatus = profile.telegram_chat_id ? 'Telegram connected' : 'Telegram not connected';
+            const emailStatus = contactEmail ? `Email: ${contactEmail}` : 'No email linked';
             const notifications = [
                 settings.trade_alerts === '1' || settings.trade_alerts === true ? 'Trade alerts on' : 'Trade alerts off',
                 settings.daily_summary === '1' || settings.daily_summary === true ? 'Daily summary on' : 'Daily summary off',
             ].join(' · ');
             const contactEl = document.getElementById('accountContactStatus');
             const notifEl = document.getElementById('accountNotificationStatus');
-            if (contactEl) contactEl.textContent = `${emailStatus} · ${telegramStatus}`;
+            if (contactEl) contactEl.textContent = emailStatus;
             if (notifEl) notifEl.textContent = notifications;
         }
 
@@ -4607,15 +4928,8 @@
         // token-paste flow and will be replaced by the Privy SDK login modal.
         function openLoginModal() {
             resetLoginModal();
-            // Pre-fill invite badge if ref code is in URL
-            const rc = referralCode();
             const badge = document.getElementById('loginInviteBadge');
-            if (rc) {
-                document.getElementById('loginInviteCode').textContent = rc;
-                badge.style.display = 'block';
-            } else {
-                badge.style.display = 'none';
-            }
+            if (badge) badge.style.display = 'none';
             document.getElementById('loginModal').classList.add('open');
             setTimeout(() => document.getElementById('loginEmail').focus(), 300);
         }
@@ -4845,7 +5159,7 @@
                 const res = await apiFetch('/auth/wallet', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ address, message, signature, referral_code: referralCode() || null }),
+                    body: JSON.stringify({ address, message, signature }),
                 });
                 const data = await res.json();
                 if (!res.ok) { showToast(data.detail || 'Wallet login failed'); return; }
@@ -4940,7 +5254,6 @@
                             allocation: parseFloat(alloc),
                             asset: activeAsset,
                             stop_loss_pct: parseFloat(stopLoss || '10'),
-                            referral_code: referralCode() || null,
                             agent_id: agentId
                         })
                     });
@@ -5068,7 +5381,7 @@
 	                const res = await apiFetch('/follow', {
 	                    method: 'POST',
 	                    headers: { 'Content-Type': 'application/json' },
-	                    body: JSON.stringify({ username: tgUser, allocation: alloc, asset: activeAsset, stop_loss_pct: stopLoss, referral_code: referralCode() || null, agent_id: modalAgent.id })
+	                    body: JSON.stringify({ username: tgUser, allocation: alloc, asset: activeAsset, stop_loss_pct: stopLoss, agent_id: modalAgent.id })
 	                });
 	                const data = await res.json();
 	                if (!res.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Copy failed');
@@ -5112,6 +5425,12 @@
         window.addEventListener('resize', syncLayoutShell);
         ensureWalletForCurrentUser().finally(refreshDashboard);
         setInterval(refreshDashboard, 30000);
+
+        // Auto-show login modal for brand-new visitors (no cached session).
+        // Skips when the user is already signed in from a previous visit.
+        if (!_privyToken && !_privyUserId && !isTelegramMode()) {
+            setTimeout(() => openLoginModal(), 600);
+        }
     </script>
 </body>
 

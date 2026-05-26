@@ -27,9 +27,13 @@ def run_trade_cycle(
     recipient_address: Optional[str] = None,
     rate_limit_sleep: int = 5,
     agent_name: str = AGENT_NAME,
+    market_data: Optional[dict] = None,   # pre-fetched data → skip the API call
 ) -> dict:
     """
     Execute one full AI trading cycle.
+
+    Pass `market_data` to reuse an already-fetched market snapshot (e.g. when
+    running multiple agents back-to-back so CoinGecko/Yahoo are only hit once).
 
     Returns a dict with keys:
         status   : "success" | "hold" | "error"
@@ -52,8 +56,12 @@ def run_trade_cycle(
                 "reason": "Kill switch active"}
 
     # ── 1. Market data ──────────────────────────────────────────────────────
-    log.info("Fetching latest market data...")
-    current_data = get_current_market_state()
+    if market_data:
+        log.info("Using pre-fetched market data (skipping API call).")
+        current_data = market_data
+    else:
+        log.info("Fetching latest market data...")
+        current_data = get_current_market_state()
 
     # ── 2. AI decision ──────────────────────────────────────────────────────
     profile = get_agent_profile(agent_name)
