@@ -3,7 +3,10 @@ from __future__ import annotations
 import re
 from typing import Optional
 
+from google import genai
+
 from backend.agents import get_agent_catalog, get_agent_profile
+from backend.config import GOOGLE_API_KEY
 from backend.database import (
     deactivate_follower,
     get_follower_trade_history,
@@ -14,15 +17,20 @@ from backend.database import (
     get_user_preferences,
     set_user_preferences,
 )
+from backend.logger import get_logger
 from backend.wallet_summary import get_wallet_stats_safe
 
+log = get_logger("assistant")
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _clean(text: str | None) -> str:
     return re.sub(r"\s+", " ", (text or "")).strip().lower()
 
 
 def _word_in(word: str, text: str) -> bool:
-    """True only when *word* appears as a whole word in *text* (not inside another word)."""
     return bool(re.search(rf"\b{re.escape(word)}\b", text))
 
 
@@ -61,7 +69,12 @@ def _best_agent() -> dict:
         }
         if best is None or candidate["score"] > best["score"]:
             best = candidate
-    return best or {"id": "Conservative_Whale", "name": "Arc_Tic Whale", "avatar": "🐋", "metrics": {"win_rate": 0, "total_trades": 0}}
+    return best or {
+        "id": "Conservative_Whale",
+        "name": "Arc_Tic Whale",
+        "avatar": "🐋",
+        "metrics": {"win_rate": 0, "total_trades": 0},
+    }
 
 
 def _copied_agents(user_id: str) -> list[dict]:
@@ -86,7 +99,7 @@ def _format_agent_list(items: list[dict]) -> str:
         return "You are not copying any agents yet."
     lines = []
     for item in items:
-        lines.append(f"- {item['agent_name']}: {item['allocation']:.2f} USDC on {item['asset']}")
+        lines.append(f"- {item['agent_name']}: {item['allocation']:.2f} USDC")
     return "\n".join(lines)
 
 
@@ -99,98 +112,10 @@ def _extract_bool_toggle(command: str) -> Optional[bool]:
     return None
 
 
-def _assistant_reply_to_qa(command_text: str, normalized: str, wallet_stats: dict, allocations: list[dict]) -> Optional[dict]:
-    if any(token in normalized for token in ["what is copy trading", "what is copy-trading", "copy trading", "copytrade"]):
-        return {
-            "status": "success",
-            "reply": (
-                "Copy trading means you attach your wallet to an agent and automatically mirror its trades. "
-                "You choose the allocation, and the platform mirrors buys and sells proportionally."
-            ),
-            "suggestions": ["What is stop loss?", "How do allocations work?", "Show my copied agents"],
-        }
-
-    if any(token in normalized for token in ["what is stop loss", "what is stop-loss", "stop loss", "stop-loss"]):
-        return {
-            "status": "success",
-            "reply": (
-                "A stop loss is a safety limit. If the copied position drops past your threshold, the bot can auto-exit "
-                "and detach that agent relationship."
-            ),
-            "suggestions": ["How does take profit work?", "Explain P&L", "What is copy trading?"],
-        }
-
-    if any(token in normalized for token in ["what is pnl", "what does pnl mean", "p&l meaning", "profit and loss", "pnl"]):
-        pnl = wallet_stats.get("performance", {}).get("24h", "0.00%")
-        return {
-            "status": "success",
-            "reply": (
-                f"P&L means profit and loss. In your wallet, the recent change is {pnl}, and your current balance is "
-                f"{float(wallet_stats.get('total_balance_usd') or 0):.2f} USDC."
-            ),
-            "suggestions": ["What is copy trading?", "Show my copied agents", "Which agent is best this week?"],
-        }
-
-    if any(token in normalized for token in ["what is allocation", "how does allocation work", "allocation", "allocated"]):
-        total = float(wallet_stats.get("total_balance_usd") or 0)
-        allocated = sum(float(item.get("allocation") or 0) for item in allocations)
-        return {
-            "status": "success",
-            "reply": (
-                f"Allocation is the amount of USDC you attach to an agent. Right now you have {allocated:.2f} USDC allocated "
-                f"out of about {total:.2f} USDC in the wallet."
-            ),
-            "suggestions": ["What is P&L?", "How does stop loss work?", "Show my copied agents"],
-        }
-
-    if any(token in normalized for token in ["who is agent wale", "what is agent wale", "agent wale"]):
-        return {
-            "status": "success",
-            "reply": (
-                "I'm Agent Wale — your AI trading assistant. I can read your dashboard data and take actions "
-                "like checking P&L, showing copied agents, or detaching from an agent."
-            ),
-            "suggestions": ["Who are you?", "What can you do?", "Show my copied agents"],
-        }
-
-    if any(token in normalized for token in ["what is attach", "what is detach", "attach detach", "attach / detach"]):
-        return {
-            "status": "success",
-            "reply": (
-                "Attach means connecting your wallet to an agent so its trades are mirrored. Detach means stopping the copy link."
-            ),
-            "suggestions": ["Show my copied agents", "How do allocations work?", "What is stop loss?"],
-        }
-
-    if any(token in normalized for token in ["how does proportional", "proportional execution", "mirror trades", "real-time mirroring"]):
-        return {
-            "status": "success",
-            "reply": (
-                "Proportional execution means the copied trade scales to your allocation. If the agent trades 1 unit, your wallet trades your share of that size."
-            ),
-            "suggestions": ["What is allocation?", "What is copy trading?", "What is P&L?"],
-        }
-
-    _qa_greeting_phrases = ["what can you do", "who are you", "hello", "help"]
-    _qa_greeting_words   = ["hi", "hey"]
-    if (any(p in normalized for p in _qa_greeting_phrases)
-            or any(_word_in(w, normalized) for w in _qa_greeting_words)):
-        return {
-            "status": "success",
-            "reply": (
-                "I’m Agent Wale, your AI trading assistant. I can explain copy trading, check your wallet and P&L, list copied agents, "
-                "show recent trades, and help you manage alerts or detach from agents."
-            ),
-            "suggestions": ["What is copy trading?", "Show my copied agents", "What is stop loss?"],
-        }
-
-    return None
-
-
 def _context_suggestions(page: str | None, selected_agent: str | None, allocations: list[dict]) -> list[str]:
     page_key = _clean(page)
     agent_label = (selected_agent or "").replace("_", " ").strip() or "this agent"
-    suggestions = ["What is copy trading?", "Show my copied agents", "What is P&L?"]
+    suggestions = ["What is copy trading?", "Show my copied agents", "What is my P&L?"]
 
     if page_key == "home":
         suggestions = [
@@ -200,7 +125,7 @@ def _context_suggestions(page: str | None, selected_agent: str | None, allocatio
         ]
     elif page_key == "market":
         suggestions = [
-            f"Which agent is best this week?",
+            "Which agent is best this week?",
             f"Copy {agent_label}",
             "How does proportional execution work?",
         ]
@@ -212,7 +137,7 @@ def _context_suggestions(page: str | None, selected_agent: str | None, allocatio
         ]
     elif page_key == "trades":
         suggestions = [
-            "What is P&L?",
+            "What is my P&L?",
             "What is stop loss?",
             "Show my copied agents",
         ]
@@ -228,151 +153,164 @@ def _context_suggestions(page: str | None, selected_agent: str | None, allocatio
     return suggestions[:4]
 
 
+# ---------------------------------------------------------------------------
+# Gemini-powered natural language reply
+# ---------------------------------------------------------------------------
+
+def _build_system_prompt(
+    wallet_stats: dict,
+    allocations: list[dict],
+    preferences: dict,
+    user_id: str,
+) -> str:
+    """Build the system prompt injected with the user's live account context."""
+    total = float(wallet_stats.get("total_balance_usd") or 0)
+    pnl_24h = wallet_stats.get("performance", {}).get("24h", "0.00%")
+    pnl_7d  = wallet_stats.get("performance", {}).get("7d",  "0.00%")
+    pnl_1y  = wallet_stats.get("performance", {}).get("1y",  "0.00%")
+
+    tokens = wallet_stats.get("token_balances") or []
+    token_str = ", ".join(
+        f"{t.get('amount', '0')} {t.get('symbol', '')}" for t in tokens
+    ) or "no tokens"
+
+    agent_str = _format_agent_list(allocations)
+
+    alerts_on = bool(preferences.get("trade_alerts", True))
+    daily_on  = bool(preferences.get("daily_summary", True))
+
+    # Fetch last 3 trades for context (lightweight)
+    try:
+        wallet_id = None
+        from backend.database import get_user
+        u = get_user(user_id)
+        if u:
+            wallet_id = u.get("wallet_id")
+        trade_rows = []
+        if wallet_id:
+            from backend.database import get_follower_trade_history
+            trade_rows = get_follower_trade_history(wallet_id, limit=3, actions={"BUY", "SELL", "HOLD"})
+    except Exception:
+        trade_rows = []
+
+    if trade_rows:
+        trade_lines = []
+        for row in trade_rows:
+            ts = (row.get("timestamp") or "")[:10]
+            trade_lines.append(
+                f"  [{ts}] {row['action']} {row.get('asset') or 'market'} — {row.get('reason') or 'no reason'}"
+            )
+        trade_str = "\n".join(trade_lines)
+    else:
+        trade_str = "  No trades recorded yet."
+
+    return f"""You are Agent Wale — the AI assistant built into Arc_Tic Whale, a copy trading platform on Arc Testnet (blockchain).
+
+YOUR SCOPE: You ONLY answer questions about Arc_Tic Whale — the user's wallet, their trades, copied agents, platform concepts (copy trading, P&L, allocations, stop loss, take profit, Uniswap swaps), or how the app works. If the user asks about ANYTHING ELSE (coding, general trivia, news, weather, math problems, other apps, politics, entertainment, etc.), politely refuse and say something like: "I can only help with Arc_Tic Whale questions. Ask me about your wallet, trades, or how copy trading works."
+
+PLATFORM OVERVIEW:
+- Arc_Tic Whale is a DeFi copy trading platform on Arc Testnet (EVM chain by Circle)
+- Users connect a Circle Developer-Controlled Wallet and allocate USDC to AI trading agents
+- When an agent trades on Uniswap V3 (BUY/SELL), the user's wallet mirrors it proportionally
+- Supported tokens: USDC, WETH, WBTC, EURC on Arc Testnet
+- Users can detach from agents at any time (stops copy trading)
+- Trade alerts and daily summaries are configurable per user
+
+USER'S LIVE ACCOUNT DATA (right now):
+- Wallet total: ${total:.2f} USDC equivalent
+- Token breakdown: {token_str}
+- 24h performance: {pnl_24h}
+- 7d performance: {pnl_7d}
+- 1y performance: {pnl_1y}
+- Copied agents ({len(allocations)}):
+{agent_str}
+- Recent trades:
+{trade_str}
+- Trade alerts: {'ON' if alerts_on else 'OFF'}
+- Daily summary: {'ON' if daily_on else 'OFF'}
+
+RESPONSE RULES:
+1. Be helpful, concise, and confident. Answer in 1–4 plain text sentences.
+2. Use the live data above to give specific, personalised answers (not generic).
+3. Never make up trade data, prices, or events not shown above.
+4. If you don't know something specific (e.g., a future price), say so honestly.
+5. If the user wants to take an action (detach, toggle alerts), confirm clearly and tell them it will be applied.
+6. Do NOT use markdown bullet points or headers in replies — plain conversational text only.
+7. Refuse off-topic questions gracefully and redirect to the platform."""
+
+
+def _gemini_reply(question: str, system_prompt: str) -> str:
+    """Call Gemini 2.5 Flash and return the text response."""
+    if not GOOGLE_API_KEY:
+        raise RuntimeError("GOOGLE_API_KEY not configured")
+
+    client = genai.Client(api_key=GOOGLE_API_KEY)
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=question,
+        config=genai.types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            temperature=0.4,
+            max_output_tokens=300,
+        ),
+    )
+    return (response.text or "").strip()
+
+
+# ---------------------------------------------------------------------------
+# Main entry point
+# ---------------------------------------------------------------------------
+
 def handle_assistant_command(user_id: str, command: str, context: Optional[dict] = None) -> dict:
     user = get_user(user_id)
     if not user:
         return {
             "status": "error",
-            "reply": "I couldn't load your account yet. Refresh once and I’ll sync your wallet.",
+            "reply": "I couldn't load your account yet. Refresh once and I'll sync your wallet.",
         }
 
     command_text = command.strip()
-    normalized = _clean(command_text)
-    context = context or {}
-    wallet_stats = get_wallet_stats_safe(user.get("wallet_id"))
-    preferences = get_user_preferences(user_id)
-    allocations = _copied_agents(user_id)
-
     if not command_text:
         return {
             "status": "error",
-            "reply": "Tell me what you want me to do, like 'What is my P&L?' or 'Detach me from Arc_Tic Whale'.",
+            "reply": "Tell me what you want to know — try 'What is my P&L?' or 'Show my copied agents'.",
         }
 
-    _greeting_phrases = ["who are you", "what are you", "what can you do"]
-    _greeting_words = ["hello", "hi", "hey", "help"]
-    if (any(phrase in normalized for phrase in _greeting_phrases)
-            or any(_word_in(w, normalized) for w in _greeting_words)):
-        return {
-            "status": "success",
-            "reply": (
-                "I’m Agent Wale, your AI trading assistant. I can check your P&L, show copied agents, "
-                "list recent trades, help you detach from an agent, and toggle alerts. "
-                "Try: ‘What is my P&L?’ or ‘Show my copied agents’."
-            ),
-            "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
-        }
+    normalized   = _clean(command_text)
+    context      = context or {}
+    wallet_stats = get_wallet_stats_safe(user.get("wallet_id"))
+    preferences  = get_user_preferences(user_id)
+    allocations  = _copied_agents(user_id)
+    suggestions  = _context_suggestions(context.get("page"), context.get("selected_agent"), allocations)
 
-    qa = _assistant_reply_to_qa(command_text, normalized, wallet_stats, allocations)
-    if qa:
-        qa["suggestions"] = qa.get("suggestions") or _context_suggestions(context.get("page"), context.get("selected_agent"), allocations)
-        return qa
+    # ------------------------------------------------------------------
+    # 1. Hard-action handlers — keyword-triggered, no LLM needed
+    # ------------------------------------------------------------------
 
-    _pnl_signals = [
-        "p&l", "pnl", "profit", "balance", "how much", "earned", "earn",
-        "made this week", "made today", "gain", "loss", "returns", "performance",
-        "worth", "how am i doing", "doing financially", "wallet value",
-        "my money", "funds", "usdc", "what's in my wallet", "whats in my wallet",
-    ]
-    if any(s in normalized for s in _pnl_signals):
-        pnl_24h = wallet_stats.get("performance", {}).get("24h", "0.00%")
-        pnl_7d  = wallet_stats.get("performance", {}).get("7d",  "0.00%")
-        total   = float(wallet_stats.get("total_balance_usd") or 0)
-        tokens  = wallet_stats.get("token_balances") or []
-        token_lines = ", ".join(
-            f"{t.get('amount', '0')} {t.get('symbol', '')}" for t in tokens
-        ) or "none"
-        return {
-            "status": "success",
-            "reply": (
-                f"Your wallet holds {total:.2f} USDC (tokens: {token_lines}). "
-                f"24h P&L: {pnl_24h} | 7d P&L: {pnl_7d}. "
-                f"You're copying {len(allocations)} agent(s)."
-            ),
-            "data": {"wallet": wallet_stats, "copied_agents": allocations},
-            "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
-        }
-
-    _best_agent_signals = [
-        "best", "top agent", "best this week", "highest win", "most profitable",
-        "which agent", "who should i copy", "recommend an agent", "best performing",
-        "who is winning", "top performer",
-    ]
-    if any(s in normalized for s in _best_agent_signals):
-        best = _best_agent()
-        metrics = best["metrics"]
-        return {
-            "status": "success",
-            "reply": (
-                f"{best['name']} looks strongest right now with a {metrics.get('win_rate', 0)}% win rate "
-                f"across {metrics.get('total_trades', 0)} trades."
-            ),
-            "data": best,
-            "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
-        }
-
-    _copied_signals = [
-        "copied", "following", "copying", "my agents", "agents i follow",
-        "who am i copying", "which agents", "show agents", "list agents",
-        "agents i'm copying", "current agents",
-    ]
-    if any(s in normalized for s in _copied_signals):
-        return {
-            "status": "success",
-            "reply": _format_agent_list(allocations),
-            "data": {"copied_agents": allocations},
-            "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
-        }
-
-    _trade_history_signals = [
-        "recent trade", "trade history", "what did i trade", "last trade",
-        "when did i last", "my trades", "show trades", "last transaction",
-        "trade log", "past trades", "previous trades", "latest trade",
-        "what trades", "have i traded",
-    ]
-    if any(s in normalized for s in _trade_history_signals):
-        history = get_follower_trade_history(user["wallet_id"], limit=5, actions={"BUY", "SELL", "HOLD"})
-        if not history:
-            reply = "No trades yet for this wallet."
-        else:
-            lines = []
-            for row in history:
-                ts = (row.get("timestamp") or "")[:10]
-                lines.append(
-                    f"- [{ts}] {row['action']} {row.get('asset') or 'market'}: "
-                    f"{row.get('reason') or 'No reason recorded.'}"
-                )
-            reply = "\n".join(lines)
-        return {
-            "status": "success",
-            "reply": reply,
-            "data": {"trades": history},
-            "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
-        }
-
-    detach_target = None
+    # Detach from agent
     if any(word in normalized for word in ["detach", "stop copying", "remove"]):
         detach_target = _match_agent_name(command_text)
         if not detach_target:
             return {
                 "status": "needs_input",
                 "reply": "Which agent should I detach? Try using the agent name.",
-                "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
+                "suggestions": suggestions,
             }
         detached = deactivate_follower(user_id, detach_target)
         if not detached:
             return {
                 "status": "skipped",
                 "reply": f"You're not actively copying {get_agent_profile(detach_target)['name']}.",
-                "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
+                "suggestions": suggestions,
             }
         return {
             "status": "success",
-            "reply": f"Detached you from {get_agent_profile(detach_target)['name']}.",
+            "reply": f"Done — detached you from {get_agent_profile(detach_target)['name']}.",
             "data": {"agent_id": detach_target},
-            "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
+            "suggestions": suggestions,
         }
 
+    # Toggle daily summary
     alert_toggle = _extract_bool_toggle(command_text)
     if "daily summary" in normalized and alert_toggle is not None:
         set_user_preferences(user_id, daily_summary=alert_toggle)
@@ -380,23 +318,90 @@ def handle_assistant_command(user_id: str, command: str, context: Optional[dict]
             "status": "success",
             "reply": f"Daily summary is now {'on' if alert_toggle else 'off'}.",
             "data": {"daily_summary": alert_toggle},
-            "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
+            "suggestions": suggestions,
         }
 
+    # Toggle trade alerts
     if alert_toggle is not None and "alert" in normalized:
         set_user_preferences(user_id, trade_alerts=alert_toggle)
         return {
             "status": "success",
             "reply": f"Trade alerts are now {'on' if alert_toggle else 'off'}.",
             "data": {"trade_alerts": alert_toggle},
-            "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
+            "suggestions": suggestions,
+        }
+
+    # ------------------------------------------------------------------
+    # 2. Gemini LLM — handles all Q&A naturally and within scope
+    # ------------------------------------------------------------------
+    try:
+        system_prompt = _build_system_prompt(wallet_stats, allocations, preferences, user_id)
+        reply = _gemini_reply(command_text, system_prompt)
+        if not reply:
+            raise ValueError("Empty reply from Gemini")
+        return {
+            "status": "success",
+            "reply": reply,
+            "suggestions": suggestions,
+        }
+    except Exception as exc:
+        log.warning("Gemini assistant failed, using fallback: %s", exc)
+
+    # ------------------------------------------------------------------
+    # 3. Static fallback (if Gemini is unavailable / key missing)
+    # ------------------------------------------------------------------
+    total   = float(wallet_stats.get("total_balance_usd") or 0)
+    pnl_24h = wallet_stats.get("performance", {}).get("24h", "0.00%")
+
+    _pnl_signals = [
+        "p&l", "pnl", "profit", "balance", "how much", "earned", "earn",
+        "gain", "loss", "returns", "performance", "worth", "wallet value",
+        "my money", "funds", "usdc",
+    ]
+    if any(s in normalized for s in _pnl_signals):
+        tokens = wallet_stats.get("token_balances") or []
+        token_lines = ", ".join(f"{t.get('amount','0')} {t.get('symbol','')}" for t in tokens) or "none"
+        return {
+            "status": "success",
+            "reply": (
+                f"Your wallet holds {total:.2f} USDC equivalent (tokens: {token_lines}). "
+                f"24h P&L: {pnl_24h}."
+            ),
+            "data": {"wallet": wallet_stats},
+            "suggestions": suggestions,
+        }
+
+    if any(s in normalized for s in ["copied", "following", "copying", "my agents", "which agents"]):
+        return {
+            "status": "success",
+            "reply": _format_agent_list(allocations),
+            "data": {"copied_agents": allocations},
+            "suggestions": suggestions,
+        }
+
+    if any(s in normalized for s in ["trade history", "recent trade", "my trades", "show trades"]):
+        wallet_id = user.get("wallet_id")
+        history = get_follower_trade_history(wallet_id, limit=5, actions={"BUY", "SELL", "HOLD"}) if wallet_id else []
+        if not history:
+            reply = "No trades yet for this wallet."
+        else:
+            lines = [
+                f"[{(row.get('timestamp') or '')[:10]}] {row['action']} {row.get('asset') or 'market'}: {row.get('reason') or 'No reason recorded.'}"
+                for row in history
+            ]
+            reply = "\n".join(lines)
+        return {
+            "status": "success",
+            "reply": reply,
+            "data": {"trades": history},
+            "suggestions": suggestions,
         }
 
     return {
         "status": "unsupported",
         "reply": (
-            "I can answer P&L, best agent, copied agents, and recent trades, "
+            "I can answer questions about your wallet, P&L, copied agents, and recent trades, "
             "or help you detach from an agent and toggle alerts."
         ),
-        "suggestions": _context_suggestions(context.get("page"), context.get("selected_agent"), allocations),
+        "suggestions": suggestions,
     }
