@@ -36,6 +36,7 @@ from backend.database import (
     get_user_preferences,
     init_db,
     log_trade,
+    log_social_post,
     set_setting,
     set_user_preferences,
     update_user_profile,
@@ -525,6 +526,11 @@ def read_root():
         "auth_required": not TRADE_DRY_RUN,
     }
 
+@app.api_route("/ping", methods=["GET", "HEAD"])
+def ping():
+    """Lightweight keep-alive endpoint for UptimeRobot / health checks. No auth, no rate limit."""
+    return {"status": "ok"}
+
 @app.post("/users/ensure")
 @limiter.limit(lambda: f"{RATE_LIMIT_PER_MINUTE}/minute")
 def ensure_user(request: Request, req: EnsureUserRequest):
@@ -814,6 +820,16 @@ def withdraw(req: Optional[WithdrawRequest] = None, _: str = Depends(verify_priv
         asset=req.asset.upper(),
         tx_id=tx_id,
         reason="Transfer submitted",
+    )
+    log_social_post(
+        agent=AGENT_NAME,
+        action="SELL",
+        post_text=(
+            f"Funds on the move — {req.amount} {req.asset.upper()} withdrawn from the vault. "
+            f"Capital rotation or profit taking. Watching closely. 🐋"
+        ),
+        tx_id=tx_id,
+        reason=f"Withdrawal of {req.amount} {req.asset.upper()} submitted.",
     )
 
     return {
@@ -1118,6 +1134,27 @@ def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_p
         stop_loss_pct=req.stop_loss_pct,
     )
 
+    # ── Feed entry: new copy event ──────────────────────────────────────────
+    agent_profile = get_agent_profile(agent_id)
+    _copy_reason = f"New follower allocated {req.allocation} {req.asset} to copy {agent_profile['name']}."
+    log_trade(
+        agent=agent_id,
+        action="BUY",
+        asset=req.asset,
+        tx_id=None,
+        reason=_copy_reason,
+    )
+    log_social_post(
+        agent=agent_id,
+        action="BUY",
+        post_text=(
+            f"New capital in the stream. A follower just allocated {req.allocation} {req.asset} "
+            f"to mirror my moves. The thesis holds. 🐋"
+        ),
+        tx_id=None,
+        reason=_copy_reason,
+    )
+
     return {
         "status": "success",
         "message": f"User {req.username} secured to smart contract.",
@@ -1187,6 +1224,28 @@ def detach_agent(req: DetachRequest, current_user_id: str = Depends(verify_privy
     detached = deactivate_follower(user_id, req.agent_id)
     if not detached:
         return {"status": "skipped", "message": "No active allocation found for this agent."}
+
+    # ── Feed entry: detach event ────────────────────────────────────────────
+    _det_profile = get_agent_profile(req.agent_id)
+    _det_reason = f"A follower exited their copy position from {_det_profile['name']}."
+    log_trade(
+        agent=req.agent_id,
+        action="SELL",
+        asset="USDC",
+        tx_id=None,
+        reason=_det_reason,
+    )
+    log_social_post(
+        agent=req.agent_id,
+        action="SELL",
+        post_text=(
+            "A position was closed. A follower detached from my copy stream — "
+            "risk management at play. The strategy continues. 🐋"
+        ),
+        tx_id=None,
+        reason=_det_reason,
+    )
+
     return {
         "status": "success",
         "message": f"Detached from {req.agent_id}.",
