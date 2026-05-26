@@ -671,15 +671,16 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
 
     if not feed:
         feed.append({
-            "agent": "Arc_Tic Whale",
-            "avatar": "🐋",
+            "agent": None,
+            "avatar": None,
             "action": "IDLE",
             "asset": None,
             "timestamp": None,
-            "body": "No agent decisions recorded yet. Trigger a market check to populate the live feed.",
+            "body": None,
             "tx_id": None,
-            "type": "trade",
-            "agent_id": AGENT_NAME,
+            "type": "placeholder",
+            "agent_id": None,
+            "is_placeholder": True,
         })
 
     return {

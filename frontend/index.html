@@ -4097,6 +4097,20 @@ function _assistantContext() {
                 email.textContent = contactEmail ? `Contact email: ${contactEmail}` : 'Contact email not set';
             }
 
+            // ── Sync greetPill with the saved DB name ──────────────────────
+            // profile.display_name is the authoritative name — always wins over
+            // whatever generic label (_setPrivySession set ('Trading Wallet',
+            // 'Google Account', etc.) was stored during login.
+            const savedName = profile.display_name;
+            if (savedName) {
+                _privyDisplayName = savedName;
+                localStorage.setItem(_privyDisplayKey, savedName);
+                const greet = document.getElementById('greetPill');
+                if (greet && greet.className.includes('pill-cyan')) {
+                    greet.textContent = `✓ ${savedName}`;
+                }
+            }
+
             const editName = document.getElementById('profileEditName');
             const editEmail = document.getElementById('profileEditEmail');
             const editAvatar = document.getElementById('profileEditAvatar');
@@ -4579,9 +4593,12 @@ function _assistantContext() {
             const container = document.getElementById('feedContainer');
             if (!container) return;
 
-            // Filter out the API's placeholder fallback entry (no real tx, no agent_id)
+            // Strip any placeholder / idle entries — only keep real trades and social posts
             const realFeed = (feed || []).filter(item =>
-                item.agent_id || item.tx_id || (item.type === 'post' && item.body && !item.body.includes('No agent decisions'))
+                !item.is_placeholder &&
+                item.type !== 'placeholder' &&
+                item.action !== 'IDLE' &&
+                (item.agent_id || item.tx_id)
             );
 
             if (!realFeed.length) {
