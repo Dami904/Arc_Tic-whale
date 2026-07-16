@@ -1,5 +1,8 @@
+import hashlib
 import os
+import secrets
 import sqlite3
+import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from backend.logger import get_logger
@@ -154,6 +157,20 @@ def init_db():
             ''')
 
             cursor.execute('''
+                CREATE TABLE IF NOT EXISTS sessions (
+                    token_hash TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    expires_at DOUBLE PRECISION NOT NULL
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS auth_nonces (
+                    nonce TEXT PRIMARY KEY,
+                    expires_at DOUBLE PRECISION NOT NULL
+                )
+            ''')
+
+            cursor.execute('''
                 CREATE TABLE IF NOT EXISTS settings (
                     key TEXT PRIMARY KEY,
                     value TEXT NOT NULL
@@ -250,6 +267,20 @@ def init_db():
                     tx_id TEXT,
                     reason TEXT,
                     timestamp TEXT NOT NULL
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS sessions (
+                    token_hash TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    expires_at REAL NOT NULL
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS auth_nonces (
+                    nonce TEXT PRIMARY KEY,
+                    expires_at REAL NOT NULL
                 )
             ''')
 
@@ -720,6 +751,65 @@ def set_setting(key: str, value: str):
 
 def is_kill_switch_active() -> bool:
     return get_setting("kill_switch", "0") == "1"
+
+
+# ── Sessions & auth nonces (DB-backed so they survive restarts/sleep) ─────────
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def create_session(user_id: str, ttl_seconds: int = 86_400) -> str:
+    """Issue a new opaque session token for user_id. Only the hash is stored."""
+    token = f"sess_{secrets.token_urlsafe(32)}"
+    expires_at = time.time() + ttl_seconds
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        cursor.execute(
+            f"INSERT INTO sessions (token_hash, user_id, expires_at) VALUES ({_PH}, {_PH}, {_PH})",
+            (_hash_token(token), user_id, expires_at),
+        )
+        conn.commit()
+    return token
+
+
+def get_session_user(token: str) -> str | None:
+    """Return the user_id for a valid session token, or None. Cleans expired rows opportunistically."""
+    now = time.time()
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        cursor.execute(f"DELETE FROM sessions WHERE expires_at < {_PH}", (now,))
+        cursor.execute(
+            f"SELECT user_id FROM sessions WHERE token_hash = {_PH} AND expires_at >= {_PH}",
+            (_hash_token(token), now),
+        )
+        row = _row(cursor)
+        conn.commit()
+    return row["user_id"] if row else None
+
+
+def create_auth_nonce(ttl_seconds: int = 300) -> str:
+    nonce = secrets.token_urlsafe(24)
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        cursor.execute(
+            f"INSERT INTO auth_nonces (nonce, expires_at) VALUES ({_PH}, {_PH})",
+            (nonce, time.time() + ttl_seconds),
+        )
+        conn.commit()
+    return nonce
+
+
+def consume_auth_nonce(nonce: str) -> bool:
+    """Atomically delete the nonce; True only if it existed and was unexpired (single-use)."""
+    now = time.time()
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        cursor.execute(f"DELETE FROM auth_nonces WHERE expires_at < {_PH}", (now,))
+        cursor.execute(f"DELETE FROM auth_nonces WHERE nonce = {_PH} AND expires_at >= {_PH}", (nonce, now))
+        consumed = cursor.rowcount == 1
+        conn.commit()
+    return consumed
 
 
 if __name__ == "__main__":
