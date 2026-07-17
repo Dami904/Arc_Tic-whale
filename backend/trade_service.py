@@ -97,6 +97,12 @@ def run_trade_cycle(
         return {"status": "error", "action": action, "asset": asset, "tx_hash": None,
                 "reason": "Blockchain execution failed"}
 
+    # ── 3b. Persist to history immediately ───────────────────────────────────
+    # Logged right after a successful on-chain trade so a runner killed
+    # mid-cycle (before mirroring/social) can never leave an executed trade
+    # with no trade_history row.
+    log_trade(agent=agent_name, action=action, asset=asset, tx_id=agent_tx, reason=reason)
+
     # ── 4. Mirror to followers ───────────────────────────────────────────────
     mirror_agent_trade(agent_name=agent_name, action=action, target_asset_symbol=asset)
 
@@ -109,9 +115,6 @@ def run_trade_cycle(
     post = generate_canteen_post(profile["name"], action, agent_tx, reason=reason)
     log.info("Social post: %s", post)
     log_social_post(agent=agent_name, action=action, post_text=post, tx_id=agent_tx, reason=reason)
-
-    # ── 7. Persist to history ────────────────────────────────────────────────
-    log_trade(agent=agent_name, action=action, asset=asset, tx_id=agent_tx, reason=reason)
 
     return {
         "status": "success",

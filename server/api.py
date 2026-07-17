@@ -1120,7 +1120,9 @@ def scheduler_status(_: str = Depends(verify_privy_token)):
         "interval_hours": 2.0,
         "runner":         "github-actions",
         "last_trade":     latest,
-        "mode":           "dry-run" if TRADE_DRY_RUN else "live",
+        # Trades execute in the Actions job, which pins TRADE_DRY_RUN=false —
+        # this web process's own TRADE_DRY_RUN value is not what actually runs.
+        "mode":           "live",
     }
 
 

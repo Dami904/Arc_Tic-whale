@@ -2,8 +2,10 @@ name: Trade Cycle
 
 on:
   schedule:
-    - cron: "0 */2 * * *"   # every 2 hours (UTC); GitHub may delay under load — acceptable
+    - cron: "23 */2 * * *"  # every 2 hours (UTC), offset from the top of the hour to avoid congestion
   workflow_dispatch: {}      # manual trigger for testing
+
+permissions: {}
 
 concurrency:
   group: trade-cycle
@@ -20,6 +22,9 @@ jobs:
       CIRCLE_ENTITY_SECRET: ${{ secrets.CIRCLE_ENTITY_SECRET }}
       AGENT_WALLET_ID: ${{ secrets.AGENT_WALLET_ID }}
       AGENT_WALLET_ADDRESS: ${{ secrets.AGENT_WALLET_ADDRESS }}
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
       TRADE_DRY_RUN: "false"
     steps:
       - uses: actions/checkout@v4
