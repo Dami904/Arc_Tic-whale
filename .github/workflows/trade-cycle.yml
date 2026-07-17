@@ -1,0 +1,31 @@
+name: Trade Cycle
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"   # every 2 hours (UTC); GitHub may delay under load — acceptable
+  workflow_dispatch: {}      # manual trigger for testing
+
+concurrency:
+  group: trade-cycle
+  cancel-in-progress: false
+
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      CIRCLE_API_KEY: ${{ secrets.CIRCLE_API_KEY }}
+      CIRCLE_ENTITY_SECRET: ${{ secrets.CIRCLE_ENTITY_SECRET }}
+      AGENT_WALLET_ID: ${{ secrets.AGENT_WALLET_ID }}
+      AGENT_WALLET_ADDRESS: ${{ secrets.AGENT_WALLET_ADDRESS }}
+      TRADE_DRY_RUN: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python scripts/run_cycle.py

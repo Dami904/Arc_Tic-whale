@@ -51,13 +51,12 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.market_data import get_current_market_state
 from backend.daily_summary import start_daily_summary_scheduler, send_daily_summary_reports
-from backend.trade_scheduler import start_trade_scheduler, stop_trade_scheduler, get_scheduler_state
 from backend.assistant import handle_assistant_command
 from backend.notifications import build_notification_reminder, user_has_notification_channel
 from backend.trade_service import run_trade_cycle
 from backend.trade_executor import execute_transfer
 from backend.copy_engine import evaluate_stop_losses
-from backend.agents import get_agent_catalog, get_agent_profile
+from backend.agents import get_agent_catalog, get_agent_profile, AGENT_PROFILES
 from backend.user_wallets import ensure_user_wallet, normalize_user_id
 from backend.wallet_summary import get_wallet_stats_safe
 from backend.wallet_manager import initialize_circle_client
@@ -90,9 +89,9 @@ init_db()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     start_daily_summary_scheduler()
-    start_trade_scheduler()          # ← auto-fires trade cycles every 2 h
+    # Trade cycles run in GitHub Actions (.github/workflows/trade-cycle.yml),
+    # not in this process — the web service is allowed to sleep on Render.
     yield
-    stop_trade_scheduler()           # ← clean shutdown
 
 
 app = FastAPI(
@@ -1111,14 +1110,16 @@ def trigger_trade(request: Request, req: Optional[TriggerTradeRequest] = None, _
 
 @app.get("/scheduler/status")
 def scheduler_status(_: str = Depends(verify_privy_token)):
-    """Returns the current state of the auto-trade scheduler."""
-    state = get_scheduler_state()
+    """Reports the last trade cycle, derived from trade_history (cycles run in GitHub Actions)."""
+    latest = None
+    for agent_id in AGENT_PROFILES:
+        trade = get_latest_trade(agent_id)
+        if trade and (latest is None or trade["timestamp"] > latest["timestamp"]):
+            latest = trade
     return {
         "interval_hours": 2.0,
-        "running":        state["running"],
-        "last_run":       state["last_run"],
-        "next_run":       state["next_run"],
-        "last_results":   state["last_results"],
+        "runner":         "github-actions",
+        "last_trade":     latest,
         "mode":           "dry-run" if TRADE_DRY_RUN else "live",
     }
 
