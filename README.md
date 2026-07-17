@@ -289,8 +289,11 @@ Required GitHub Actions secrets (repo → Settings → Secrets and variables →
 The cron does nothing until this workflow is merged into `main` — a manual run via
 Actions tab → "Trade Cycle" → Run workflow works from any branch for testing.
 
-Kill switch: set the `kill_switch` setting to `1` (via the app's admin toggle) — cycles
-skip cleanly and exit 0. `scripts/run_cycle.py` also refuses to run in live mode
+Kill switch: set the `kill_switch` setting to `1` — cycles skip cleanly and exit 0.
+**Note:** `POST /settings/kill_switch` is currently reachable by any authenticated
+user, not just admins — anyone signed up can halt trading platform-wide. Tightening
+this to an admin-only check is a recommended follow-up now that it gates a live
+GitHub Actions trading job. `scripts/run_cycle.py` also refuses to run in live mode
 (`TRADE_DRY_RUN=false`) if any required secret is missing, rather than silently trading
 against an empty fallback database.
 

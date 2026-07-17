@@ -5,7 +5,6 @@ import json as _json
 import re
 import urllib.parse
 import random
-import secrets
 import time
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -1020,7 +1019,8 @@ def wallet_nonce(request: Request):
 
 
 @app.post("/auth/wallet")
-async def wallet_auth(body: dict):
+@limiter.limit(lambda: f"{RATE_LIMIT_PER_MINUTE}/minute")
+async def wallet_auth(request: Request, body: dict):
     address   = (body.get("address") or "").lower().strip()
     message   = (body.get("message") or "").strip()
     signature = (body.get("signature") or "").strip()
