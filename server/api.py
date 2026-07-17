@@ -42,6 +42,8 @@ from backend.database import (
     update_user_profile,
     create_session,
     get_session_user,
+    create_auth_nonce,
+    consume_auth_nonce,
 )
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -1007,13 +1009,25 @@ async def verify_otp(body: dict):
     session_token = create_session(user_id)
     return {"token": session_token, "user_id": user_id, "email": email}
 
+@app.get("/auth/wallet-nonce")
+def wallet_nonce():
+    """Issue a single-use, 5-minute nonce the wallet must sign to log in."""
+    nonce = create_auth_nonce(ttl_seconds=300)
+    return {"nonce": nonce, "message": f"Sign in to Arc_Tic Whale\nNonce: {nonce}"}
+
+
 @app.post("/auth/wallet")
 async def wallet_auth(body: dict):
     address   = (body.get("address") or "").lower().strip()
     message   = (body.get("message") or "").strip()
     signature = (body.get("signature") or "").strip()
-    if not address or not message or not signature:
-        raise HTTPException(status_code=400, detail="address, message, and signature required")
+    nonce     = (body.get("nonce") or "").strip()
+    if not address or not message or not signature or not nonce:
+        raise HTTPException(status_code=400, detail="address, message, signature, and nonce required")
+    if nonce not in message:
+        raise HTTPException(status_code=401, detail="Signed message does not contain the issued nonce")
+    if not consume_auth_nonce(nonce):
+        raise HTTPException(status_code=401, detail="Invalid, expired, or already-used nonce")
     msg = encode_defunct(text=message)
     try:
         recovered = Account.recover_message(msg, signature=signature).lower()
@@ -1022,8 +1036,9 @@ async def wallet_auth(body: dict):
     if recovered != address:
         raise HTTPException(status_code=401, detail="Signature verification failed")
     wallet = ensure_user_wallet(f"wallet_{address[:8]}")
+    session_token = create_session(wallet["user_id"])
     return {
-        "token": f"wallet_{address}",
+        "token": session_token,
         "user_id": wallet["user_id"],
         "email": "",
         "display_name": "Trading Wallet",
