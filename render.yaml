@@ -31,6 +31,9 @@ services:
       - key: PYTHON_BACKEND_URL
         sync: false            # Set to arctic-whale-api Render URL after first deploy
 
+  # NOTE: Trade cycles do NOT run in this service. They run in GitHub Actions
+  # (.github/workflows/trade-cycle.yml) directly against the DATABASE_URL below,
+  # so this service can sleep on the free tier without missing trades.
   - type: web
     name: arctic-whale-api
     runtime: python
@@ -40,6 +43,8 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: TRADE_DRY_RUN
+        value: "false"
+      - key: AGENT_DEV_MODE
         value: "false"
       - key: DATABASE_URL
         fromDatabase:

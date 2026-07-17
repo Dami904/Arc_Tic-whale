@@ -275,6 +275,25 @@ Use the same Render blueprint pattern from `render.yaml`, but point each environ
 - wallet IDs
 - `BOT_TOKEN`
 
+### Scheduled Trading (GitHub Actions)
+
+Trade cycles run every 2 hours via GitHub Actions (`.github/workflows/trade-cycle.yml`),
+not inside the web service — so Render free-tier sleep never stops the agents.
+
+Required GitHub Actions secrets (repo → Settings → Secrets and variables → Actions):
+`DATABASE_URL`, `GOOGLE_API_KEY`, `CIRCLE_API_KEY`, `CIRCLE_ENTITY_SECRET`,
+`AGENT_WALLET_ID`, `AGENT_WALLET_ADDRESS`, plus `BOT_TOKEN` / `RESEND_API_KEY` /
+`RESEND_FROM_EMAIL` if you want trade-alert notifications to fire from this job.
+
+**GitHub only triggers `schedule:` workflows on the repository's default branch.**
+The cron does nothing until this workflow is merged into `main` — a manual run via
+Actions tab → "Trade Cycle" → Run workflow works from any branch for testing.
+
+Kill switch: set the `kill_switch` setting to `1` (via the app's admin toggle) — cycles
+skip cleanly and exit 0. `scripts/run_cycle.py` also refuses to run in live mode
+(`TRADE_DRY_RUN=false`) if any required secret is missing, rather than silently trading
+against an empty fallback database.
+
 ### Telegram Bot
 
 Run one production bot only on Render.
