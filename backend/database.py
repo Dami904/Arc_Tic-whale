@@ -760,32 +760,47 @@ def _hash_token(token: str) -> str:
 
 
 def create_session(user_id: str, ttl_seconds: int = 86_400) -> str:
-    """Issue a new opaque session token for user_id. Only the hash is stored."""
+    """Issue a new opaque session token for user_id. Only the hash is stored.
+    Expired rows are cleaned up here so the read path stays a pure SELECT."""
     token = f"sess_{secrets.token_urlsafe(32)}"
-    expires_at = time.time() + ttl_seconds
+    now = time.time()
     with _connection() as conn:
         cursor = _cursor(conn)
+        cursor.execute(f"DELETE FROM sessions WHERE expires_at < {_PH}", (now,))
         cursor.execute(
             f"INSERT INTO sessions (token_hash, user_id, expires_at) VALUES ({_PH}, {_PH}, {_PH})",
-            (_hash_token(token), user_id, expires_at),
+            (_hash_token(token), user_id, now + ttl_seconds),
         )
         conn.commit()
     return token
 
 
 def get_session_user(token: str) -> str | None:
-    """Return the user_id for a valid session token, or None. Cleans expired rows opportunistically."""
-    now = time.time()
+    """Return the user_id for a valid session token, or None."""
     with _connection() as conn:
         cursor = _cursor(conn)
-        cursor.execute(f"DELETE FROM sessions WHERE expires_at < {_PH}", (now,))
         cursor.execute(
             f"SELECT user_id FROM sessions WHERE token_hash = {_PH} AND expires_at >= {_PH}",
-            (_hash_token(token), now),
+            (_hash_token(token), time.time()),
         )
         row = _row(cursor)
-        conn.commit()
     return row["user_id"] if row else None
+
+
+def delete_session(token: str) -> None:
+    """Revoke a single session (logout)."""
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        cursor.execute(f"DELETE FROM sessions WHERE token_hash = {_PH}", (_hash_token(token),))
+        conn.commit()
+
+
+def delete_user_sessions(user_id: str) -> None:
+    """Revoke every session for a user (compromise response / credential change)."""
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        cursor.execute(f"DELETE FROM sessions WHERE user_id = {_PH}", (user_id,))
+        conn.commit()
 
 
 def create_auth_nonce(ttl_seconds: int = 300) -> str:

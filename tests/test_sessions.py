@@ -1,3 +1,4 @@
+import hashlib
 import time
 
 import pytest
@@ -7,6 +8,10 @@ import backend.database as db
 
 @pytest.fixture
 def tmp_db(tmp_path, monkeypatch):
+    # Force the SQLite backend regardless of any DATABASE_URL in the
+    # environment, so tests can never hit production Postgres.
+    monkeypatch.setattr(db, "_USE_PG", False)
+    monkeypatch.setattr(db, "_PH", "?")
     monkeypatch.setattr(db, "DB_NAME", str(tmp_path / "test.db"))
     db.init_db()
     yield db
@@ -32,7 +37,22 @@ class TestSessions:
             cur.execute("SELECT token_hash FROM sessions")
             rows = db._rows(cur)
         assert len(rows) == 1
-        assert token not in rows[0]["token_hash"]
+        assert rows[0]["token_hash"] == hashlib.sha256(token.encode()).hexdigest()
+
+    def test_delete_session_revokes_token(self, tmp_db):
+        token = tmp_db.create_session("user_abc", ttl_seconds=60)
+        assert tmp_db.get_session_user(token) == "user_abc"
+        tmp_db.delete_session(token)
+        assert tmp_db.get_session_user(token) is None
+
+    def test_delete_user_sessions_revokes_all_for_user(self, tmp_db):
+        token_a = tmp_db.create_session("user_abc", ttl_seconds=60)
+        token_b = tmp_db.create_session("user_abc", ttl_seconds=60)
+        token_other = tmp_db.create_session("user_xyz", ttl_seconds=60)
+        tmp_db.delete_user_sessions("user_abc")
+        assert tmp_db.get_session_user(token_a) is None
+        assert tmp_db.get_session_user(token_b) is None
+        assert tmp_db.get_session_user(token_other) == "user_xyz"
 
 
 class TestAuthNonces:
