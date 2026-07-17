@@ -5166,6 +5166,7 @@ function _assistantContext() {
                 const accounts = await provider.request({ method: 'eth_accounts' });
                 const address = accounts[0].toLowerCase();
                 const nonceRes = await apiFetch('/auth/wallet-nonce');
+                if (!nonceRes.ok) { showToast('Could not start wallet login'); return; }
                 const { nonce, message } = await nonceRes.json();
                 const signature = await provider.request({ method: 'personal_sign', params: [message, address] });
                 const res = await apiFetch('/auth/wallet', {

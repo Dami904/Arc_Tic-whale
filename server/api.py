@@ -1009,11 +1009,15 @@ async def verify_otp(body: dict):
     session_token = create_session(user_id)
     return {"token": session_token, "user_id": user_id, "email": email}
 
+WALLET_LOGIN_MESSAGE = "Sign in to Arc_Tic Whale\nNonce: {nonce}"
+
+
 @app.get("/auth/wallet-nonce")
-def wallet_nonce():
+@limiter.limit(lambda: f"{RATE_LIMIT_PER_MINUTE}/minute")
+def wallet_nonce(request: Request):
     """Issue a single-use, 5-minute nonce the wallet must sign to log in."""
     nonce = create_auth_nonce(ttl_seconds=300)
-    return {"nonce": nonce, "message": f"Sign in to Arc_Tic Whale\nNonce: {nonce}"}
+    return {"nonce": nonce, "message": WALLET_LOGIN_MESSAGE.format(nonce=nonce)}
 
 
 @app.post("/auth/wallet")
@@ -1024,8 +1028,8 @@ async def wallet_auth(body: dict):
     nonce     = (body.get("nonce") or "").strip()
     if not address or not message or not signature or not nonce:
         raise HTTPException(status_code=400, detail="address, message, signature, and nonce required")
-    if nonce not in message:
-        raise HTTPException(status_code=401, detail="Signed message does not contain the issued nonce")
+    if message != WALLET_LOGIN_MESSAGE.format(nonce=nonce):
+        raise HTTPException(status_code=401, detail="Signed message does not match the expected format")
     if not consume_auth_nonce(nonce):
         raise HTTPException(status_code=401, detail="Invalid, expired, or already-used nonce")
     msg = encode_defunct(text=message)
@@ -1035,7 +1039,9 @@ async def wallet_auth(body: dict):
         raise HTTPException(status_code=400, detail="Invalid signature format")
     if recovered != address:
         raise HTTPException(status_code=401, detail="Signature verification failed")
-    wallet = ensure_user_wallet(f"wallet_{address[:8]}")
+    wallet = ensure_user_wallet(f"wallet_{address}")
+    if not wallet:
+        raise HTTPException(status_code=503, detail="Wallet provisioning unavailable")
     session_token = create_session(wallet["user_id"])
     return {
         "token": session_token,

@@ -805,11 +805,13 @@ def delete_user_sessions(user_id: str) -> None:
 
 def create_auth_nonce(ttl_seconds: int = 300) -> str:
     nonce = secrets.token_urlsafe(24)
+    now = time.time()
     with _connection() as conn:
         cursor = _cursor(conn)
+        cursor.execute(f"DELETE FROM auth_nonces WHERE expires_at < {_PH}", (now,))
         cursor.execute(
             f"INSERT INTO auth_nonces (nonce, expires_at) VALUES ({_PH}, {_PH})",
-            (nonce, time.time() + ttl_seconds),
+            (nonce, now + ttl_seconds),
         )
         conn.commit()
     return nonce

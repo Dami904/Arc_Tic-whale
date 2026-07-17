@@ -105,9 +105,35 @@ class TestWalletNonceLogin:
         r = self._login(client, nonce="forged-nonce-value")
         assert r.status_code == 401
 
-    def test_message_must_contain_nonce(self, client):
+    def test_message_must_exactly_equal_canonical_form(self, client):
         nonce = client.get("/auth/wallet-nonce").json()["nonce"]
         r = self._login(client, message="Sign in to Arc_Tic Whale\nNonce: something-else", nonce=nonce)
+        assert r.status_code == 401
+
+    def test_message_with_extra_prepended_text_rejected(self, client):
+        nonce = client.get("/auth/wallet-nonce").json()["nonce"]
+        r = self._login(client, message=f"EVIL PREFIX\nSign in to Arc_Tic Whale\nNonce: {nonce}", nonce=nonce)
+        assert r.status_code == 401
+
+    def test_signature_from_different_key_rejected(self, client, monkeypatch):
+        import server.api as api
+        monkeypatch.setattr(api, "ensure_user_wallet", lambda uid: {"user_id": uid, "wallet_id": "w1", "wallet_address": "0x0"})
+        nonce = client.get("/auth/wallet-nonce").json()["nonce"]
+        message = f"Sign in to Arc_Tic Whale\nNonce: {nonce}"
+        other_key = "0x" + "22" * 32
+        r = client.post("/auth/wallet", json={
+            "address": Account.from_key(self.KEY).address.lower(),
+            "message": message,
+            "signature": _sign(message, other_key),
+            "nonce": nonce,
+        })
+        assert r.status_code == 401
+
+    def test_expired_nonce_rejected(self, client):
+        import backend.database as db
+        nonce = db.create_auth_nonce(ttl_seconds=-1)
+        message = f"Sign in to Arc_Tic Whale\nNonce: {nonce}"
+        r = self._login(client, message=message, nonce=nonce)
         assert r.status_code == 401
 
 
