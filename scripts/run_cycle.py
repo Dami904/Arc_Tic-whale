@@ -34,7 +34,7 @@ def run_all() -> int:
         missing = [
             name for name in (
                 "DATABASE_URL", "GOOGLE_API_KEY", "CIRCLE_API_KEY",
-                "CIRCLE_ENTITY_SECRET", "AGENT_WALLET_ID",
+                "CIRCLE_ENTITY_SECRET", "AGENT_WALLET_ID", "AGENT_WALLET_ADDRESS",
             ) if not os.getenv(name)
         ]
         if missing:
