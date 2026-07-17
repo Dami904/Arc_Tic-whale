@@ -40,6 +40,8 @@ from backend.database import (
     set_setting,
     set_user_preferences,
     update_user_profile,
+    create_session,
+    get_session_user,
 )
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -71,6 +73,7 @@ from backend.config import (
     WALLETCONNECT_PROJECT_ID,
     RATE_LIMIT_PER_MINUTE,
     TRADE_DRY_RUN,
+    AGENT_DEV_MODE,
 )
 from backend.email_otp import send_otp_email
 from backend.privy_jwt import verify_privy_access_token
@@ -134,17 +137,11 @@ def _verify_telegram_init_data(init_data: str) -> str | None:
     except Exception:
         return None
 
-# OTP session store — maps a secure random token → (user_id, expires_at)
-# NOTE: this is in-process memory. With multiple uvicorn workers, sessions generated
-# in one worker cannot be verified by another. For production scale, migrate to Redis
-# or store sessions in the database.
-_OTP_SESSION_TTL = 86_400  # 24 hours
-_otp_session_store: dict[str, tuple[str, float]] = {}
-
 # --- Auth dependency ---
 def verify_privy_token(request: Request) -> str:
-    """Accepts Telegram WebApp initData (X-Telegram-Init-Data header) or Privy JWT (Bearer token)."""
-    if TRADE_DRY_RUN:
+    """Accepts Telegram WebApp initData (X-Telegram-Init-Data header) or Privy JWT / session token (Bearer)."""
+    if TRADE_DRY_RUN and AGENT_DEV_MODE:
+        # Local development only. Production sets both to false (render.yaml).
         return "dryrun_user"
 
     # Telegram Mini App mode — verify HMAC signature from Telegram
@@ -165,20 +162,14 @@ def verify_privy_token(request: Request) -> str:
     if API_AUTH_TOKEN and token == API_AUTH_TOKEN:
         return "admin"
 
-    # Wallet-login pseudo-token (not a JWT)
-    # Token format is "wallet_{full_address}" but user_id is stored as "wallet_{address[:8]}"
-    if token.startswith("wallet_"):
-        address = token[len("wallet_"):]
-        return f"wallet_{address[:8]}" if len(address) > 8 else token
-
-    # Custom OTP session token (email fallback — see /auth/verify-otp)
-    if token.startswith("otp_"):
-        session = _otp_session_store.get(token)
-        if session:
-            sess_user_id, expires_at = session
-            if time.time() < expires_at:
-                return sess_user_id
-            _otp_session_store.pop(token, None)
+    # Server-issued session token (email OTP fallback or wallet sign-in)
+    if token.startswith("sess_"):
+        try:
+            user_id = get_session_user(token)
+        except Exception:
+            raise HTTPException(status_code=503, detail="Session store unavailable")
+        if user_id:
+            return user_id
         raise HTTPException(status_code=401, detail="Invalid or expired session token")
 
     # Privy access token (JWT)
@@ -1013,8 +1004,7 @@ async def verify_otp(body: dict):
     safe_email = email.replace("@", "_at_").replace(".", "_")
     user_id = f"email_{safe_email}"[:64]
     # Generate a cryptographically secure, unguessable session token
-    session_token = f"otp_{secrets.token_urlsafe(32)}"
-    _otp_session_store[session_token] = (user_id, time.time() + _OTP_SESSION_TTL)
+    session_token = create_session(user_id)
     return {"token": session_token, "user_id": user_id, "email": email}
 
 @app.post("/auth/wallet")
