@@ -6,6 +6,14 @@ from __future__ import annotations
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+_db_url = os.getenv("DATABASE_URL", "")
+_is_remote = _db_url and "localhost" not in _db_url and "127.0.0.1" not in _db_url
+if _is_remote and "--force" not in sys.argv:
+    sys.exit(
+        "REFUSING to seed demo data: DATABASE_URL points at a remote database.\n"
+        "This would inject fake trades into production. Pass --force to override."
+    )
+
 import backend.database as db
 
 db.init_db()
