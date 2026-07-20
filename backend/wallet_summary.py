@@ -119,11 +119,4 @@ def get_wallet_stats_safe(wallet_id: str | None) -> dict:
                 "decimals": 6,
             }]
 
-    eth_performance_data = get_current_market_state().get("ETH", {})
-    performance = {
-        "24h": eth_performance_data.get("24H_CHANGE", "0.00%"),
-        "7d": eth_performance_data.get("7D_CHANGE", "0.00%"),
-        "1y": eth_performance_data.get("1Y_CHANGE", "0.00%"),
-    }
-
-    return {"total_balance_usd": total_balance_usd, "token_balances": token_balances, "performance": performance}
+    return {"total_balance_usd": total_balance_usd, "token_balances": token_balances}

@@ -12,13 +12,13 @@ from backend.database import (
     deactivate_follower,
     get_follower_trade_history,
     get_follower_summary,
-    get_trade_metrics,
     get_user,
     get_user_allocations,
     get_user_preferences,
     set_user_preferences,
 )
 from backend.logger import get_logger
+from backend.performance import get_agent_performance, get_follower_performance
 from backend.wallet_summary import get_wallet_stats_safe
 
 log = get_logger("assistant")
@@ -67,6 +67,29 @@ def _copied_agents(user_id: str) -> list[dict]:
             "asset": allocation.get("asset") or "USDC",
         })
     return copied
+
+
+def _primary_follow_agent_id(allocations: list[dict]) -> Optional[str]:
+    """Largest-allocation agent among the user's active follows — same
+    'primary follow' convention used for the dashboard and daily summary."""
+    if not allocations:
+        return None
+    return max(allocations, key=lambda a: a.get("allocation") or 0)["agent_id"]
+
+
+def _user_pnl_windows(user_id: str, allocations: list[dict]) -> dict:
+    """Real 24h/7d/1y P&L for the user's primary (largest-allocation) follow.
+    Not following anyone, or too little history, both read as honest
+    'insufficient data' rather than a fabricated number."""
+    agent_id = _primary_follow_agent_id(allocations)
+    if not agent_id:
+        return {"24h": "N/A (not following an agent yet)", "7d": "N/A", "1y": "N/A"}
+    perf = get_follower_performance(user_id, agent_id)
+    return {
+        "24h": perf.get("24h") or "insufficient data yet",
+        "7d": perf.get("7d") or "insufficient data yet",
+        "1y": perf.get("1y") or "insufficient data yet",
+    }
 
 
 def _format_agent_list(items: list[dict]) -> str:
@@ -140,9 +163,10 @@ def _build_system_prompt(
     user_id: str,
 ) -> str:
     total   = float(wallet_stats.get("total_balance_usd") or 0)
-    pnl_24h = wallet_stats.get("performance", {}).get("24h", "0.00%")
-    pnl_7d  = wallet_stats.get("performance", {}).get("7d",  "0.00%")
-    pnl_1y  = wallet_stats.get("performance", {}).get("1y",  "0.00%")
+    _pnl    = _user_pnl_windows(user_id, allocations)
+    pnl_24h = _pnl["24h"]
+    pnl_7d  = _pnl["7d"]
+    pnl_1y  = _pnl["1y"]
 
     tokens = wallet_stats.get("token_balances") or []
     token_str = ", ".join(f"{t.get('amount','0')} {t.get('symbol','')}" for t in tokens) or "no tokens"
@@ -168,7 +192,7 @@ def _build_system_prompt(
     # Agent catalog with live metrics
     agent_lines = []
     for agent in _agent_index():
-        metrics = get_trade_metrics(agent["id"])
+        metrics = get_agent_performance(agent["id"])
         followers = get_follower_summary(agent["id"])
         agent_lines.append(
             f"  - {agent['name']} ({agent['id']}): "
@@ -322,7 +346,7 @@ def handle_assistant_command(user_id: str, command: str, context: Optional[dict]
     # 6. Static fallback (if Gemini is unavailable)
     # ------------------------------------------------------------------
     total   = float(wallet_stats.get("total_balance_usd") or 0)
-    pnl_24h = wallet_stats.get("performance", {}).get("24h", "0.00%")
+    pnl_24h = _user_pnl_windows(user_id, allocations)["24h"]
     if any(s in normalized for s in ["p&l", "pnl", "profit", "balance", "how much", "wallet", "funds"]):
         tokens = wallet_stats.get("token_balances") or []
         token_lines = ", ".join(f"{t.get('amount','0')} {t.get('symbol','')}" for t in tokens) or "none"
