@@ -315,11 +315,14 @@ than meaningful.
 
 ### Telegram Bot
 
-Run one production bot only on Render.
+Run one production bot only, as the `arctic-whale-telegram-bot` Render **worker** service
+(not a web service — it has no HTTP port, it long-polls Telegram).
 
 - Point `WEBAPP_URL` at the production web app URL
 - Keep staging testing inside the browser or directly through the staging web URL
 - Do not run a second bot token unless you later want Telegram staging
+- The worker needs its own `DATABASE_URL` and Circle credentials since `ensure_user_wallet`
+  provisions a wallet directly on `/start`, the same as the API service does on signup
 
 ### Release Flow
 
