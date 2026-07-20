@@ -62,6 +62,7 @@ def _maybe_stop_out_follower(agent_name: str, follower_row: dict, market_state: 
         target_asset_symbol=held_asset,
         amount=str(allocation),
         recipient_address=follower_wallet_address,
+        current_price=market_state.get(held_asset, {}).get("PRICE"),
     )
     if not tx_id:
         log.error("Stop loss sell failed for %s", follower_wallet_id)
@@ -131,6 +132,7 @@ def mirror_agent_trade(agent_name, action, target_asset_symbol):
             target_asset_symbol=target_asset_symbol,
             amount=str(allocation),
             recipient_address=follower_wallet_address,
+            current_price=entry_price,
         )
 
         if tx_id:
@@ -195,6 +197,7 @@ def exit_all_positions(user_id: str) -> list[dict]:
             target_asset_symbol=held_asset,
             amount=str(allocation),
             recipient_address=wallet_address,
+            current_price=market_state.get(held_asset, {}).get("PRICE"),
         )
 
         if not tx_id:

@@ -91,6 +91,7 @@ def run_trade_cycle(
         action=action,
         target_asset_symbol=asset,
         recipient_address=recipient_address,
+        current_price=current_data.get(asset, {}).get("PRICE"),
     )
 
     if not agent_tx:

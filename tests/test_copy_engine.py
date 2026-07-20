@@ -32,7 +32,7 @@ class TestExitAllPositions:
 
         mock_exec.assert_called_once_with(
             wallet_id="w1", action="SELL", target_asset_symbol="BTC",
-            amount="25.0", recipient_address="0xaddr",
+            amount="25.0", recipient_address="0xaddr", current_price=68000,
         )
         assert results == [{"agent": "Conservative_Whale", "asset": "BTC", "status": "success", "tx_id": "0xsell123"}]
 

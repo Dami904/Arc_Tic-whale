@@ -203,7 +203,18 @@ def execute_trade(
     target_asset_symbol: str,
     amount: str = "1.0",
     recipient_address: str | None = None,
+    current_price: float | None = None,
 ) -> str | None:
+    """
+    amount is always a USDC notional (e.g. "1.0" = $1 worth), matching what
+    every caller actually passes (a follower's USDC allocation, or the
+    default $0.5-$2.0 clamp). For a BUY that's already the unit Uniswap
+    needs (spend $X of USDC). For a SELL, current_price (the asset's USDC
+    price) is required to convert that same $X notional into the asset's
+    own native units — without it, "amount" would be misread as raw units
+    of the asset (e.g. "sell 1.0" meaning 1.0 whole BTC instead of $1 of
+    BTC), so a SELL with no price is refused rather than guessed at.
+    """
     action = (action or "").upper().strip()
     target_asset_symbol = (target_asset_symbol or "").upper().strip()
 
@@ -219,13 +230,28 @@ def execute_trade(
         log.error("Missing Circle wallet_id.")
         return None
 
-    final_amount = _normalize_amount(amount)
+    final_amount = _normalize_amount(amount)  # USDC notional, clamped to $0.5-$2.0
     recipient = recipient_address or AGENT_WALLET_ADDRESS
     if not recipient:
         log.error("Missing recipient wallet address.")
         return None
 
-    log.info("Preparing %s %s for wallet %s at %s USDC.", action, target_asset_symbol, wallet_id, final_amount)
+    if action == "SELL":
+        if not current_price or current_price <= 0:
+            log.error(
+                "Missing current_price for SELL %s — refusing to guess the USDC-to-asset-units conversion.",
+                target_asset_symbol,
+            )
+            return None
+        swap_amount = final_amount / Decimal(str(current_price))
+    else:
+        swap_amount = final_amount
+
+    log.info(
+        "Preparing %s %s for wallet %s: %s USDC notional (%s %s).",
+        action, target_asset_symbol, wallet_id, final_amount, swap_amount,
+        "USDC" if action == "BUY" else target_asset_symbol,
+    )
 
     if TRADE_DRY_RUN:
         dry_run_id = f"dryrun-{uuid.uuid4()}"
@@ -237,7 +263,7 @@ def execute_trade(
         transactions_api = developer_controlled_wallets.TransactionsApi(client)
 
         token_to_approve = "USDC" if action == "BUY" else target_asset_symbol
-        approval_contract, approval_call_data = _build_approval_calldata(token_to_approve, final_amount)
+        approval_contract, approval_call_data = _build_approval_calldata(token_to_approve, swap_amount)
         approval_tx_id = _submit_contract_execution(
             transactions_api,
             wallet_id,
@@ -247,7 +273,7 @@ def execute_trade(
         )
         log.info("Approval submitted. Tx: %s", approval_tx_id)
 
-        call_data = _build_swap_calldata(action, target_asset_symbol, final_amount, recipient)
+        call_data = _build_swap_calldata(action, target_asset_symbol, swap_amount, recipient)
         tx_id = _submit_contract_execution(
             transactions_api,
             wallet_id,
