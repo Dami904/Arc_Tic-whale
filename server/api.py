@@ -48,7 +48,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from backend.market_data import get_current_market_state
-from backend.daily_summary import start_daily_summary_scheduler, send_daily_summary_reports
+from backend.daily_summary import send_daily_summary_reports
 from backend.assistant import handle_assistant_command
 from backend.notifications import build_notification_reminder, user_has_notification_channel
 from backend.trade_service import run_trade_cycle
@@ -87,9 +87,9 @@ init_db()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    start_daily_summary_scheduler()
-    # Trade cycles run in GitHub Actions (.github/workflows/trade-cycle.yml),
-    # not in this process — the web service is allowed to sleep on Render.
+    # Trade cycles and daily summaries both run in GitHub Actions
+    # (.github/workflows/trade-cycle.yml, daily-summary.yml), not in this
+    # process — the web service is allowed to sleep on Render.
     yield
 
 

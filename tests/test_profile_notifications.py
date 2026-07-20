@@ -252,11 +252,9 @@ def test_daily_summary_job_filters_by_preferences_and_channel(monkeypatch):
             "daily_summary": 1,
         },
     ])
-    monkeypatch.setattr(daily_summary, "get_user_allocations", lambda user_id: [{"allocation_amount": 40.0}] if user_id == "user_daily" else [])
-    monkeypatch.setattr(daily_summary, "get_wallet_stats_safe", lambda wallet_id: {
-        "total_balance_usd": 100.0,
-        "performance": {"24h": "5.0%"},
-    })
+    monkeypatch.setattr(daily_summary, "get_user_allocations", lambda user_id: [{"allocation_amount": 40.0, "target_agent": "Conservative_Whale"}] if user_id == "user_daily" else [])
+    monkeypatch.setattr(daily_summary, "get_wallet_stats_safe", lambda wallet_id: {"total_balance_usd": 100.0})
+    monkeypatch.setattr(daily_summary, "get_follower_performance", lambda user_id, agent_name: {"24h": "5.0%"})
     monkeypatch.setattr(daily_summary, "get_follower_trade_history", lambda wallet_id, **kwargs: [{"timestamp": "2026-05-24T08:00:00"}])
     monkeypatch.setattr(daily_summary, "notify_daily_summary", lambda user, **kwargs: sent.append((user, kwargs)) or {"email": True, "telegram": False})
     monkeypatch.setattr(daily_summary, "user_has_notification_channel", lambda user: bool(user.get("email") or user.get("telegram_chat_id")))

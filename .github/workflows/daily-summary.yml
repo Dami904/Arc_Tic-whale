@@ -1,0 +1,31 @@
+name: Daily Summary
+
+on:
+  schedule:
+    - cron: "0 19 * * *"   # ~20:00 Africa/Lagos (UTC+1)
+  workflow_dispatch: {}
+
+concurrency:
+  group: daily-summary
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+      TRADE_DRY_RUN: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python scripts/send_daily_summaries.py
