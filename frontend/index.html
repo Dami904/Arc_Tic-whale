@@ -3231,14 +3231,84 @@
         }
 
         .landing-footer {
-            text-align: center;
-            font-family: var(--font-mono);
-            font-size: 11px;
-            color: var(--muted);
-            padding: 20px;
-            border-top: 1px solid var(--border);
             position: relative;
             z-index: 2;
+            border-top: 1px solid var(--border);
+            padding: 40px clamp(20px, 5vw, 56px) 24px;
+        }
+
+        .landing-footer-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 28px;
+            padding-bottom: 28px;
+        }
+
+        .landing-footer-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 16px;
+        }
+        .landing-footer-tagline {
+            margin-top: 8px;
+            font-size: 12.5px;
+            color: var(--muted-mid);
+            max-width: 32ch;
+            line-height: 1.5;
+        }
+
+        .landing-footer-col-title {
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 12px;
+        }
+        .landing-footer-links {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+        .landing-footer-links a, .landing-footer-links span {
+            font-size: 13px;
+            color: var(--muted-mid);
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .landing-footer-links a:hover { color: var(--cyan); }
+
+        .landing-footer-bottom {
+            border-top: 1px solid var(--border);
+            padding-top: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .landing-footer-disclaimer {
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        .landing-footer-copyright {
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            color: var(--muted);
+        }
+
+        @media (min-width: 768px) {
+            .landing-footer-grid {
+                grid-template-columns: 1.3fr 1fr 1fr;
+            }
+            .landing-footer-bottom {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
         }
 
         /* ── Tablet / desktop ── */
@@ -3313,7 +3383,7 @@
             </div>
         </section>
 
-        <section class="landing-section">
+        <section class="landing-section" id="how-it-works">
             <div class="landing-section-title">How it works</div>
             <p class="landing-section-sub">Three steps between you and your first mirrored trade.</p>
             <div class="landing-steps">
@@ -3341,7 +3411,7 @@
             </div>
         </section>
 
-        <section class="landing-section">
+        <section class="landing-section" id="meet-the-agents">
             <div class="landing-section-title">Meet the agents</div>
             <p class="landing-section-sub">Four distinct strategies, each trading live — pick the one that matches your nerve.</p>
             <div class="landing-agent-grid" id="landingAgentGrid">
@@ -3349,7 +3419,7 @@
             </div>
         </section>
 
-        <section class="landing-section">
+        <section class="landing-section" id="safety">
             <div class="landing-trust">
                 <div class="landing-trust-item">
                     <h4>Your own wallet, not a pool</h4>
@@ -3373,8 +3443,34 @@
         </section>
 
         <footer class="landing-footer">
-            Arc_Tic Whale · Arc Testnet · test funds only, no real money is at risk<br>
-            Agent trades are AI-generated market calls, not financial advice. Nothing here is a guarantee of performance.
+            <div class="landing-footer-grid">
+                <div>
+                    <div class="landing-footer-brand"><span class="landing-brand-mark">🐋</span> Arc_Tic Whale</div>
+                    <p class="landing-footer-tagline">AI-driven copy trading on Circle Arc Testnet. Four agents trade live — you mirror the ones you trust.</p>
+                </div>
+                <div>
+                    <div class="landing-footer-col-title">Product</div>
+                    <div class="landing-footer-links">
+                        <a href="#how-it-works">How it works</a>
+                        <a href="#meet-the-agents">Meet the agents</a>
+                        <a href="#safety">Safety &amp; spending limits</a>
+                        <a href="javascript:void(0)" onclick="enterApp()">Launch app</a>
+                    </div>
+                </div>
+                <div>
+                    <div class="landing-footer-col-title">Community</div>
+                    <div class="landing-footer-links">
+                        <span>Already on Telegram? Message the bot to jump straight in.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="landing-footer-bottom">
+                <div class="landing-footer-disclaimer">
+                    Arc Testnet · test funds only, no real money is at risk.<br>
+                    Agent trades are AI-generated market calls, not financial advice. Nothing here is a guarantee of performance.
+                </div>
+                <div class="landing-footer-copyright">© 2026 Arc_Tic Whale</div>
+            </div>
         </footer>
     </div>
 
