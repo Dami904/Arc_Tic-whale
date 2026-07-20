@@ -27,7 +27,6 @@ from backend.database import (
     get_follower_trade_history,
     get_setting,
     get_trade_history,
-    get_trade_metrics,
     get_latest_trade,
     get_social_posts,
     get_user,
@@ -58,6 +57,7 @@ from backend.copy_engine import evaluate_stop_losses
 from backend.agents import get_agent_catalog, get_agent_profile, AGENT_PROFILES
 from backend.user_wallets import ensure_user_wallet, normalize_user_id
 from backend.wallet_summary import get_wallet_stats_safe
+from backend.performance import get_agent_performance, get_follower_performance
 from backend.wallet_manager import initialize_circle_client
 from circle.web3.developer_controlled_wallets.api import TransactionsApi, WalletsApi
 from backend.config import (
@@ -606,15 +606,21 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
         else get_trade_history(limit=20, agent=AGENT_NAME, actions=TRADE_ACTIONS)
     )
     wallet_activity = get_wallet_activity(wallet["wallet_id"], AGENT_NAME if wallet["source"] != "user" else None, limit=20)
-    metrics = get_trade_metrics(AGENT_NAME)
-    followers = get_follower_summary(AGENT_NAME)
     dashboard_user = wallet.get("user") or {}
     user_id = dashboard_user.get("user_id")
+    if wallet["source"] == "user" and wallet["allocations"] and user_id:
+        _primary_follow = max(wallet["allocations"], key=lambda row: float(row.get("allocation_amount") or 0.0))
+        performance = get_follower_performance(user_id, _primary_follow["target_agent"])
+        metrics = get_agent_performance(_primary_follow["target_agent"])
+    else:
+        performance = get_agent_performance(AGENT_NAME)
+        metrics = performance
+    followers = get_follower_summary(AGENT_NAME)
     preferences = get_user_preferences(user_id) if user_id else {"trade_alerts": 1, "daily_summary": 1}
     agent_cards = []
     agent_lookup = {profile["id"]: profile for profile in get_agent_catalog()}
     for profile in get_agent_catalog():
-        agent_metrics = get_trade_metrics(profile["id"])
+        agent_metrics = get_agent_performance(profile["id"])
         agent_followers = get_follower_summary(profile["id"])
         user_allocation = 0.0
         user_allocation_row = None
@@ -633,7 +639,7 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
             "win_rate": agent_metrics["win_rate"],
             "trades": agent_metrics["total_trades"],
             "followers": agent_followers["total_followers"],
-            "roi_24h": stats["performance"].get("24h", "0.00%"),
+            "roi_24h": agent_metrics["24h"] or "N/A",
             "allocated_usdc": user_allocation,
             "has_allocation": bool(user_allocation_row),
             "stop_loss_pct": float(user_allocation_row.get("stop_loss_pct") or 10.0) if user_allocation_row else 10.0,
@@ -651,7 +657,7 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
         allocated = followers["total_allocation"]
     free_balance = max(0.0, total_balance - allocated)
     allocation_pct = round((allocated / total_balance) * 100, 1) if total_balance else 0.0
-    pnl_pct = _parse_percent(stats["performance"].get("24h"))
+    pnl_pct = _parse_percent(performance.get("24h"))
     pnl_amount = round(total_balance * (pnl_pct / 100.0), 2)
 
     feed = []
@@ -692,7 +698,7 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
             "wallet_id": wallet["wallet_id"],
             "total_balance_usd": total_balance,
             "token_balances": stats["token_balances"],
-            "performance": stats["performance"],
+            "performance": performance,
             "portfolio_pnl": {
                 "amount": pnl_amount,
                 "pct": pnl_pct,
@@ -1193,7 +1199,7 @@ def list_agents():
     catalog = get_agent_catalog()
     result = []
     for profile in catalog:
-        metrics = get_trade_metrics(profile["id"])
+        metrics = get_agent_performance(profile["id"])
         followers = get_follower_summary(profile["id"])
         status = _agent_status(profile)
         result.append({
