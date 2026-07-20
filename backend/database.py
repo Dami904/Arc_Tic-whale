@@ -96,6 +96,7 @@ def init_db():
             cursor.execute("ALTER TABLE followers ADD COLUMN IF NOT EXISTS asset TEXT")
             cursor.execute("ALTER TABLE followers ADD COLUMN IF NOT EXISTS user_wallet_address TEXT")
             cursor.execute("ALTER TABLE followers ADD COLUMN IF NOT EXISTS stop_loss_pct REAL DEFAULT 10.0")
+            cursor.execute("ALTER TABLE followers ADD COLUMN IF NOT EXISTS followed_at TEXT")
 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS users (
@@ -141,6 +142,18 @@ def init_db():
                     tx_id TEXT,
                     reason TEXT,
                     timestamp TEXT NOT NULL
+                )
+            ''')
+            cursor.execute("ALTER TABLE trade_history ADD COLUMN IF NOT EXISTS price DOUBLE PRECISION")
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS agent_nav_snapshots (
+                    id SERIAL PRIMARY KEY,
+                    agent TEXT NOT NULL,
+                    snapshot_date TEXT NOT NULL,
+                    nav_multiplier DOUBLE PRECISION NOT NULL,
+                    created_at TEXT NOT NULL,
+                    UNIQUE (agent, snapshot_date)
                 )
             ''')
 
@@ -202,6 +215,8 @@ def init_db():
                 cursor.execute("ALTER TABLE followers ADD COLUMN user_wallet_address TEXT")
             if "stop_loss_pct" not in follower_columns:
                 cursor.execute("ALTER TABLE followers ADD COLUMN stop_loss_pct REAL DEFAULT 10.0")
+            if "followed_at" not in follower_columns:
+                cursor.execute("ALTER TABLE followers ADD COLUMN followed_at TEXT")
 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS users (
@@ -255,6 +270,21 @@ def init_db():
                     tx_id TEXT,
                     reason TEXT,
                     timestamp TEXT NOT NULL
+                )
+            ''')
+            cursor.execute("PRAGMA table_info(trade_history)")
+            trade_history_columns = {row[1] for row in cursor.fetchall()}
+            if "price" not in trade_history_columns:
+                cursor.execute("ALTER TABLE trade_history ADD COLUMN price REAL")
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS agent_nav_snapshots (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    agent TEXT NOT NULL,
+                    snapshot_date TEXT NOT NULL,
+                    nav_multiplier REAL NOT NULL,
+                    created_at TEXT NOT NULL,
+                    UNIQUE (agent, snapshot_date)
                 )
             ''')
 
@@ -514,8 +544,9 @@ def add_follower(
     with _connection() as conn:
         cursor = _cursor(conn)
         cursor.execute(
-            f"INSERT INTO followers (user_id, user_wallet_id, user_wallet_address, target_agent, allocation_amount, asset, stop_loss_pct) VALUES ({_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH})",
-            (user_id, user_wallet_id, user_wallet_address, target_agent, allocation_amount, asset, stop_loss_pct if stop_loss_pct is not None else 10.0),
+            f"INSERT INTO followers (user_id, user_wallet_id, user_wallet_address, target_agent, allocation_amount, asset, stop_loss_pct, followed_at) VALUES ({_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH})",
+            (user_id, user_wallet_id, user_wallet_address, target_agent, allocation_amount, asset,
+             stop_loss_pct if stop_loss_pct is not None else 10.0, datetime.now(timezone.utc).isoformat()),
         )
         conn.commit()
     log.info("User %s is now following %s.", user_id, target_agent)
@@ -583,12 +614,12 @@ def get_follower_summary(agent_name):
 
 # ── Trade history ─────────────────────────────────────────────────────────────
 
-def log_trade(agent: str, action: str, asset: str | None, tx_id: str | None, reason: str = ""):
+def log_trade(agent: str, action: str, asset: str | None, tx_id: str | None, reason: str = "", price: float | None = None):
     with _connection() as conn:
         cursor = _cursor(conn)
         cursor.execute(
-            f"INSERT INTO trade_history (agent, action, asset, tx_id, reason, timestamp) VALUES ({_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH})",
-            (agent, action, asset, tx_id, reason, datetime.now(timezone.utc).isoformat()),
+            f"INSERT INTO trade_history (agent, action, asset, tx_id, reason, timestamp, price) VALUES ({_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH})",
+            (agent, action, asset, tx_id, reason, datetime.now(timezone.utc).isoformat(), price),
         )
         conn.commit()
 
@@ -827,6 +858,80 @@ def consume_auth_nonce(nonce: str) -> bool:
         consumed = cursor.rowcount == 1
         conn.commit()
     return consumed
+
+
+# ── Performance stats support ───────────────────────────────────────────────
+
+def get_trade_rows_for_performance(agent: str, since: str | None = None) -> list[dict]:
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        if since:
+            cursor.execute(
+                f"SELECT action, asset, price, timestamp FROM trade_history "
+                f"WHERE agent = {_PH} AND price IS NOT NULL AND timestamp >= {_PH} ORDER BY timestamp ASC",
+                (agent, since),
+            )
+        else:
+            cursor.execute(
+                f"SELECT action, asset, price, timestamp FROM trade_history "
+                f"WHERE agent = {_PH} AND price IS NOT NULL ORDER BY timestamp ASC",
+                (agent,),
+            )
+        return _rows(cursor)
+
+
+def get_price_at_or_before(agent: str, before_timestamp: str) -> float | None:
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        cursor.execute(
+            f"SELECT price FROM trade_history WHERE agent = {_PH} AND price IS NOT NULL "
+            f"AND timestamp <= {_PH} ORDER BY timestamp DESC LIMIT 1",
+            (agent, before_timestamp),
+        )
+        row = _row(cursor)
+    return row["price"] if row else None
+
+
+def get_followed_at(user_id: str, target_agent: str) -> str | None:
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        cursor.execute(
+            f"SELECT followed_at FROM followers WHERE user_id = {_PH} AND target_agent = {_PH} AND is_active = 1",
+            (user_id, target_agent),
+        )
+        row = _row(cursor)
+    return row["followed_at"] if row else None
+
+
+def upsert_nav_snapshot(agent: str, snapshot_date: str, nav_multiplier: float) -> None:
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        if _USE_PG:
+            cursor.execute(
+                "INSERT INTO agent_nav_snapshots (agent, snapshot_date, nav_multiplier, created_at) "
+                "VALUES (%s, %s, %s, %s) ON CONFLICT (agent, snapshot_date) "
+                "DO UPDATE SET nav_multiplier = EXCLUDED.nav_multiplier, created_at = EXCLUDED.created_at",
+                (agent, snapshot_date, nav_multiplier, datetime.now(timezone.utc).isoformat()),
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO agent_nav_snapshots (agent, snapshot_date, nav_multiplier, created_at) "
+                "VALUES (?, ?, ?, ?) ON CONFLICT (agent, snapshot_date) "
+                "DO UPDATE SET nav_multiplier = excluded.nav_multiplier, created_at = excluded.created_at",
+                (agent, snapshot_date, nav_multiplier, datetime.now(timezone.utc).isoformat()),
+            )
+        conn.commit()
+
+
+def get_nav_snapshot_on_or_before(agent: str, target_date: str) -> dict | None:
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        cursor.execute(
+            f"SELECT nav_multiplier, snapshot_date FROM agent_nav_snapshots "
+            f"WHERE agent = {_PH} AND snapshot_date <= {_PH} ORDER BY snapshot_date DESC LIMIT 1",
+            (agent, target_date),
+        )
+        return _row(cursor)
 
 
 if __name__ == "__main__":
