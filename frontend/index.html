@@ -5043,6 +5043,10 @@ function _assistantContext() {
                             <div class="acs"><div class="acs-val">${agent.trades || 0}</div><div class="acs-lbl">Trades</div></div>
                             <div class="acs"><div class="acs-val ${color}">${agent.roi_24h || 'N/A'}</div><div class="acs-lbl">24h Signal</div></div>
                         </div>
+                        ${agent.retention_rate_pct != null ? `
+                        <div style="font-size:11px;color:var(--muted-mid);margin-top:-4px;margin-bottom:10px;">
+                            🔁 ${agent.retention_rate_pct}% of followers still active${agent.avg_tenure_days != null ? ` · avg ${agent.avg_tenure_days}d before leaving` : ''}
+                        </div>` : ''}
                         <div class="agent-card-allocation">
                             <div style="flex:1;">
                                 <div class="agent-alloc-label">USDC allocated</div>

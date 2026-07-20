@@ -23,6 +23,7 @@ from backend.database import (
     get_all_users,
     get_follower_by_wallet_id,
     get_follower_wallet,
+    get_agent_retention_stats,
     get_follower_summary,
     get_follower_trade_history,
     get_setting,
@@ -634,6 +635,7 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
     for profile in get_agent_catalog():
         agent_metrics = get_agent_performance(profile["id"], current_prices=_live_prices)
         agent_followers = get_follower_summary(profile["id"])
+        agent_retention = get_agent_retention_stats(profile["id"])
         user_allocation = 0.0
         user_allocation_row = None
         if user_id:
@@ -653,6 +655,8 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
             "followers": agent_followers["total_followers"],
             "roi_24h": agent_metrics["24h"] or "N/A",
             "trend": agent_metrics["trend"],
+            "retention_rate_pct": agent_retention["retention_rate_pct"],
+            "avg_tenure_days": agent_retention["avg_tenure_days"],
             "allocated_usdc": user_allocation,
             "has_allocation": bool(user_allocation_row),
             "stop_loss_pct": float(user_allocation_row.get("stop_loss_pct") or 10.0) if user_allocation_row else 10.0,
@@ -1218,6 +1222,7 @@ def list_agents():
     for profile in catalog:
         metrics = get_agent_performance(profile["id"], current_prices=_live_prices)
         followers = get_follower_summary(profile["id"])
+        retention = get_agent_retention_stats(profile["id"])
         status = _agent_status(profile)
         result.append({
             "id":           profile["id"],
@@ -1230,6 +1235,8 @@ def list_agents():
             "trades":       metrics["total_trades"],
             "trend":        metrics["trend"],
             "followers":    followers["total_followers"],
+            "retention_rate_pct": retention["retention_rate_pct"],
+            "avg_tenure_days":    retention["avg_tenure_days"],
             "status":       status["label"],
             "status_detail":status["detail"],
             "last_action":  status["action"],

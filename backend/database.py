@@ -97,6 +97,7 @@ def init_db():
             cursor.execute("ALTER TABLE followers ADD COLUMN IF NOT EXISTS user_wallet_address TEXT")
             cursor.execute("ALTER TABLE followers ADD COLUMN IF NOT EXISTS stop_loss_pct REAL DEFAULT 10.0")
             cursor.execute("ALTER TABLE followers ADD COLUMN IF NOT EXISTS followed_at TEXT")
+            cursor.execute("ALTER TABLE followers ADD COLUMN IF NOT EXISTS deactivated_at TEXT")
 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS users (
@@ -217,6 +218,8 @@ def init_db():
                 cursor.execute("ALTER TABLE followers ADD COLUMN stop_loss_pct REAL DEFAULT 10.0")
             if "followed_at" not in follower_columns:
                 cursor.execute("ALTER TABLE followers ADD COLUMN followed_at TEXT")
+            if "deactivated_at" not in follower_columns:
+                cursor.execute("ALTER TABLE followers ADD COLUMN deactivated_at TEXT")
 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS users (
@@ -479,8 +482,9 @@ def deactivate_follower(user_id, target_agent):
     with _connection() as conn:
         cursor = _cursor(conn)
         cursor.execute(
-            f"UPDATE followers SET is_active = 0 WHERE user_id = {_PH} AND target_agent = {_PH} AND is_active = 1",
-            (user_id, target_agent),
+            f"UPDATE followers SET is_active = 0, deactivated_at = {_PH} "
+            f"WHERE user_id = {_PH} AND target_agent = {_PH} AND is_active = 1",
+            (datetime.now(timezone.utc).isoformat(), user_id, target_agent),
         )
         conn.commit()
         updated = cursor.rowcount
@@ -610,6 +614,52 @@ def get_follower_summary(agent_name):
         )
         summary["by_asset"] = _rows(cursor)
     return summary
+
+
+def get_agent_retention_stats(agent_name: str) -> dict:
+    """
+    total_follows / active_follows count every follow ever created for this
+    agent (not just currently active ones), so retention_rate_pct reflects
+    real churn. avg_tenure_days is computed only from follows that have both
+    followed_at and deactivated_at recorded — legacy rows predating those
+    columns are excluded rather than guessed at.
+    """
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        cursor.execute(
+            f"SELECT is_active, followed_at, deactivated_at FROM followers WHERE target_agent = {_PH}",
+            (agent_name,),
+        )
+        rows = _rows(cursor)
+
+    total_follows = len(rows)
+    if total_follows == 0:
+        return {"total_follows": 0, "active_follows": 0, "retention_rate_pct": None, "avg_tenure_days": None}
+
+    active_follows = sum(1 for r in rows if int(r.get("is_active") or 0) == 1)
+    retention_rate_pct = round((active_follows / total_follows) * 100, 1)
+
+    tenures = []
+    for r in rows:
+        followed_at = r.get("followed_at")
+        deactivated_at = r.get("deactivated_at")
+        if not followed_at or not deactivated_at:
+            continue
+        try:
+            start = datetime.fromisoformat(followed_at)
+            end = datetime.fromisoformat(deactivated_at)
+        except ValueError:
+            continue
+        tenures.append((end - start).total_seconds() / 86400)
+
+    avg_tenure_days = round(sum(tenures) / len(tenures), 1) if tenures else None
+
+    return {
+        "total_follows": total_follows,
+        "active_follows": active_follows,
+        "retention_rate_pct": retention_rate_pct,
+        "avg_tenure_days": avg_tenure_days,
+    }
 
 
 # ── Trade history ─────────────────────────────────────────────────────────────
