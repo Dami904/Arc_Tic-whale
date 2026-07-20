@@ -10,6 +10,7 @@ import backend.notifications as notifications
 def _use_temp_db(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(db, "DB_NAME", str(tmp_path / "test.db"))
     monkeypatch.setattr(db, "_USE_PG", False)
+    monkeypatch.setattr(db, "_PH", "?")
     db.init_db()
 
 
