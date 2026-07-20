@@ -20,9 +20,14 @@ _FALLBACK_PRICES = {
     "EURC": {"PRICE": 1.16,    "24H_CHANGE": "+0.29%", "7D_CHANGE": "-0.05%", "1Y_CHANGE": "+1.20%"},
 }
 
-# Simple 60-second in-process cache to avoid CoinGecko rate limits
+# Simple 60-second in-process cache to avoid CoinGecko/Yahoo rate limits
+# and redundant round-trips (get_current_market_state() is called once per
+# agent in several API loops — see backend/performance.py's current_prices
+# sharing pattern for the other half of that fix).
 _cache: dict = {}
 _cache_ts: float = 0.0
+_stock_cache: dict = {}
+_stock_cache_ts: float = 0.0
 _CACHE_TTL = 60  # seconds
 
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
@@ -87,8 +92,13 @@ def _percent_change(current, previous):
 def _get_stock_data():
     """
     Fetches stock/ETF price data from Yahoo's public chart endpoint.
+    Results are cached for 60 s — same rationale as _get_crypto_data().
     Returns a dictionary with symbols as keys.
     """
+    global _stock_cache, _stock_cache_ts
+    if _stock_cache and (time.time() - _stock_cache_ts) < _CACHE_TTL:
+        return _stock_cache
+
     stock_data = {}
     for symbol in STOCK_SYMBOLS:
         try:
@@ -127,6 +137,8 @@ def _get_stock_data():
                 "TYPE": "STOCK",
                 "SOURCE": "Yahoo Finance (Fallback)"
             }
+    _stock_cache = stock_data
+    _stock_cache_ts = time.time()
     return stock_data
 
 def get_current_market_state():

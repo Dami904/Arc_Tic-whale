@@ -120,9 +120,13 @@ def _windows_from_snapshots(agent: str, live_multiplier: float, earliest_baselin
     return windows
 
 
-def get_agent_performance(agent_name: str) -> dict:
+def get_agent_performance(agent_name: str, current_prices: dict | None = None) -> dict:
+    """current_prices: pass a pre-fetched get_current_market_state() result when
+    computing this for multiple agents in a loop, to avoid redundant external
+    API calls (each is several real CoinGecko/Yahoo requests)."""
     rows = get_trade_rows_for_performance(agent_name)
-    current_prices = get_current_market_state()
+    if current_prices is None:
+        current_prices = get_current_market_state()
     walk = _walk_trade_rows(rows, current_prices=current_prices)
     windows = _windows_from_snapshots(agent_name, walk["multiplier"])
     return {
@@ -134,7 +138,8 @@ def get_agent_performance(agent_name: str) -> dict:
     }
 
 
-def get_follower_performance(user_id: str, agent_name: str) -> dict:
+def get_follower_performance(user_id: str, agent_name: str, current_prices: dict | None = None) -> dict:
+    """current_prices: see get_agent_performance."""
     followed_at = get_followed_at(user_id, agent_name)
     if not followed_at:
         return {
@@ -147,7 +152,8 @@ def get_follower_performance(user_id: str, agent_name: str) -> dict:
     if rows and rows[0]["action"] == "SELL":
         synthetic_entry = get_price_at_or_before(agent_name, followed_at)
 
-    current_prices = get_current_market_state()
+    if current_prices is None:
+        current_prices = get_current_market_state()
     walk = _walk_trade_rows(rows, current_prices=current_prices, assume_open_position_price=synthetic_entry)
     windows = _windows_from_snapshots(agent_name, walk["multiplier"], earliest_baseline=followed_at)
     return {

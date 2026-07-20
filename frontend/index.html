@@ -2908,6 +2908,357 @@
             }
         }
 
+        /* ════════════════════════════════════════
+         LANDING PAGE — shown to anonymous web visitors only
+         (never inside the Telegram Mini App; never for
+         returning signed-in users — see body.show-landing)
+════════════════════════════════════════ */
+        #page-landing { display: none; }
+        body.show-landing #page-landing { display: block; }
+        body.show-landing .nav-toggle,
+        body.show-landing .utility-toggle,
+        body.show-landing .utility-backdrop,
+        body.show-landing .utility-panel,
+        body.show-landing .page,
+        body.show-landing .bottom-nav {
+            display: none !important;
+        }
+
+        .landing {
+            position: relative;
+            min-height: 100vh;
+            padding: 0 0 64px;
+        }
+
+        .landing-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 20px clamp(20px, 5vw, 56px);
+            position: relative;
+            z-index: 2;
+        }
+
+        .landing-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 18px;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+        }
+        .landing-brand-mark { font-size: 22px; line-height: 1; flex-shrink: 0; }
+
+        .landing-nav-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+
+        /* Narrow phones: the testnet badge is redundant with the hero/footer
+           copy, so drop it first to keep the brand and CTA from crowding. */
+        @media (max-width: 420px) {
+            .landing-brand { font-size: 15px; gap: 7px; }
+            .landing-brand-mark { font-size: 18px; }
+            .testnet-badge { display: none; }
+        }
+
+        .testnet-badge {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted-mid);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 5px 11px;
+            white-space: nowrap;
+        }
+
+        .landing-cta {
+            font-family: var(--font-main);
+            font-weight: 600;
+            font-size: 13px;
+            color: #04120e;
+            background: var(--cyan);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+            cursor: pointer;
+            box-shadow: 0 0 0 rgba(0, 221, 180, 0);
+            transition: box-shadow 0.2s, transform 0.15s;
+        }
+        .landing-cta:hover { box-shadow: 0 0 24px var(--cyan-glow); transform: translateY(-1px); }
+        .landing-cta:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+        /* ── Hero ── */
+        .landing-hero {
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 40px;
+            padding: 24px clamp(20px, 5vw, 56px) 56px;
+            z-index: 2;
+        }
+
+        .landing-eyebrow {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--cyan);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .landing-headline {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: clamp(32px, 6vw, 56px);
+            line-height: 1.05;
+            letter-spacing: -0.01em;
+            max-width: 14ch;
+        }
+
+        .landing-sub {
+            margin-top: 18px;
+            font-size: 16px;
+            line-height: 1.6;
+            color: var(--muted-mid);
+            max-width: 46ch;
+        }
+
+        .landing-hero-actions {
+            margin-top: 28px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .landing-hero-note {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        /* ── Sonar signature visual ── */
+        .sonar-stage {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            max-width: 420px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sonar-ring {
+            position: absolute;
+            border: 1px solid var(--border-accent);
+            border-radius: 50%;
+            animation: sonarPing 3.6s cubic-bezier(0.2, 0.7, 0.4, 1) infinite;
+        }
+        .sonar-ring:nth-child(1) { animation-delay: 0s; }
+        .sonar-ring:nth-child(2) { animation-delay: 1.2s; }
+        .sonar-ring:nth-child(3) { animation-delay: 2.4s; }
+
+        @keyframes sonarPing {
+            0%   { width: 40px; height: 40px; opacity: 0.9; }
+            100% { width: 100%; height: 100%; opacity: 0; }
+        }
+
+        .sonar-core {
+            position: relative;
+            z-index: 1;
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 32% 28%, rgba(0, 221, 180, 0.35), var(--surface-raised) 70%);
+            border: 1px solid var(--border-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 38px;
+            box-shadow: 0 0 40px var(--cyan-glow);
+        }
+
+        .sonar-blip {
+            position: absolute;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 0.04em;
+            padding: 4px 9px;
+            border-radius: 20px;
+            white-space: nowrap;
+            animation: sonarDrift 7.5s ease-in-out infinite;
+        }
+        .sonar-blip.buy  { background: var(--cyan-dim);  color: var(--cyan); border: 1px solid var(--border-accent); }
+        .sonar-blip.hold { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .sonar-blip.sell { background: var(--red-dim);   color: var(--red);  border: 1px solid rgba(255, 70, 85, 0.3); }
+
+        .sonar-blip.b1 { top: 6%;  left: 62%; animation-delay: 0s; }
+        .sonar-blip.b2 { top: 68%; left: 8%;  animation-delay: 1.8s; }
+        .sonar-blip.b3 { top: 78%; left: 66%; animation-delay: 3.6s; }
+        .sonar-blip.b4 { top: 14%; left: 6%;  animation-delay: 5.4s; }
+
+        @keyframes sonarDrift {
+            0%, 100% { opacity: 0; transform: translateY(6px) scale(0.92); }
+            15%, 70% { opacity: 1; transform: translateY(0) scale(1); }
+            85%      { opacity: 0; transform: translateY(-6px) scale(0.92); }
+        }
+
+        /* ── How it works ── */
+        .landing-section {
+            padding: 48px clamp(20px, 5vw, 56px);
+            position: relative;
+            z-index: 2;
+        }
+
+        .landing-section-title {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: clamp(22px, 3.4vw, 30px);
+            margin-bottom: 8px;
+        }
+        .landing-section-sub {
+            color: var(--muted-mid);
+            font-size: 14px;
+            margin-bottom: 28px;
+            max-width: 56ch;
+        }
+
+        .landing-steps {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .landing-step {
+            border: 1px solid var(--border);
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 22px;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+        .landing-step-num {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--cyan);
+            border: 1px solid var(--border-accent);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            flex: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .landing-step-title { font-weight: 600; margin-bottom: 4px; }
+        .landing-step-body { color: var(--muted-mid); font-size: 13.5px; line-height: 1.55; }
+
+        /* ── Agents ── */
+        .landing-agent-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+        .landing-agent-card {
+            border: 1px solid var(--border);
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .landing-agent-top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .landing-agent-avatar { font-size: 26px; }
+        .landing-agent-name { font-weight: 600; font-size: 14.5px; }
+        .landing-agent-risk {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--muted-mid);
+        }
+        .landing-agent-desc { color: var(--muted-mid); font-size: 13px; line-height: 1.55; margin-bottom: 12px; }
+        .landing-agent-stats {
+            display: flex;
+            gap: 18px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+        }
+        .landing-agent-stats span { color: var(--muted); }
+        .landing-agent-stats b { color: var(--text); font-weight: 600; }
+
+        /* ── Trust strip ── */
+        .landing-trust {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+        .landing-trust-item {
+            border-top: 1px solid var(--border);
+            padding-top: 14px;
+        }
+        .landing-trust-item h4 { font-size: 13.5px; font-weight: 600; margin-bottom: 6px; }
+        .landing-trust-item p { color: var(--muted-mid); font-size: 13px; line-height: 1.55; }
+
+        /* ── Final CTA ── */
+        .landing-final {
+            text-align: center;
+            padding: 56px clamp(20px, 5vw, 56px) 24px;
+            position: relative;
+            z-index: 2;
+        }
+        .landing-final h3 {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: clamp(22px, 3.6vw, 32px);
+            margin-bottom: 14px;
+        }
+        .landing-final-note {
+            margin-top: 16px;
+            font-size: 12.5px;
+            color: var(--muted);
+        }
+
+        .landing-footer {
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--muted);
+            padding: 20px;
+            border-top: 1px solid var(--border);
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ── Tablet / desktop ── */
+        @media (min-width: 768px) {
+            .landing-hero {
+                grid-template-columns: 1.1fr 0.9fr;
+                align-items: center;
+                padding-top: 48px;
+            }
+            .landing-steps { grid-template-columns: repeat(3, 1fr); }
+            .landing-agent-grid { grid-template-columns: repeat(2, 1fr); }
+            .landing-trust { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        @media (min-width: 1100px) {
+            .landing-hero { padding-top: 64px; }
+            .landing-agent-grid { grid-template-columns: repeat(4, 1fr); }
+            .landing-headline { max-width: 16ch; }
+        }
+
         /* ── ACCESSIBILITY: honour reduced-motion preference ── */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
@@ -2921,6 +3272,108 @@
 </head>
 
 <body>
+
+    <!-- ════════════════════════════════════════
+     LANDING PAGE — anonymous web visitors only.
+     Never shown inside the Telegram Mini App (isTelegramMode())
+     and never shown to a returning signed-in user.
+════════════════════════════════════════ -->
+    <div id="page-landing" class="landing">
+        <nav class="landing-nav">
+            <div class="landing-brand"><span class="landing-brand-mark">🐋</span> Arc_Tic Whale</div>
+            <div class="landing-nav-right">
+                <span class="testnet-badge">Arc Testnet</span>
+                <button class="landing-cta" type="button" onclick="enterApp()">Launch App</button>
+            </div>
+        </nav>
+
+        <section class="landing-hero">
+            <div>
+                <div class="landing-eyebrow"><span class="live-dot-pulse"></span> Four AI agents, live on Arc Testnet</div>
+                <h1 class="landing-headline">AI agents make the call. Your wallet mirrors the trade.</h1>
+                <p class="landing-sub">
+                    Four Gemini-powered agents — from patient accumulator to momentum degen — read the market
+                    around the clock. Follow one, and every buy or sell it makes mirrors straight into your
+                    own Circle-secured wallet, automatically.
+                </p>
+                <div class="landing-hero-actions">
+                    <button class="landing-cta" type="button" onclick="enterApp()">Launch App</button>
+                    <span class="landing-hero-note">Test USDC only — no real funds at risk</span>
+                </div>
+            </div>
+            <div class="sonar-stage" aria-hidden="true">
+                <div class="sonar-ring"></div>
+                <div class="sonar-ring"></div>
+                <div class="sonar-ring"></div>
+                <div class="sonar-core">🐋</div>
+                <div class="sonar-blip buy b1">BUY BTC</div>
+                <div class="sonar-blip hold b2">HOLD</div>
+                <div class="sonar-blip sell b3">SELL ETH</div>
+                <div class="sonar-blip buy b4">BUY EURC</div>
+            </div>
+        </section>
+
+        <section class="landing-section">
+            <div class="landing-section-title">How it works</div>
+            <p class="landing-section-sub">Three steps between you and your first mirrored trade.</p>
+            <div class="landing-steps">
+                <div class="landing-step">
+                    <div class="landing-step-num">1</div>
+                    <div>
+                        <div class="landing-step-title">Connect your wallet</div>
+                        <div class="landing-step-body">Sign in with email, a social account, or your own wallet. A Circle-secured wallet is provisioned instantly, guarded by spending-limit policies.</div>
+                    </div>
+                </div>
+                <div class="landing-step">
+                    <div class="landing-step-num">2</div>
+                    <div>
+                        <div class="landing-step-title">Follow an agent</div>
+                        <div class="landing-step-body">Pick a risk profile — from cautious to aggressive — and set how much of your balance to allocate.</div>
+                    </div>
+                </div>
+                <div class="landing-step">
+                    <div class="landing-step-num">3</div>
+                    <div>
+                        <div class="landing-step-title">Trades mirror automatically</div>
+                        <div class="landing-step-body">Every buy or sell your agent makes executes from your own wallet — no manual approvals, no missed entries.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="landing-section">
+            <div class="landing-section-title">Meet the agents</div>
+            <p class="landing-section-sub">Four distinct strategies, each trading live — pick the one that matches your nerve.</p>
+            <div class="landing-agent-grid" id="landingAgentGrid">
+                <!-- populated live from /agents on load; see loadLandingAgents() -->
+            </div>
+        </section>
+
+        <section class="landing-section">
+            <div class="landing-trust">
+                <div class="landing-trust-item">
+                    <h4>Your own wallet, not a pool</h4>
+                    <p>Every follower gets a dedicated Circle-secured wallet. Trades execute from your wallet directly — funds are never pooled with other users.</p>
+                </div>
+                <div class="landing-trust-item">
+                    <h4>Spending limits, enforced on-chain</h4>
+                    <p>Circle Agent Stack attaches per-transaction, daily, and monthly caps to every wallet — a ceiling on what any single mirrored trade can move.</p>
+                </div>
+                <div class="landing-trust-item">
+                    <h4>A real sandbox, not a demo</h4>
+                    <p>Everything runs live on Arc Testnet with test USDC — the same mechanics as production, none of the financial risk.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="landing-final">
+            <h3>Pick an agent. Watch it trade.</h3>
+            <button class="landing-cta" type="button" onclick="enterApp()">Launch App</button>
+            <div class="landing-final-note">Already on Telegram? Message the bot to jump straight in.</div>
+        </section>
+
+        <footer class="landing-footer">Arc_Tic Whale · Arc Testnet · test funds only</footer>
+    </div>
 
     <button class="nav-toggle" id="navToggle" type="button" aria-label="Toggle navigation"
         onclick="toggleNavPanel()">☰</button>
@@ -2973,20 +3426,20 @@
         <div class="balance-card">
             <div class="balance-label">Vault Balance</div>
             <div class="balance-amount" id="balDisplay">
-                150.00<span class="balance-unit">USDC</span>
+                —<span class="balance-unit">USDC</span>
             </div>
             <div class="balance-sub">
                 <div class="balance-stat">
 	                    <div class="bs-label">24H PnL</div>
-                    <div class="bs-val positive" id="pnl24h">+4.20 USDC</div>
+                    <div class="bs-val" id="pnl24h">—</div>
                 </div>
                 <div class="balance-stat">
 	                    <div class="bs-label">7D PnL</div>
-                    <div class="bs-val positive" id="pnl7d">+18.55 USDC</div>
+                    <div class="bs-val" id="pnl7d">—</div>
                 </div>
                 <div class="balance-stat">
 	                    <div class="bs-label">1Y PnL</div>
-                    <div class="bs-val positive" id="pnlAllTime">+42.10 USDC</div>
+                    <div class="bs-val" id="pnlAllTime">—</div>
                 </div>
             </div>
         </div>
@@ -3663,6 +4116,18 @@
             return userId ? 'Signed in' : 'Sign In';
         }
 
+        // The app shell (layout sync, resize listener, dashboard polling) only
+        // needs to start once — either at initial load (returning signed-in
+        // user) or the first time a landing-page visitor completes login.
+        let _shellStarted = false;
+        function _startAppShellOnce() {
+            if (_shellStarted) return;
+            _shellStarted = true;
+            syncLayoutShell();
+            window.addEventListener('resize', syncLayoutShell);
+            setInterval(refreshDashboard, 30000);
+        }
+
         function _setPrivySession(userId, token, email, displayName = '') {
             const safeEmail = email && email.includes('@') ? email : '';
             _privyUserId = userId; _privyToken = token; _privyEmail = safeEmail; _privyDisplayName = displayName || '';
@@ -3676,6 +4141,8 @@
             const label = _identityLabel(userId, safeEmail, displayName);
             document.getElementById('greetPill').textContent = `✓ ${label}`;
             document.getElementById('greetPill').className = 'pill pill-cyan';
+            document.body.classList.remove('show-landing');
+            _startAppShellOnce();
         }
 
         function _clearPrivySession() {
@@ -5252,6 +5719,12 @@ function _assistantContext() {
             }
             _clearPrivySession();
             showToast('Signed out');
+            // Telegram Mini App users stay in the app (there's nowhere else for
+            // them to go); web visitors return to the marketing landing page.
+            if (!isTelegramMode()) {
+                document.body.classList.add('show-landing');
+                loadLandingAgents();
+            }
         }
 
         // ── Copy Toggle ──
@@ -5459,15 +5932,52 @@ function _assistantContext() {
             toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
         }
 
-        syncLayoutShell();
-        window.addEventListener('resize', syncLayoutShell);
-        ensureWalletForCurrentUser().finally(refreshDashboard);
-        setInterval(refreshDashboard, 30000);
+        // Anonymous web visitors (not Telegram, not signed in from a previous
+        // visit) see the marketing landing page instead of the app shell.
+        // Telegram Mini App users and returning signed-in users go straight in.
+        function enterApp() {
+            // Landing page stays visible behind the modal until login actually
+            // succeeds (_setPrivySession removes 'show-landing') — so closing
+            // the modal without finishing sign-in leaves the visitor back on
+            // the marketing page, not a half-initialized app shell.
+            openLoginModal();
+        }
 
-        // Auto-show login modal for brand-new visitors (no cached session).
-        // Skips when the user is already signed in from a previous visit.
-        if (!_privyToken && !_privyUserId && !isTelegramMode()) {
-            setTimeout(() => openLoginModal(), 600);
+        async function loadLandingAgents() {
+            const grid = document.getElementById('landingAgentGrid');
+            if (!grid) return;
+            try {
+                const res = await fetch((window.API_BASE || '') + '/agents');
+                const data = await res.json();
+                const agents = data.agents || [];
+                grid.innerHTML = agents.map(a => `
+                    <div class="landing-agent-card">
+                        <div class="landing-agent-top">
+                            <span class="landing-agent-avatar">${a.avatar || '🤖'}</span>
+                            <div>
+                                <div class="landing-agent-name">${a.name}</div>
+                                <div class="landing-agent-risk">${a.risk_label} risk</div>
+                            </div>
+                        </div>
+                        <div class="landing-agent-desc">${a.description || ''}</div>
+                        <div class="landing-agent-stats">
+                            <span>Win rate <b>${a.win_rate || 0}%</b></span>
+                            <span>Followers <b>${fmtCount(a.followers || 0)}</b></span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                grid.innerHTML = '<div class="landing-section-sub">Agent data is warming up — check back in a moment.</div>';
+            }
+        }
+
+        const showLanding = !isTelegramMode() && !_privyToken && !_privyUserId;
+        if (showLanding) {
+            document.body.classList.add('show-landing');
+            loadLandingAgents();
+        } else {
+            _startAppShellOnce();
+            ensureWalletForCurrentUser().finally(refreshDashboard);
         }
     </script>
 </body>

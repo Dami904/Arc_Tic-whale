@@ -608,19 +608,20 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
     wallet_activity = get_wallet_activity(wallet["wallet_id"], AGENT_NAME if wallet["source"] != "user" else None, limit=20)
     dashboard_user = wallet.get("user") or {}
     user_id = dashboard_user.get("user_id")
+    _live_prices = get_current_market_state()  # fetched once, shared across every performance call below
     if wallet["source"] == "user" and wallet["allocations"] and user_id:
         _primary_follow = max(wallet["allocations"], key=lambda row: float(row.get("allocation_amount") or 0.0))
-        performance = get_follower_performance(user_id, _primary_follow["target_agent"])
-        metrics = get_agent_performance(_primary_follow["target_agent"])
+        performance = get_follower_performance(user_id, _primary_follow["target_agent"], current_prices=_live_prices)
+        metrics = get_agent_performance(_primary_follow["target_agent"], current_prices=_live_prices)
     else:
-        performance = get_agent_performance(AGENT_NAME)
+        performance = get_agent_performance(AGENT_NAME, current_prices=_live_prices)
         metrics = performance
     followers = get_follower_summary(AGENT_NAME)
     preferences = get_user_preferences(user_id) if user_id else {"trade_alerts": 1, "daily_summary": 1}
     agent_cards = []
     agent_lookup = {profile["id"]: profile for profile in get_agent_catalog()}
     for profile in get_agent_catalog():
-        agent_metrics = get_agent_performance(profile["id"])
+        agent_metrics = get_agent_performance(profile["id"], current_prices=_live_prices)
         agent_followers = get_follower_summary(profile["id"])
         user_allocation = 0.0
         user_allocation_row = None
@@ -1198,8 +1199,9 @@ def list_agents():
     """Public endpoint — returns all agent profiles with live metrics. No auth required."""
     catalog = get_agent_catalog()
     result = []
+    _live_prices = get_current_market_state()  # fetched once, shared across all agents below
     for profile in catalog:
-        metrics = get_agent_performance(profile["id"])
+        metrics = get_agent_performance(profile["id"], current_prices=_live_prices)
         followers = get_follower_summary(profile["id"])
         status = _agent_status(profile)
         result.append({

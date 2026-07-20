@@ -120,6 +120,14 @@ class TestGetAgentPerformance:
         assert result["7d"] is None
         assert result["1y"] is None
 
+    @patch("backend.performance.get_current_market_state")
+    @patch("backend.performance.get_nav_snapshot_on_or_before", return_value=None)
+    @patch("backend.performance.get_trade_rows_for_performance")
+    def test_passed_current_prices_skips_market_fetch(self, mock_rows, mock_snap, mock_market):
+        mock_rows.return_value = [{"action": "BUY", "asset": "BTC", "price": 100.0, "timestamp": "t1"}]
+        get_agent_performance("Conservative_Whale", current_prices={"BTC": {"PRICE": 150.0}})
+        mock_market.assert_not_called()
+
     @patch("backend.performance.get_current_market_state", return_value={"BTC": {"PRICE": 120.0}})
     @patch("backend.performance.get_nav_snapshot_on_or_before")
     @patch("backend.performance.get_trade_rows_for_performance")
