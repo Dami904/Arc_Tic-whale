@@ -80,7 +80,8 @@ def run_trade_cycle(
 
     if action == "HOLD":
         log.info("Action: HOLD. No on-chain transaction required.")
-        log_trade(agent=agent_name, action="HOLD", asset=asset, tx_id=None, reason=reason)
+        hold_price = current_data.get(asset, {}).get("PRICE") if asset else None
+        log_trade(agent=agent_name, action="HOLD", asset=asset, tx_id=None, reason=reason, price=hold_price)
         return {"status": "hold", "action": "HOLD", "asset": asset, "tx_hash": None, "reason": reason}
 
     # ── 3. Execute agent trade ───────────────────────────────────────────────
@@ -101,7 +102,8 @@ def run_trade_cycle(
     # Logged right after a successful on-chain trade so a runner killed
     # mid-cycle (before mirroring/social) can never leave an executed trade
     # with no trade_history row.
-    log_trade(agent=agent_name, action=action, asset=asset, tx_id=agent_tx, reason=reason)
+    trade_price = current_data.get(asset, {}).get("PRICE") if asset else None
+    log_trade(agent=agent_name, action=action, asset=asset, tx_id=agent_tx, reason=reason, price=trade_price)
 
     # ── 4. Mirror to followers ───────────────────────────────────────────────
     mirror_agent_trade(agent_name=agent_name, action=action, target_asset_symbol=asset)

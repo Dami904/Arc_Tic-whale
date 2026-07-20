@@ -101,6 +101,33 @@ class TestTradeDecisionFlow:
             assert result["status"] == "error"
             assert "AGENT_WALLET_ID missing" in result["reason"]
 
+    def test_hold_logs_price_from_market_data(self, mock_trade_cycle):
+        mock_trade_cycle["market"].return_value = {"BTC": {"PRICE": 68000}}
+        mock_trade_cycle["ai"].return_value = "DECISION: HOLD\nREASON: No clear signal."
+        mock_trade_cycle["parse"].return_value = {"decision": "HOLD", "asset": "BTC", "reason": "No clear signal."}
+
+        from backend.trade_service import run_trade_cycle
+        run_trade_cycle(wallet_id="test-wallet", rate_limit_sleep=0)
+
+        mock_trade_cycle["log"].assert_called_once_with(
+            agent="Conservative_Whale", action="HOLD", asset="BTC", tx_id=None,
+            reason="No clear signal.", price=68000,
+        )
+
+    def test_buy_logs_price_from_market_data(self, mock_trade_cycle):
+        mock_trade_cycle["market"].return_value = {"BTC": {"PRICE": 68000}}
+        mock_trade_cycle["ai"].return_value = "DECISION: BUY BTC\nREASON: Dip."
+        mock_trade_cycle["parse"].return_value = {"decision": "BUY", "asset": "BTC", "reason": "Dip."}
+        mock_trade_cycle["exec"].return_value = "0xdeadbeef"
+
+        from backend.trade_service import run_trade_cycle
+        run_trade_cycle(wallet_id="test-wallet", rate_limit_sleep=0)
+
+        mock_trade_cycle["log"].assert_called_once_with(
+            agent="Conservative_Whale", action="BUY", asset="BTC", tx_id="0xdeadbeef",
+            reason="Dip.", price=68000,
+        )
+
 
 class TestFallbackDecision:
     def test_fallback_buy_on_dip(self, sample_negative_market):
