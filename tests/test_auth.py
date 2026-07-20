@@ -145,3 +145,48 @@ class TestSessionStore503:
         monkeypatch.setattr(api, "get_session_user", boom)
         r = client.get("/settings", headers={"Authorization": "Bearer sess_whatever"})
         assert r.status_code == 503
+
+
+class TestKillSwitchAdminOnly:
+    def test_non_admin_cannot_set_kill_switch(self, client):
+        token = db.create_session("email_test_user")
+        r = client.post(
+            "/settings/kill_switch",
+            params={"value": "1"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 403
+
+    def test_admin_can_set_kill_switch(self, client, monkeypatch):
+        import server.api as api
+        monkeypatch.setattr(api, "API_AUTH_TOKEN", "test-admin-token")
+        r = client.post(
+            "/settings/kill_switch",
+            params={"value": "1"},
+            headers={"Authorization": "Bearer test-admin-token"},
+        )
+        assert r.status_code == 200
+        assert r.json()["kill_switch"] == "1"
+
+    def test_non_admin_can_still_set_own_trade_alerts(self, client):
+        token = db.create_session("email_test_user")
+        r = client.post(
+            "/settings/trade_alerts",
+            params={"value": "0"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+
+
+class TestExitAllPositionsEndpoint:
+    def test_requires_auth(self, client):
+        r = client.post("/positions/exit-all")
+        assert r.status_code == 401
+
+    def test_authenticated_user_with_no_positions_gets_empty_result(self, client):
+        token = db.create_session("email_test_user")
+        r = client.post("/positions/exit-all", headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["exited"] == []
+        assert body["failed"] == []

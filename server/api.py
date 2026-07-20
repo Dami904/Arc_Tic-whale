@@ -53,7 +53,7 @@ from backend.assistant import handle_assistant_command
 from backend.notifications import build_notification_reminder, user_has_notification_channel
 from backend.trade_service import run_trade_cycle
 from backend.trade_executor import execute_transfer
-from backend.copy_engine import evaluate_stop_losses
+from backend.copy_engine import evaluate_stop_losses, exit_all_positions
 from backend.agents import get_agent_catalog, get_agent_profile, AGENT_PROFILES
 from backend.user_wallets import ensure_user_wallet, normalize_user_id
 from backend.wallet_summary import get_wallet_stats_safe
@@ -746,6 +746,8 @@ def update_setting(key: str, value: str, current_user_id: str = Depends(verify_p
     if key not in ["kill_switch", "trade_alerts", "daily_summary"]:
         raise HTTPException(status_code=400, detail="Invalid setting")
     if key == "kill_switch":
+        if current_user_id != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
         set_setting(key, value)
     else:
         user_id = normalize_user_id(current_user_id)
@@ -1270,4 +1272,26 @@ def detach_agent(req: DetachRequest, current_user_id: str = Depends(verify_privy
     return {
         "status": "success",
         "message": f"Detached from {req.agent_id}.",
+    }
+
+
+@app.post("/positions/exit-all")
+@limiter.limit(lambda: f"{RATE_LIMIT_PER_MINUTE}/minute")
+def exit_all_positions_endpoint(request: Request, current_user_id: str = Depends(verify_privy_token)):
+    """User-initiated emergency exit: sells the caller's current holdings back
+    to USDC across every agent they follow. Does not unfollow — the user
+    keeps following, they just exit whatever position they're in right now."""
+    user_id = normalize_user_id(current_user_id)
+    results = exit_all_positions(user_id)
+    exited = [r for r in results if r["status"] == "success"]
+    failed = [r for r in results if r["status"] == "error"]
+    return {
+        "status": "success" if not failed else ("partial" if exited else "error"),
+        "exited": exited,
+        "failed": failed,
+        "message": (
+            f"Exited {len(exited)} position(s)." if exited and not failed
+            else "No open positions to exit." if not exited and not failed
+            else f"Exited {len(exited)} position(s), {len(failed)} failed."
+        ),
     }

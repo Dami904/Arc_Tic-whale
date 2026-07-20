@@ -5,6 +5,7 @@ from backend.database import (
     get_follower_by_wallet_id,
     get_latest_follower_trade,
     get_user,
+    get_user_allocations,
     log_trade,
     follower_trade_agent_key,
 )
@@ -158,3 +159,67 @@ def mirror_agent_trade(agent_name, action, target_asset_symbol):
                         log.info("Notification reminder for %s: %s", follower_wallet_id, reminder)
         else:
             log.error("Mirror trade failed for %s", follower_wallet_id)
+
+
+def exit_all_positions(user_id: str) -> list[dict]:
+    """
+    User-initiated emergency exit: sells back to USDC whatever asset the user
+    currently holds across every agent they follow (determined by each
+    follow's most recent mirrored trade). Does NOT unfollow the agent — the
+    user keeps following, they just exit their current holding. A follow
+    with no open position (last action was SELL, or no trades yet) is
+    skipped, not an error.
+    """
+    market_state = get_current_market_state()
+    results: list[dict] = []
+
+    for row in get_user_allocations(user_id):
+        agent_name = row["target_agent"]
+        wallet_id = row.get("user_wallet_id")
+        wallet_address = row.get("user_wallet_address")
+        if not wallet_id or not wallet_address:
+            continue
+
+        latest_trade = get_latest_follower_trade(wallet_id, agent_name)
+        if not latest_trade or str(latest_trade.get("action") or "").upper() != "BUY":
+            continue  # already in USDC, or never traded — nothing to exit
+
+        held_asset = str(latest_trade.get("asset") or "").upper()
+        if not held_asset:
+            continue
+
+        allocation = float(row.get("allocation_amount") or 0.0)
+        tx_id = execute_trade(
+            wallet_id=wallet_id,
+            action="SELL",
+            target_asset_symbol=held_asset,
+            amount=str(allocation),
+            recipient_address=wallet_address,
+        )
+
+        if not tx_id:
+            log.error("Exit-all sell failed for %s on %s", wallet_id, agent_name)
+            results.append({"agent": agent_name, "asset": held_asset, "status": "error"})
+            continue
+
+        log_trade(
+            agent=follower_trade_agent_key(wallet_id, agent_name),
+            action="SELL",
+            asset=held_asset,
+            tx_id=tx_id,
+            reason="User-initiated exit-all",
+        )
+        results.append({"agent": agent_name, "asset": held_asset, "status": "success", "tx_id": tx_id})
+
+        user = get_user(user_id)
+        if user and int(user.get("trade_alerts") or 0) == 1:
+            notify_trade_alert(
+                user,
+                agent_name=get_agent_profile(agent_name)["name"],
+                action="SELL",
+                token=held_asset,
+                amount_usdc=allocation,
+                entry_price=market_state.get(held_asset, {}).get("PRICE", 0),
+            )
+
+    return results

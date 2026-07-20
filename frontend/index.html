@@ -3781,12 +3781,12 @@
         <div class="card">
             <div class="section-title">Global Risk Controls</div>
 
-            <div class="kill-switch" style="margin-bottom:12px;">
+            <div class="kill-switch" style="margin-bottom:12px; flex-direction:column; align-items:stretch; gap:12px;">
                 <div class="kill-info">
-                    <div class="ki-title">🛑 Global Kill Switch</div>
-                    <div class="ki-sub">Pause ALL copy-trading instantly</div>
+                    <div class="ki-title">🛑 Exit All Positions</div>
+                    <div class="ki-sub">Sell everything you currently hold back to USDC — you stay following</div>
                 </div>
-                <div class="toggle" id="killToggle" onclick="toggleKill()"></div>
+                <button class="btn btn-danger" type="button" onclick="exitAllPositions()">Exit All</button>
             </div>
 
             <div class="kill-switch" style="margin-bottom:12px;">
@@ -4988,8 +4988,6 @@ function _assistantContext() {
 
 	        async function refreshDashboard() {
 	            await Promise.all([refreshWalletStats(), refreshMarketData(), fetchTradeHistory(), initSettings()]);
-                // Keep scheduler panel fresh whenever dashboard refreshes on wallet page
-                if (currentPage === 'wallet') refreshSchedulerStatus();
 	        }
 
         function renderAgents(agents) {
@@ -5176,10 +5174,8 @@ function _assistantContext() {
             try {
                 const res = await apiFetch('/settings');
                 const settings = await res.json();
-                const killToggle = document.getElementById('killToggle');
                 const alertToggle = document.getElementById('alertToggle');
                 const summaryToggle = document.getElementById('summaryToggle');
-                if (killToggle) killToggle.classList.toggle('on', settings.kill_switch === '1');
                 if (alertToggle) alertToggle.classList.toggle('on', settings.trade_alerts === '1');
                 if (summaryToggle) summaryToggle.classList.toggle('on', settings.daily_summary === '1');
                 updateNotificationReminder(settings.notification_reminder || '');
@@ -5211,9 +5207,21 @@ function _assistantContext() {
         }
 
         // ── Updated Toggles ──
-        function toggleKill() { toggleSetting('kill_switch', document.getElementById('killToggle')); }
         function toggleAlerts() { toggleSetting('trade_alerts', document.getElementById('alertToggle')); }
         function toggleSummary() { toggleSetting('daily_summary', document.getElementById('summaryToggle')); }
+
+        async function exitAllPositions() {
+            if (!confirm('Sell everything you currently hold back to USDC? You will keep following your agents — this only exits your current position.')) return;
+            try {
+                const res = await apiFetch('/positions/exit-all', { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || data.message || 'Exit failed');
+                showToast(data.message || 'Exit complete');
+                if ((data.exited || []).length > 0) refreshDashboard();
+            } catch (err) {
+                showToast(err.message || 'Could not exit positions');
+            }
+        }
 
         function updateAccountStatus(settings = {}) {
             const profile = dashboardCache.profile || {};
