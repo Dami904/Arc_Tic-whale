@@ -74,7 +74,7 @@ def get_agent_catalog():
 def initialize_agent(temperature=0.2):
     # We initialize the model here using the key from config.py
     return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
+        model="gemini-3.1-flash-lite",
         temperature=temperature,
         google_api_key=GOOGLE_API_KEY
     )

@@ -247,7 +247,7 @@ def _gemini_reply(question: str, system_prompt: str) -> str:
         raise RuntimeError("GOOGLE_API_KEY not configured")
     client = genai.Client(api_key=GOOGLE_API_KEY)
     response = client.models.generate_content(
-        model="gemini-2.0-flash",   # 200 req/day free vs 20 for 2.5-flash
+        model="gemini-3.1-flash-lite",
         contents=question,
         config=genai_types.GenerateContentConfig(
             system_instruction=system_prompt,

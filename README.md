@@ -75,7 +75,7 @@ If the Agent Service is unreachable, the Python backend automatically falls back
 
 ## AI Agent Variations
 
-One `GOOGLE_API_KEY` powers all four agent profiles. Each uses the same Gemini 2.5 Flash model with a different system prompt, risk posture, and temperature — producing genuinely different investing decisions:
+One `GOOGLE_API_KEY` powers all four agent profiles. Each uses the same Gemini 3.1 Flash Lite model with a different system prompt, risk posture, and temperature — producing genuinely different investing decisions:
 
 | Agent ID | Display Name | Risk | Temp | Strategy |
 |---|---|---|---|---|
@@ -97,7 +97,7 @@ flowchart TD
 
     MD --> TS[trade_service.py\nrun_trade_cycle]
     TS --> AI[agents.py\nask_agent × 4 profiles]
-    AI --> GL[Google Gemini 2.5 Flash]
+    AI --> GL[Google Gemini 3.1 Flash Lite]
 
     TS --> TE[trade_executor.py\nUniswap V3 swap]
     TE --> CW[Circle DCW Python SDK\nArc Testnet]
@@ -124,7 +124,7 @@ flowchart TD
 Market Data (CoinGecko / Yahoo Finance)
        │
        ▼
-  AI Agent (Gemini 2.5 Flash · one of 4 profiles)
+  AI Agent (Gemini 3.1 Flash Lite · one of 4 profiles)
   ──► DECISION: BUY / SELL / HOLD + asset + reason
        │
        ▼
@@ -486,7 +486,7 @@ pytest tests/ -v
 
 | Layer | Technology |
 |---|---|
-| **AI Agents** | Google Gemini 2.5 Flash, LangChain |
+| **AI Agents** | Google Gemini 3.1 Flash Lite, LangChain |
 | **Agent Stack** | **Circle Agent Stack** — `@circle-fin/developer-controlled-wallets` (Node.js) |
 | **Blockchain** | Circle Developer-Controlled Wallets, Uniswap V3, Arc Testnet |
 | **Backend** | Python, FastAPI, Uvicorn |

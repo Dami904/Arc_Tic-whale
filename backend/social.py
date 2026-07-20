@@ -30,7 +30,7 @@ def generate_canteen_post(agent_name, action, tx_id, reason=""):
     try:
         client = genai.Client(api_key=GOOGLE_API_KEY)
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.1-flash-lite',
             contents=prompt
         )
         post_content = response.text.strip()
