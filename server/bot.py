@@ -64,4 +64,4 @@ def send_welcome(message):
     bot.reply_to(message, welcome_text, reply_markup=markup, parse_mode="Markdown")
 
 print("🤖 Telegram Bot is listening for /start commands...")
-bot.polling()
+bot.infinite_polling()
