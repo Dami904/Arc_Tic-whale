@@ -5024,18 +5024,24 @@ function _assistantContext() {
 	                    <div class="agent-card risk-${agent.risk}" data-risk="${agent.risk}"
 	                        onclick="openCopyModal('${args[1]}','${args[2]}','${args[3]}','${args[4]}','${args[5]}','${args[6]}','${args[0]}')">
 	                        <div class="agent-card-top">
-	                            <div class="agent-card-icon">${agent.avatar}</div>
+	                            <div class="agent-card-icon" style="position:relative;">
+	                                ${agent.avatar}
+	                                <span style="position:absolute;bottom:-4px;right:-4px;background:var(--surface-raised);border:1px solid var(--border-accent);border-radius:20px;font-size:9px;font-family:var(--font-mono);padding:1px 5px;color:var(--cyan);" title="Ranked by win rate">#${agent.rank || '-'}</span>
+	                            </div>
                             <div class="agent-card-info">
                                 <div class="agent-card-name">${agent.name}</div>
                                 <div class="agent-card-desc">${agent.description}</div>
                                 <div class="agent-card-desc" style="margin-top:6px;color:var(--muted-mid);font-size:11px;">Status: ${statusText} · ${statusDetail}</div>
                             </div>
-                            <span class="pill ${pill}">${agent.risk_label}</span>
+                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+                                <span class="pill ${pill}">${agent.risk_label}</span>
+                                ${agent.trend === 'declining' ? '<span class="pill pill-red" title="Recent return has trailed the prior week by more than 5 points">⚠ Declining</span>' : ''}
+                            </div>
                         </div>
                         <div class="agent-card-stats">
                             <div class="acs"><div class="acs-val ${color}">${agent.win_rate || 0}%</div><div class="acs-lbl">Win Rate</div></div>
                             <div class="acs"><div class="acs-val">${agent.trades || 0}</div><div class="acs-lbl">Trades</div></div>
-                            <div class="acs"><div class="acs-val ${color}">${agent.roi_30d || '0.00%'}</div><div class="acs-lbl">24h Signal</div></div>
+                            <div class="acs"><div class="acs-val ${color}">${agent.roi_24h || 'N/A'}</div><div class="acs-lbl">24h Signal</div></div>
                         </div>
                         <div class="agent-card-allocation">
                             <div style="flex:1;">

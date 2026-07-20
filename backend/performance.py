@@ -120,6 +120,48 @@ def _windows_from_snapshots(agent: str, live_multiplier: float, earliest_baselin
     return windows
 
 
+_DEGRADATION_THRESHOLD_PCT = 5.0  # flag when the recent window trails the prior one by at least this many points
+
+
+def compute_agent_trend(agent_name: str, window_days: int = 7) -> dict:
+    """
+    Strategy degradation signal: compares this agent's most recent
+    window_days NAV return against the prior window_days window. Needs a
+    real, distinct snapshot at both boundaries — reports insufficient_data
+    honestly rather than guessing from too little history (same pattern as
+    the 24h/7d/1y windows).
+    """
+    now = datetime.now(timezone.utc)
+    today_str = now.date().isoformat()
+    week_ago_str = (now - timedelta(days=window_days)).date().isoformat()
+    two_weeks_ago_str = (now - timedelta(days=2 * window_days)).date().isoformat()
+
+    snap_today = get_nav_snapshot_on_or_before(agent_name, today_str)
+    snap_week = get_nav_snapshot_on_or_before(agent_name, week_ago_str)
+    snap_two_weeks = get_nav_snapshot_on_or_before(agent_name, two_weeks_ago_str)
+
+    insufficient = {"trend": "insufficient_data", "recent_return_pct": None, "prior_return_pct": None}
+
+    if not snap_today or not snap_week or not snap_two_weeks:
+        return insufficient
+    if snap_week["snapshot_date"] == snap_two_weeks["snapshot_date"]:
+        # A gap in snapshot history collapsed both lookups onto the same
+        # row — there's no real prior window to compare against yet.
+        return insufficient
+    if not snap_week["nav_multiplier"] or not snap_two_weeks["nav_multiplier"]:
+        return insufficient
+
+    recent_return_pct = ((snap_today["nav_multiplier"] / snap_week["nav_multiplier"]) - 1) * 100
+    prior_return_pct = ((snap_week["nav_multiplier"] / snap_two_weeks["nav_multiplier"]) - 1) * 100
+    declining = (prior_return_pct - recent_return_pct) >= _DEGRADATION_THRESHOLD_PCT
+
+    return {
+        "trend": "declining" if declining else "stable",
+        "recent_return_pct": round(recent_return_pct, 2),
+        "prior_return_pct": round(prior_return_pct, 2),
+    }
+
+
 def get_agent_performance(agent_name: str, current_prices: dict | None = None) -> dict:
     """current_prices: pass a pre-fetched get_current_market_state() result when
     computing this for multiple agents in a loop, to avoid redundant external
@@ -129,11 +171,15 @@ def get_agent_performance(agent_name: str, current_prices: dict | None = None) -
         current_prices = get_current_market_state()
     walk = _walk_trade_rows(rows, current_prices=current_prices)
     windows = _windows_from_snapshots(agent_name, walk["multiplier"])
+    trend = compute_agent_trend(agent_name)
     return {
         "win_rate": walk["win_rate"],
         "total_trades": walk["total_trades"],
         "closed_trades": walk["closed_trades"],
         "has_open_position": walk["has_open_position"],
+        "trend": trend["trend"],
+        "recent_return_pct": trend["recent_return_pct"],
+        "prior_return_pct": trend["prior_return_pct"],
         **windows,
     }
 

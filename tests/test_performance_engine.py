@@ -128,6 +128,19 @@ class TestGetAgentPerformance:
         get_agent_performance("Conservative_Whale", current_prices={"BTC": {"PRICE": 150.0}})
         mock_market.assert_not_called()
 
+    @patch("backend.performance.compute_agent_trend")
+    @patch("backend.performance.get_current_market_state", return_value={"BTC": {"PRICE": 120.0}})
+    @patch("backend.performance.get_nav_snapshot_on_or_before", return_value=None)
+    @patch("backend.performance.get_trade_rows_for_performance")
+    def test_includes_degradation_trend(self, mock_rows, mock_snap, mock_market, mock_trend):
+        mock_rows.return_value = []
+        mock_trend.return_value = {"trend": "declining", "recent_return_pct": -3.0, "prior_return_pct": 8.0}
+        result = get_agent_performance("Conservative_Whale")
+        mock_trend.assert_called_once_with("Conservative_Whale")
+        assert result["trend"] == "declining"
+        assert result["recent_return_pct"] == -3.0
+        assert result["prior_return_pct"] == 8.0
+
     @patch("backend.performance.get_current_market_state", return_value={"BTC": {"PRICE": 120.0}})
     @patch("backend.performance.get_nav_snapshot_on_or_before")
     @patch("backend.performance.get_trade_rows_for_performance")
@@ -162,3 +175,61 @@ class TestGetFollowerPerformance:
         assert result["closed_trades"] == 0
         assert result["24h"] is None
         assert result["win_rate"] == 0.0
+
+
+from backend.performance import compute_agent_trend
+
+
+class TestComputeAgentTrend:
+    def test_insufficient_data_when_no_snapshots_at_all(self):
+        with patch("backend.performance.get_nav_snapshot_on_or_before", return_value=None):
+            result = compute_agent_trend("Conservative_Whale")
+        assert result["trend"] == "insufficient_data"
+        assert result["recent_return_pct"] is None
+        assert result["prior_return_pct"] is None
+
+    def test_insufficient_data_when_week_and_two_week_snapshots_coincide(self):
+        # A gap in snapshot history (e.g. a missed daily run) means both the
+        # "week ago" and "two weeks ago" lookups clamp to the same earlier
+        # row — not a real two-window comparison, so don't claim a trend.
+        same_snap = {"nav_multiplier": 1.00, "snapshot_date": "2026-06-20"}
+        today_snap = {"nav_multiplier": 1.05, "snapshot_date": "2026-07-20"}
+        with patch("backend.performance.get_nav_snapshot_on_or_before", side_effect=[today_snap, same_snap, same_snap]):
+            result = compute_agent_trend("Conservative_Whale")
+        assert result["trend"] == "insufficient_data"
+
+    def test_declining_trend_flagged_past_threshold(self):
+        # today: 1.05, week ago: 1.10 (recent week: -4.5%), two weeks ago: 1.00 (prior week: +10%)
+        snapshots = {
+            "today": {"nav_multiplier": 1.05, "snapshot_date": "2026-07-20"},
+            "week": {"nav_multiplier": 1.10, "snapshot_date": "2026-07-13"},
+            "two_week": {"nav_multiplier": 1.00, "snapshot_date": "2026-07-06"},
+        }
+        with patch("backend.performance.get_nav_snapshot_on_or_before", side_effect=[
+            snapshots["today"], snapshots["week"], snapshots["two_week"],
+        ]):
+            result = compute_agent_trend("Conservative_Whale")
+        assert result["trend"] == "declining"
+        assert round(result["recent_return_pct"], 2) == round(((1.05 / 1.10) - 1) * 100, 2)
+        assert round(result["prior_return_pct"], 2) == round(((1.10 / 1.00) - 1) * 100, 2)
+
+    def test_stable_trend_when_drop_under_threshold(self):
+        # recent week +8%, prior week +10% — a 2pt drop, under the 5pt threshold
+        snapshots = [
+            {"nav_multiplier": 1.188, "snapshot_date": "2026-07-20"},  # today
+            {"nav_multiplier": 1.10, "snapshot_date": "2026-07-13"},   # week ago
+            {"nav_multiplier": 1.00, "snapshot_date": "2026-07-06"},   # two weeks ago
+        ]
+        with patch("backend.performance.get_nav_snapshot_on_or_before", side_effect=snapshots):
+            result = compute_agent_trend("Conservative_Whale")
+        assert result["trend"] == "stable"
+
+    def test_stable_trend_when_recent_beats_prior(self):
+        snapshots = [
+            {"nav_multiplier": 1.20, "snapshot_date": "2026-07-20"},  # today
+            {"nav_multiplier": 1.05, "snapshot_date": "2026-07-13"},  # week ago
+            {"nav_multiplier": 1.00, "snapshot_date": "2026-07-06"},  # two weeks ago
+        ]
+        with patch("backend.performance.get_nav_snapshot_on_or_before", side_effect=snapshots):
+            result = compute_agent_trend("Conservative_Whale")
+        assert result["trend"] == "stable"

@@ -367,6 +367,17 @@ def get_active_wallet_context(username: Optional[str] = None) -> dict:
     }
 
 
+def _rank_agent_cards(cards: list[dict]) -> list[dict]:
+    """Sorts agent cards by win_rate descending (stable — ties keep catalog
+    order) and assigns a 1-indexed rank. win_rate is 0.0 for agents with no
+    closed trades yet, so an unproven agent naturally ranks last rather than
+    being hidden or excluded."""
+    ranked = sorted(cards, key=lambda c: c["win_rate"], reverse=True)
+    for i, card in enumerate(ranked, start=1):
+        card["rank"] = i
+    return ranked
+
+
 def _agent_status(profile: dict) -> dict:
     latest_trade = get_latest_trade(profile["id"])
     if not latest_trade:
@@ -641,6 +652,7 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
             "trades": agent_metrics["total_trades"],
             "followers": agent_followers["total_followers"],
             "roi_24h": agent_metrics["24h"] or "N/A",
+            "trend": agent_metrics["trend"],
             "allocated_usdc": user_allocation,
             "has_allocation": bool(user_allocation_row),
             "stop_loss_pct": float(user_allocation_row.get("stop_loss_pct") or 10.0) if user_allocation_row else 10.0,
@@ -650,6 +662,7 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
             "last_asset": status["asset"],
             "last_trade_at": status["timestamp"],
         })
+    agent_cards = _rank_agent_cards(agent_cards)
 
     total_balance = stats["total_balance_usd"]
     if wallet["source"] == "user":
@@ -1215,6 +1228,7 @@ def list_agents():
             "description":  profile["description"],
             "win_rate":     metrics["win_rate"],
             "trades":       metrics["total_trades"],
+            "trend":        metrics["trend"],
             "followers":    followers["total_followers"],
             "status":       status["label"],
             "status_detail":status["detail"],
@@ -1222,7 +1236,7 @@ def list_agents():
             "last_asset":   status["asset"],
             "last_trade_at":status["timestamp"],
         })
-    return {"agents": result}
+    return {"agents": _rank_agent_cards(result)}
 
 
 @app.post("/agents/update-stop-loss")
