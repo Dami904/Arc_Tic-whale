@@ -27,17 +27,18 @@
 
 ### 2. Computation engine — `backend/performance.py` (new module)
 
-Core primitive: `compute_cumulative_multiplier(agent_name, since=None, current_prices=None) -> dict`. Walks that agent's `trade_history` rows in timestamp order (filtered to `timestamp >= since` when given, and to rows with a non-NULL `price`), tracking a simulated single stake per asset:
+Core primitive: `compute_cumulative_multiplier(agent_name, since=None, current_prices=None) -> dict`. Walks `trade_history` rows where `agent = agent_name` **exactly** (this is what naturally excludes follower-mirror rows, which are stored under the key `"Follower:<wallet>:<agent>"` per `follower_trade_agent_key` — they never match `agent_name` exactly, so the walk only ever sees the agent's own signal history) in timestamp order, filtered to `timestamp >= since` when given, and to rows with a non-NULL `price`. Tracks a simulated single stake per asset:
 - A BUY while not holding that asset opens a position at the recorded price.
+- **Exception — implicit entry:** if `since` is set (a follower's window) and the *first* row encountered is a SELL (i.e. the agent already held a position when the follower's window starts), treat it as if a BUY happened at `since` using the price recorded on the nearest `trade_history`/`agent_nav_snapshots` data at-or-before `since` as a synthetic entry price, rather than silently dropping the leg. This credits the follower with the exposure they actually had from the moment they joined, even though they weren't around for the agent's real entry.
 - A SELL while holding closes it — multiply the running total by `sell_price / buy_price`; record a "win" if that ratio is > 1.
-- A BUY while already holding, or a SELL while not holding, is a no-op (defensive — shouldn't happen given agent signal semantics, but avoids corrupting the walk on unexpected data).
+- A BUY while already holding, or any other SELL-while-not-holding (i.e. not the implicit-entry case above), is a no-op (defensive — shouldn't happen given agent signal semantics otherwise, but avoids corrupting the walk on unexpected data).
 - HOLD rows are no-ops.
 - If the walk ends with an open position (last action was an unmatched BUY), mark it to `current_prices[asset]` instead of a recorded price — this is the unrealized leg. `current_prices` is optional; when omitted, the open leg is excluded (used for point-in-time historical snapshots where "now" isn't meaningful).
 
-Returns `{multiplier: float, win_rate: float, closed_trades: int, has_open_position: bool}`. `win_rate` = wins / closed_trades × 100 (0.0 if no closed trades).
+Returns `{multiplier: float, win_rate: float, closed_trades: int, total_trades: int, has_open_position: bool}`. `win_rate` = wins / closed_trades × 100 (0.0 if no closed trades). `closed_trades` = completed BUY→SELL round trips; `total_trades` = count of BUY/SELL rows seen (preserves the existing semantics of `get_trade_metrics()["total_trades"]`, which `frontend/index.html:4355`'s `tradeCountStat` already reads — the replacement must keep this key so that display doesn't break or silently change meaning).
 
 Two callers built on top of this:
-- `get_agent_performance(agent_name) -> dict` — all-time stats via `compute_cumulative_multiplier(agent_name, current_prices=live_prices)`, plus `24h`/`7d`/`1y` by dividing today's live multiplier by the nearest `agent_nav_snapshots` row at each lookback distance (nearest-available, not exact-day). A window reports `None` when no snapshot exists far enough back yet (surfaced by the API as "insufficient data", not a fabricated 0%).
+- `get_agent_performance(agent_name) -> dict` — all-time stats via `compute_cumulative_multiplier(agent_name, current_prices=live_prices)`, plus `24h`/`7d`/`1y` by dividing today's live multiplier by the nearest `agent_nav_snapshots` row at each lookback distance (nearest-available, not exact-day). A window reports `None` when no snapshot exists far enough back yet (surfaced by the API as "insufficient data", not a fabricated 0%). This is also the source for each agent marketplace card's `roi_24h` (currently `server/api.py:627`, which wrongly reuses the *requesting user's own wallet* performance for every card — see Section 5).
 - `get_follower_performance(user_id, agent_name) -> dict` — identical shape, but `since=followed_at` for the all-time figure, and each window's baseline is `max(followed_at, snapshot at N days ago)` so a follower who joined 3 days ago gets a genuine 3-day "7d" number instead of a distorted one.
 
 ### 3. Daily NAV snapshot job
@@ -50,7 +51,8 @@ Two callers built on top of this:
 
 ### 5. API / frontend wiring
 
-- `server/api.py`: replace `get_trade_metrics(agent)` call sites (dashboard ~line 609/617-633, copy modal ~line 1196-1206) with `get_agent_performance(agent)`.
+- `server/api.py`: replace `get_trade_metrics(agent)` call sites (dashboard ~line 609/617-633, `/agents` ~line 1196-1206) with `get_agent_performance(agent)`; the returned dict keeps a `total_trades` key so `frontend/index.html:4355` keeps working unmodified.
+- `server/api.py:627` — `agent_cards[i]["roi_24h"]` currently reads `stats["performance"].get("24h", ...)` (the *requesting user's own* wallet stats, identical across every card). Replace with `get_agent_performance(profile["id"])["24h"]`, i.e. that specific agent's own 24h window.
 - Replace `get_wallet_stats_safe(...)`'s fake `performance` field in the `/dashboard` response with `get_follower_performance(user_id, agent_name)` for the user's active follow(s).
 - `frontend/index.html`: field names (`win_rate`, `performance['24h']/['7d']/['1y']`) stay the same so existing display code doesn't need rewriting; relabel copy that implies "market performance" to "your return since following" where the value is follower-scoped. Handle `None` window values with an "insufficient data yet" display state instead of `0%`.
 
