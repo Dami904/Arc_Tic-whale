@@ -297,6 +297,22 @@ GitHub Actions trading job. `scripts/run_cycle.py` also refuses to run in live m
 (`TRADE_DRY_RUN=false`) if any required secret is missing, rather than silently trading
 against an empty fallback database.
 
+Two more daily jobs follow the same pattern:
+
+- `.github/workflows/nav-snapshot.yml` — once daily, records each agent's cumulative
+  simulated-return multiplier so `backend/performance.py` can compute real 24h/7d/1y
+  performance windows. Needs only the `DATABASE_URL` secret.
+- `.github/workflows/daily-summary.yml` — once daily (~20:00 Africa/Lagos), sends
+  daily summary notifications. Replaces the old in-process scheduler, which died
+  whenever Render slept the dyno. Needs `DATABASE_URL` plus `BOT_TOKEN`/`RESEND_API_KEY`/
+  `RESEND_FROM_EMAIL`.
+
+Performance numbers (`win_rate`, `24h`/`7d`/`1y`) are simulated signal-following
+returns (see `docs/superpowers/specs/2026-07-18-phase2-real-performance-stats-design.md`),
+not reconciled real on-chain trade amounts — the on-chain BUY/SELL sizing has a known
+unit inconsistency (out of scope to fix) that would make real-amount P&L noisy rather
+than meaningful.
+
 ### Telegram Bot
 
 Run one production bot only on Render.
