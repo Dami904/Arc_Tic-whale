@@ -1,0 +1,28 @@
+name: NAV Snapshot
+
+on:
+  schedule:
+    - cron: "10 0 * * *"   # once daily, 00:10 UTC
+  workflow_dispatch: {}
+
+concurrency:
+  group: nav-snapshot
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      TRADE_DRY_RUN: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python scripts/snapshot_nav.py
