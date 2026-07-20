@@ -896,7 +896,8 @@ def get_followed_at(user_id: str, target_agent: str) -> str | None:
     with _connection() as conn:
         cursor = _cursor(conn)
         cursor.execute(
-            f"SELECT followed_at FROM followers WHERE user_id = {_PH} AND target_agent = {_PH} AND is_active = 1",
+            f"SELECT followed_at FROM followers WHERE user_id = {_PH} AND target_agent = {_PH} AND is_active = 1 "
+            f"ORDER BY id DESC LIMIT 1",
             (user_id, target_agent),
         )
         row = _row(cursor)
