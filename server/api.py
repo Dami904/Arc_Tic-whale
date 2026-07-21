@@ -60,6 +60,7 @@ from backend.user_wallets import ensure_user_wallet, normalize_user_id
 from backend.wallet_summary import get_wallet_stats_safe
 from backend.performance import get_agent_performance, get_follower_performance
 from backend.wallet_manager import initialize_circle_client
+from backend.telegram_bot import ensure_webhook_registered, process_webhook_update
 from circle.web3.developer_controlled_wallets.api import TransactionsApi, WalletsApi
 from backend.config import (
     AGENT_WALLET_ADDRESS,
@@ -75,6 +76,7 @@ from backend.config import (
     RATE_LIMIT_PER_MINUTE,
     TRADE_DRY_RUN,
     AGENT_DEV_MODE,
+    TELEGRAM_WEBHOOK_SECRET,
 )
 from backend.email_otp import send_otp_email
 from backend.privy_jwt import verify_privy_access_token
@@ -91,6 +93,10 @@ async def lifespan(app: FastAPI):
     # Trade cycles and daily summaries both run in GitHub Actions
     # (.github/workflows/trade-cycle.yml, daily-summary.yml), not in this
     # process — the web service is allowed to sleep on Render.
+    try:
+        ensure_webhook_registered()
+    except Exception as exc:
+        log.error("Telegram webhook registration failed at startup: %s", exc)
     yield
 
 
@@ -887,6 +893,22 @@ def serve_telegram_webapp():
         inline_config,
     )
     return HTMLResponse(content=html)
+
+
+@app.post("/telegram-webhook")
+async def telegram_webhook(request: Request):
+    """Receives Telegram bot updates via webhook — see backend/telegram_bot.py
+    for why this replaced long-polling (Render's Background Worker plans
+    aren't free; this rides on the already-deployed, already-free web
+    service instead). Always returns 200 quickly: Telegram retries
+    aggressively on non-2xx responses, and process_webhook_update already
+    logs failures internally rather than raising."""
+    if TELEGRAM_WEBHOOK_SECRET:
+        if request.headers.get("X-Telegram-Bot-Api-Secret-Token") != TELEGRAM_WEBHOOK_SECRET:
+            raise HTTPException(status_code=401, detail="Invalid webhook secret")
+    body = await request.json()
+    process_webhook_update(body)
+    return {"ok": True}
 
 
 import base64

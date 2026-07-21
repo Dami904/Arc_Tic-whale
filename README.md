@@ -115,7 +115,9 @@ flowchart TD
 
     WEB[index.html\nTelegram Mini App] --> API
     WEB --> AS
-    TB[bot.py\nTelegram Bot] --> WEB
+    TG[Telegram] -->|webhook POST| API
+    API --> TB[telegram_bot.py\n/start handler]
+    TB --> WEB
 ```
 
 ### Data Flow
@@ -315,14 +317,22 @@ than meaningful.
 
 ### Telegram Bot
 
-Run one production bot only, as the `arctic-whale-telegram-bot` Render **worker** service
-(not a web service — it has no HTTP port, it long-polls Telegram).
+The bot runs as a **webhook route on `arctic-whale-api`** (`backend/telegram_bot.py`,
+`POST /telegram-webhook`) — not a separate long-polling process. Render's Background
+Worker plans aren't free, and a webhook rides for free on a web service that's already
+deployed; it also wakes correctly on the next incoming message even from Render's
+free-tier sleep, which a sleeping long-poller couldn't do anyway.
 
+- Set `PYTHON_BACKEND_URL` on `arctic-whale-api` to **that service's own public Render
+  URL** — the app registers its webhook with Telegram on every startup
+  (`ensure_webhook_registered()`), and needs to know its own address to do that.
+- Set `TELEGRAM_WEBHOOK_SECRET` to a random string — Telegram echoes it back on every
+  webhook POST (`X-Telegram-Bot-Api-Secret-Token` header), and the route rejects
+  anything that doesn't match. Without it, `/telegram-webhook` accepts unauthenticated
+  requests (logged as a warning on startup).
 - Point `WEBAPP_URL` at the production web app URL
-- Keep staging testing inside the browser or directly through the staging web URL
-- Do not run a second bot token unless you later want Telegram staging
-- The worker needs its own `DATABASE_URL` and Circle credentials since `ensure_user_wallet`
-  provisions a wallet directly on `/start`, the same as the API service does on signup
+- Run one production bot only — do not run a second bot token unless you later want
+  Telegram staging
 
 ### Release Flow
 
@@ -366,9 +376,11 @@ python -m server.main
 
 ### Telegram Bot
 
-```bash
-python -m server.bot
-```
+The bot is a webhook route inside the API (`POST /telegram-webhook`), not a separate
+process — running `uvicorn server.api:app` already serves it. Telegram needs a public
+HTTPS URL to send webhooks to, so local testing needs a tunnel (e.g. `ngrok http 8765`),
+with `PYTHON_BACKEND_URL` set to that tunnel's URL before startup so
+`ensure_webhook_registered()` registers the right address.
 
 ---
 
@@ -391,6 +403,7 @@ python -m server.bot
 | `/referrals` | GET | — | Referral code + reward history |
 | `/settings/:key` | POST | Localhost/Bearer | Update kill-switch / alerts / summary |
 | `/webapp` | GET | — | Telegram Mini App UI |
+| `/telegram-webhook` | POST | `X-Telegram-Bot-Api-Secret-Token` | Telegram bot updates (webhook, not polling) |
 
 > **Auth note:** Localhost requests (`127.0.0.1`) bypass Bearer token auth automatically. External callers require `Authorization: Bearer <API_AUTH_TOKEN>`. `TRADE_DRY_RUN=true` bypasses auth entirely.
 
@@ -426,11 +439,11 @@ circle1/
 │   ├── database.py              # SQLite (followers, trades, settings)
 │   ├── config.py                # Env vars, contract addresses, AGENT_SERVICE_URL
 │   ├── logger.py                # Structured logging (structlog)
+│   ├── telegram_bot.py          # Telegram bot — webhook handler, not a standalone process
 │   └── utils.py                 # parse_ai_decision parser
 │
 ├── server/
-│   ├── api.py                   # FastAPI — all endpoints, auth, dashboard
-│   ├── bot.py                   # Telegram bot
+│   ├── api.py                   # FastAPI — all endpoints, auth, dashboard, /telegram-webhook
 │   ├── main.py                  # CLI entry point
 │   └── start_server.py          # Local DB initializer
 │

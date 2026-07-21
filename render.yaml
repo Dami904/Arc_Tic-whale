@@ -84,28 +84,13 @@ services:
         sync: false
       - key: WEBAPP_URL
         sync: false
-
-  - type: worker
-    name: arctic-whale-telegram-bot
-    runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python server/bot.py
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: BOT_TOKEN
-        sync: false
-      - key: WEBAPP_URL
-        sync: false            # Set to the arctic-whale-api or Vercel frontend URL after first deploy
-      - key: DATABASE_URL
-        fromDatabase:
-          name: arctic-whale-db
-          property: connectionString
-      - key: CIRCLE_API_KEY
-        sync: false
-      - key: CIRCLE_ENTITY_SECRET
-        sync: false
-      - key: AGENT_SERVICE_URL
-        sync: false
-      - key: AGENT_SERVICE_SECRET
-        sync: false
+      # The Telegram bot runs as a webhook route on THIS service now (see
+      # backend/telegram_bot.py) instead of a separate long-polling worker —
+      # Render's Background Worker plans aren't free, and a webhook rides
+      # for free on a web service that's already deployed. PYTHON_BACKEND_URL
+      # must be this service's own public Render URL so the app can register
+      # its webhook with Telegram on startup.
+      - key: PYTHON_BACKEND_URL
+        sync: false            # Set to this service's own Render URL after first deploy
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false            # Verifies incoming webhook POSTs actually came from Telegram

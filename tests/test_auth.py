@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -190,3 +192,43 @@ class TestExitAllPositionsEndpoint:
         body = r.json()
         assert body["exited"] == []
         assert body["failed"] == []
+
+
+class TestTelegramWebhookEndpoint:
+    def test_no_secret_configured_accepts_any_request(self, client, monkeypatch):
+        import server.api as api
+        monkeypatch.setattr(api, "TELEGRAM_WEBHOOK_SECRET", "")
+        with patch("server.api.process_webhook_update") as mock_process:
+            r = client.post("/telegram-webhook", json={"update_id": 1})
+        assert r.status_code == 200
+        mock_process.assert_called_once_with({"update_id": 1})
+
+    def test_rejects_missing_secret_header_when_configured(self, client, monkeypatch):
+        import server.api as api
+        monkeypatch.setattr(api, "TELEGRAM_WEBHOOK_SECRET", "supersecret")
+        with patch("server.api.process_webhook_update") as mock_process:
+            r = client.post("/telegram-webhook", json={"update_id": 1})
+        assert r.status_code == 401
+        mock_process.assert_not_called()
+
+    def test_rejects_wrong_secret_header(self, client, monkeypatch):
+        import server.api as api
+        monkeypatch.setattr(api, "TELEGRAM_WEBHOOK_SECRET", "supersecret")
+        r = client.post(
+            "/telegram-webhook",
+            json={"update_id": 1},
+            headers={"X-Telegram-Bot-Api-Secret-Token": "wrong"},
+        )
+        assert r.status_code == 401
+
+    def test_accepts_correct_secret_header(self, client, monkeypatch):
+        import server.api as api
+        monkeypatch.setattr(api, "TELEGRAM_WEBHOOK_SECRET", "supersecret")
+        with patch("server.api.process_webhook_update") as mock_process:
+            r = client.post(
+                "/telegram-webhook",
+                json={"update_id": 1},
+                headers={"X-Telegram-Bot-Api-Secret-Token": "supersecret"},
+            )
+        assert r.status_code == 200
+        mock_process.assert_called_once_with({"update_id": 1})

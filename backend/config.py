@@ -16,9 +16,14 @@ AGENT_WALLET_ADDRESS = os.getenv("AGENT_WALLET_ADDRESS")
 AGENT_WALLET_ID = os.getenv("AGENT_WALLET_ID")
 PARENT_WALLET_ID = os.getenv("PARENT_WALLET_ID", AGENT_WALLET_ID or "")
 
-# Telegram Keys (optional — only needed if running bot.py)
+# Telegram Keys (optional — only needed to run the Telegram bot)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "http://127.0.0.1:8765/webapp")
+# Verifies incoming webhook POSTs actually came from Telegram (sent back as
+# the X-Telegram-Bot-Api-Secret-Token header). Optional but strongly
+# recommended once BOT_TOKEN is set — without it, POST /telegram-webhook
+# accepts unauthenticated requests.
+TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
 
 # Database
 DATABASE_URL = os.getenv("DATABASE_URL", "")  # PostgreSQL on Railway; falls back to SQLite if empty
