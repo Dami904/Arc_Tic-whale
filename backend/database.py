@@ -20,8 +20,23 @@ _PH = "%s" if _USE_PG else "?"
 if _USE_PG:
     import psycopg2
     import psycopg2.extras
+    import psycopg2.pool
 
 DB_NAME = os.path.join(os.path.dirname(__file__), "agora_marketplace.db")
+
+_pg_pool = None
+
+
+def _get_pg_pool():
+    # Lazy singleton: a single request can open a dozen+ short DB calls
+    # (dashboard stats, trade history, performance, etc). Without pooling
+    # each one paid a fresh TCP+TLS handshake to Neon, which is what made
+    # the app feel slow to load right after login. Reusing connections
+    # from a small pool removes that overhead from the hot path.
+    global _pg_pool
+    if _pg_pool is None:
+        _pg_pool = psycopg2.pool.ThreadedConnectionPool(minconn=1, maxconn=10, dsn=DATABASE_URL)
+    return _pg_pool
 
 
 def _connect():
@@ -34,7 +49,26 @@ def _connect():
 
 @contextmanager
 def _connection():
-    """Open a DB connection and guarantee it is closed - even on exception."""
+    """Borrow a DB connection and guarantee it is returned - even on exception.
+
+    Postgres connections come from a pool (see _get_pg_pool); SQLite files
+    are cheap to open locally so those still get a fresh connection each time.
+    """
+    if _USE_PG:
+        pool = _get_pg_pool()
+        conn = pool.getconn()
+        try:
+            yield conn
+        finally:
+            # rollback() is a no-op if the caller already committed; it's
+            # what clears out read-only queries' implicit transaction so
+            # the connection goes back to the pool clean.
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            pool.putconn(conn)
+        return
     conn = _connect()
     try:
         yield conn
