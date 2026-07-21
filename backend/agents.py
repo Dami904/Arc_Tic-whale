@@ -109,7 +109,10 @@ def ask_agent(market_data, agent_name="Conservative_Whale"):
 
     try:
         response = llm.invoke([system_prompt, user_message])
-        return response.content
+        # gemini-3.1-flash-lite is a thinking-capable model: response.content
+        # can be a list of content blocks (text + thinking parts) rather than
+        # a plain string. .text normalizes to just the text parts.
+        return response.text
     except Exception as e:
         return fallback_market_decision(market_data)
 
@@ -160,7 +163,7 @@ def generate_social_post(agent_name, action, reasoning, tx_id):
                                           f"Do not include hashes or raw JSON.")
     
     response = llm.invoke([social_prompt])
-    post_content = response.content.strip()
+    post_content = response.text.strip()
     
     # Append the short transaction identifier for verification
     short_tx = f"{tx_id[:6]}...{tx_id[-4:]}" if tx_id else "Pending"
