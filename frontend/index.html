@@ -1181,29 +1181,12 @@
             border-radius: 22px;
             font-size: 12px;
             font-weight: 600;
-            cursor: pointer;
             transition: all 0.2s ease;
             color: var(--muted-mid);
             min-height: 36px;
             display: inline-flex;
             align-items: center;
             box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-        }
-
-        .asset-pill:hover {
-            border-color: rgba(0,221,180,0.2);
-            color: var(--text);
-            background: rgba(0,221,180,0.05);
-        }
-
-        .asset-pill.active {
-            background: rgba(0,221,180,0.14);
-            border-color: rgba(0,221,180,0.35);
-            color: var(--cyan);
-            box-shadow:
-                0 0 16px rgba(0,221,180,0.18),
-                0 1px 4px rgba(0,0,0,0.2);
-            font-weight: 700;
         }
 
         /* Follow section */
@@ -3563,15 +3546,16 @@
             </div>
         </div>
 
-        <!-- Asset Selector -->
+        <!-- Live price ticker - informational only, not a trading control.
+             Agents decide which asset to trade themselves; see backend/agents.py. -->
         <div class="card">
-            <div class="section-title">Active Market</div>
+            <div class="section-title">Live Prices</div>
             <div class="asset-pills">
-                <div class="asset-pill active" data-symbol="BTC" onclick="selectAsset(this,'BTC')">₿ BTC</div>
-                <div class="asset-pill" data-symbol="ETH" onclick="selectAsset(this,'ETH')">Ξ ETH</div>
-                <div class="asset-pill" data-symbol="AAPL" onclick="selectAsset(this,'AAPL')">🍎 AAPL</div>
-                <div class="asset-pill" data-symbol="SPY" onclick="selectAsset(this,'SPY')">📊 SPY</div>
-                <div class="asset-pill" data-symbol="EURC" onclick="selectAsset(this,'EURC')">€ EURC</div>
+                <div class="asset-pill" data-symbol="BTC">₿ BTC</div>
+                <div class="asset-pill" data-symbol="ETH">Ξ ETH</div>
+                <div class="asset-pill" data-symbol="AAPL">🍎 AAPL</div>
+                <div class="asset-pill" data-symbol="SPY">📊 SPY</div>
+                <div class="asset-pill" data-symbol="EURC">€ EURC</div>
             </div>
         </div>
 
@@ -4848,21 +4832,6 @@ function _assistantContext() {
 	        ];
         bootSeq.forEach(([delay, msg, type]) => setTimeout(() => log(msg, type), delay));
 
-        // ── Asset Selection ──
-        let activeAsset = 'BTC';
-        function selectAsset(el, name) {
-            document.querySelectorAll('.asset-pill').forEach(p => p.classList.remove('active'));
-            el.classList.add('active');
-            activeAsset = name;
-            log(`Recalibrating target → ${activeAsset}`, 'action');
-            const data = marketCache[activeAsset];
-            if (data) {
-                setTimeout(() => log(`${activeAsset} ${fmtUsd(data.PRICE)} · 24h ${data['24H_CHANGE']} · ${data.SOURCE}`, 'sys'), 400);
-            } else {
-                setTimeout(() => log(`${activeAsset} signal strength: analyzing...`, 'sys'), 400);
-            }
-        }
-
         let selectedAgentId = localStorage.getItem('arc_selected_agent') || 'Conservative_Whale';
         function _selectedAgentProfile() {
             return (dashboardCache.agents || []).find(agent => agent.id === selectedAgentId) || null;
@@ -5870,14 +5839,13 @@ function _assistantContext() {
                         body: JSON.stringify({
                             username: tgUser,
                             allocation: parseFloat(alloc),
-                            asset: activeAsset,
                             stop_loss_pct: parseFloat(stopLoss || '10'),
                             agent_id: agentId
                         })
                     });
                     const data = await response.json();
                     if (!response.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Follow failed');
-                    log(`Copy-trading ENABLED - ${alloc} USDC on ${activeAsset} with ${activeAgent?.name || agentId}`, 'action');
+                    log(`Copy-trading ENABLED - ${alloc} USDC with ${activeAgent?.name || agentId}`, 'action');
                     showToast(`Now copying ${activeAgent?.name || 'selected agent'} ✓`);
                     await refreshDashboard();
                 } catch (err) {
@@ -5905,7 +5873,7 @@ function _assistantContext() {
 
         // ── Force Check ──
         async function forceMarketCheck() {
-            log(`Forcing market check on ${activeAsset}...`, 'action');
+            log(`Forcing market check...`, 'action');
             showToast('AI Pipeline awakened...');
             try {
 		                const tgUser = currentUsername();
@@ -5920,7 +5888,7 @@ function _assistantContext() {
                 const data = await res.json();
 	                if (data.status === 'success' || data.status === 'hold') {
 	                    if (data.status === 'hold' || data.action === "HOLD") {
-	                        log(`Agent decided to HOLD. No favorable entry for ${activeAsset}.`, 'warn');
+	                        log(`Agent decided to HOLD. No favorable entry found.`, 'warn');
 	                        showToast('Agent held position');
 	                    } else {
 	                        log(`Execution confirmed! Action: ${data.action}`, 'action');

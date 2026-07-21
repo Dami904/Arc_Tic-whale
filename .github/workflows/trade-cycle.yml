@@ -2,7 +2,7 @@ name: Trade Cycle
 
 on:
   schedule:
-    - cron: "23 */2 * * *"  # every 2 hours (UTC), offset from the top of the hour to avoid congestion
+    - cron: "7,22,37,52 * * * *"  # every 15 min (UTC), offset from :00/:15/:30/:45 to avoid congestion
   workflow_dispatch: {}      # manual trigger for testing
 
 permissions: {}
@@ -14,7 +14,7 @@ concurrency:
 jobs:
   trade:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}

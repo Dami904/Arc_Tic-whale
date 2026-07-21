@@ -198,7 +198,6 @@ class TradeResponse(BaseModel):
 class FollowRequest(BaseModel):
     username: str
     allocation: float
-    asset: str
     stop_loss_pct: Optional[float] = 10.0
     agent_id: str = "Conservative_Whale"
 
@@ -1179,7 +1178,7 @@ def scheduler_status(_: str = Depends(verify_privy_token)):
 def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_privy_token)):
     agent_ids = {agent["id"] for agent in get_agent_catalog()}
     agent_id = req.agent_id if req.agent_id in agent_ids else AGENT_NAME
-    log.info("Follow request from @%s for %s USDC on %s via %s", req.username, req.allocation, req.asset, agent_id)
+    log.info("Follow request from @%s for %s USDC via %s", req.username, req.allocation, agent_id)
 
     wallet_record = ensure_user_wallet(req.username)
     real_wallet_id = wallet_record.get("wallet_id") if wallet_record else None
@@ -1204,7 +1203,6 @@ def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_p
         user_wallet_id=real_wallet_id,
         target_agent=agent_id,
         allocation_amount=req.allocation,
-        asset=req.asset,
         user_wallet_address=real_wallet_address,
         stop_loss_pct=req.stop_loss_pct,
     )
