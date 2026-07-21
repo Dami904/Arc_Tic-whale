@@ -18,7 +18,7 @@ import backend.database as db
 
 db.init_db()
 
-# ── Demo user — matches dryrun_user returned by verify_privy_token in dry-run mode
+# ── Demo user - matches dryrun_user returned by verify_privy_token in dry-run mode
 USER_ID     = "dryrun_user"
 WALLET_ID   = "wallet_dryrun_001"
 WALLET_ADDR = "0xDEMO1234567890abcdef1234567890abcdef1234"
@@ -64,13 +64,13 @@ print(f"✅ Agent trades: {len(agent_trades)}")
 
 # ── Follower (copy) trades for demo user ─────────────────────────────────────
 follower_trades = [
-    (f"Follower:{WALLET_ID}", "BUY",  "BTC",  "0xf001", "Copied Conservative_Whale — BTC breakout entry"),
-    (f"Follower:{WALLET_ID}", "HOLD", "BTC",  "0xf002", "Copied Conservative_Whale — holding BTC"),
-    (f"Follower:{WALLET_ID}", "SELL", "BTC",  "0xf003", "Copied Conservative_Whale — profit take +4.2%"),
-    (f"Follower:{WALLET_ID}", "BUY",  "ETH",  "0xf004", "Copied Conservative_Whale — ETH dip buy"),
-    (f"Follower:{WALLET_ID}", "BUY",  "EURC", "0xf005", "Copied Conservative_Whale — rotating to EURC"),
-    (f"Follower:{WALLET_ID}", "SELL", "ETH",  "0xf006", "Copied Conservative_Whale — ETH profit take +3.8%"),
-    (f"Follower:{WALLET_ID}", "BUY",  "BTC",  "0xf007", "Copied Conservative_Whale — BTC re-entry"),
+    (f"Follower:{WALLET_ID}", "BUY",  "BTC",  "0xf001", "Copied Conservative_Whale - BTC breakout entry"),
+    (f"Follower:{WALLET_ID}", "HOLD", "BTC",  "0xf002", "Copied Conservative_Whale - holding BTC"),
+    (f"Follower:{WALLET_ID}", "SELL", "BTC",  "0xf003", "Copied Conservative_Whale - profit take +4.2%"),
+    (f"Follower:{WALLET_ID}", "BUY",  "ETH",  "0xf004", "Copied Conservative_Whale - ETH dip buy"),
+    (f"Follower:{WALLET_ID}", "BUY",  "EURC", "0xf005", "Copied Conservative_Whale - rotating to EURC"),
+    (f"Follower:{WALLET_ID}", "SELL", "ETH",  "0xf006", "Copied Conservative_Whale - ETH profit take +3.8%"),
+    (f"Follower:{WALLET_ID}", "BUY",  "BTC",  "0xf007", "Copied Conservative_Whale - BTC re-entry"),
 ]
 for agent, action, asset, txid, reason in follower_trades:
     try:
@@ -84,7 +84,7 @@ posts = [
     ("Conservative_Whale", "BUY",  "0xabc001", "BTC breaking out above key resistance. Strong volume confirmation. Entered long 🐋 #BTC #CopyTrading"),
     ("Conservative_Whale", "SELL", "0xabc003", "Profit locked on BTC +4.2% 🎯 Rotating gains to EURC. Patience pays."),
     ("Conservative_Whale", "BUY",  "0xabc004", "ETH oversold on the 4H chart. Support holding at $2,050. Loading up 🔵 #ETH"),
-    ("Conservative_Whale", "SELL", "0xabc006", "ETH resistance hit — taking the +3.8% and moving on. Never get greedy. 📊"),
+    ("Conservative_Whale", "SELL", "0xabc006", "ETH resistance hit - taking the +3.8% and moving on. Never get greedy. 📊"),
     ("Conservative_Whale", "BUY",  "0xabc007", "BTC higher low confirmed. Trend is your friend. Re-entering 🐋 #Bitcoin"),
 ]
 for agent, action, txid, text in posts:

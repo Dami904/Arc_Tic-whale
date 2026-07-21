@@ -106,7 +106,7 @@ def create_wallet_with_policy(
         )
         return {"wallet_id": data["wallet_id"], "address": data["address"]}
     except Exception as e:
-        log.warning("Agent Service unreachable (%s) — falling back to DCW.", e)
+        log.warning("Agent Service unreachable (%s) - falling back to DCW.", e)
         return create_agent_wallet(agent_name)
 
 

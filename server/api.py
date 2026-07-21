@@ -92,7 +92,7 @@ init_db()
 async def lifespan(app: FastAPI):
     # Trade cycles and daily summaries both run in GitHub Actions
     # (.github/workflows/trade-cycle.yml, daily-summary.yml), not in this
-    # process — the web service is allowed to sleep on Render.
+    # process - the web service is allowed to sleep on Render.
     try:
         ensure_webhook_registered()
     except Exception as exc:
@@ -151,7 +151,7 @@ def verify_privy_token(request: Request) -> str:
         # Local development only. Production sets both to false (render.yaml).
         return "dryrun_user"
 
-    # Telegram Mini App mode — verify HMAC signature from Telegram
+    # Telegram Mini App mode - verify HMAC signature from Telegram
     tg_init_data = request.headers.get("X-Telegram-Init-Data", "")
     if tg_init_data:
         tg_user_id = _verify_telegram_init_data(tg_init_data)
@@ -159,7 +159,7 @@ def verify_privy_token(request: Request) -> str:
             return tg_user_id
         raise HTTPException(status_code=401, detail="Invalid Telegram auth data")
 
-    # Web / Privy mode — Bearer token
+    # Web / Privy mode - Bearer token
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Authorization header")
@@ -251,11 +251,11 @@ class AssistantCommandRequest(BaseModel):
 # --- API Endpoints ---
 AGENT_NAME = "Conservative_Whale"
 TRADE_ACTIONS = {"BUY", "SELL", "HOLD"}
-FEED_ACTIONS   = {"BUY", "SELL"}          # HOLD is scheduler noise — not feed-worthy
+FEED_ACTIONS   = {"BUY", "SELL"}          # HOLD is scheduler noise - not feed-worthy
 WALLET_ACTIONS = {"DEPOSIT", "WITHDRAW"}
 
 # ── Circle token-ID → symbol resolver ──────────────────────────────────────
-# Circle transactions only carry a tokenId UUID — no symbol.
+# Circle transactions only carry a tokenId UUID - no symbol.
 # wallet balance responses carry both the UUID (token.id) and the symbol.
 # We build this map from the balances call and reuse it for transactions.
 _token_id_cache: dict[str, str] = {}  # tokenId UUID → symbol string
@@ -271,7 +271,7 @@ _ARC_ADDRESS_MAP: dict[str, str] = {
 
 def _seed_token_cache_from_balances(wallet_id: str) -> None:
     """Populate _token_id_cache from the wallet's token balances.
-    The balance response includes tb.token.id (UUID) + tb.token.symbol — no extra API call needed."""
+    The balance response includes tb.token.id (UUID) + tb.token.symbol - no extra API call needed."""
     if not wallet_id:
         return
     try:
@@ -375,7 +375,7 @@ def get_active_wallet_context(username: Optional[str] = None) -> dict:
 
 
 def _rank_agent_cards(cards: list[dict]) -> list[dict]:
-    """Sorts agent cards by win_rate descending (stable — ties keep catalog
+    """Sorts agent cards by win_rate descending (stable - ties keep catalog
     order) and assigns a 1-indexed rank. win_rate is 0.0 for agents with no
     closed trades yet, so an unproven agent naturally ranks last rather than
     being hidden or excluded."""
@@ -616,7 +616,7 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
     effective_username = username or normalize_user_id(current_user_id)
     wallet = get_active_wallet_context(effective_username)
     stats = get_wallet_stats_safe(wallet["wallet_id"])
-    trades = get_trade_history(limit=20, actions=FEED_ACTIONS)   # BUY/SELL only — no HOLD noise
+    trades = get_trade_history(limit=20, actions=FEED_ACTIONS)   # BUY/SELL only - no HOLD noise
     social_posts = get_social_posts(limit=20)
     wallet_trades = (
         get_follower_trade_history(wallet["wallet_id"], limit=20, actions=TRADE_ACTIONS)
@@ -850,7 +850,7 @@ def withdraw(req: Optional[WithdrawRequest] = None, _: str = Depends(verify_priv
         agent=AGENT_NAME,
         action="SELL",
         post_text=(
-            f"Funds on the move — {req.amount} {req.asset.upper()} withdrawn from the vault. "
+            f"Funds on the move - {req.amount} {req.asset.upper()} withdrawn from the vault. "
             f"Capital rotation or profit taking. Watching closely. 🐋"
         ),
         tx_id=tx_id,
@@ -897,7 +897,7 @@ def serve_telegram_webapp():
 
 @app.post("/telegram-webhook")
 async def telegram_webhook(request: Request):
-    """Receives Telegram bot updates via webhook — see backend/telegram_bot.py
+    """Receives Telegram bot updates via webhook - see backend/telegram_bot.py
     for why this replaced long-polling (Render's Background Worker plans
     aren't free; this rides on the already-deployed, already-free web
     service instead). Always returns 200 quickly: Telegram retries
@@ -979,13 +979,13 @@ async def request_otp(body: dict):
                 }
             privy_error = _privy_error_detail(r)
             log.warning(
-                "Privy OTP send failed (%s): %s — using custom fallback",
+                "Privy OTP send failed (%s): %s - using custom fallback",
                 r.status_code,
                 privy_error,
             )
         except Exception as exc:
             privy_error = str(exc)
-            log.warning("Privy OTP request failed (%s) — using custom OTP fallback", exc)
+            log.warning("Privy OTP request failed (%s) - using custom OTP fallback", exc)
 
     # Custom OTP fallback
     code = str(random.randint(100000, 999999))
@@ -1033,18 +1033,18 @@ async def verify_otp(body: dict):
                 linked = user.get("linked_accounts", [{}])
                 user_email = next((a.get("address") for a in linked if a.get("type") == "email"), email)
                 return {"token": data.get("token", ""), "user_id": user.get("id", ""), "email": user_email}
-            log.warning("Privy OTP verify returned %s — trying custom OTP store", r.status_code)
+            log.warning("Privy OTP verify returned %s - trying custom OTP store", r.status_code)
         except Exception as exc:
-            log.warning("Privy OTP verify failed (%s) — trying custom OTP store", exc)
+            log.warning("Privy OTP verify failed (%s) - trying custom OTP store", exc)
 
     # Custom OTP fallback
     stored = _otp_store.get(email)
     if not stored:
-        raise HTTPException(status_code=401, detail="No code found for this email — request a new one")
+        raise HTTPException(status_code=401, detail="No code found for this email - request a new one")
     stored_code, expires_at = stored
     if time.time() > expires_at:
         _otp_store.pop(email, None)
-        raise HTTPException(status_code=401, detail="Code expired — request a new one")
+        raise HTTPException(status_code=401, detail="Code expired - request a new one")
     if not hmac.compare_digest(stored_code, code):
         raise HTTPException(status_code=401, detail="Invalid code")
     _otp_store.pop(email, None)
@@ -1109,7 +1109,7 @@ def auth_callback():
         if Path(callback_path).is_file():
             html = Path(callback_path).read_text()
             # Inject Privy credentials at serve time so the popup can complete OAuth.
-            # callback.html loads /static/runtime-config.js which has empty strings —
+            # callback.html loads /static/runtime-config.js which has empty strings -
             # we replace that tag with an inline script containing the real values.
             inline_config = (
                 "<script>\n"
@@ -1168,7 +1168,7 @@ def scheduler_status(_: str = Depends(verify_privy_token)):
         "interval_hours": 2.0,
         "runner":         "github-actions",
         "last_trade":     latest,
-        # Trades execute in the Actions job, which pins TRADE_DRY_RUN=false —
+        # Trades execute in the Actions job, which pins TRADE_DRY_RUN=false -
         # this web process's own TRADE_DRY_RUN value is not what actually runs.
         "mode":           "live",
     }
@@ -1188,7 +1188,7 @@ def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_p
     if not real_wallet_id or not real_wallet_address:
         return {"status": "error", "message": "Failed to generate Web3 wallet for user."}
 
-    # ── Server-side balance check (authoritative — frontend cache can be stale) ──
+    # ── Server-side balance check (authoritative - frontend cache can be stale) ──
     wallet_stats = get_wallet_stats_safe(real_wallet_id)
     token_list   = wallet_stats.get("token_balances") or []
     usdc_token   = next((t for t in token_list if str(t.get("symbol", "")).upper() == "USDC"), None)
@@ -1196,7 +1196,7 @@ def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_p
     if req.allocation > usdc_balance:
         return {
             "status": "error",
-            "message": f"Insufficient balance — you have {usdc_balance:.2f} USDC available.",
+            "message": f"Insufficient balance - you have {usdc_balance:.2f} USDC available.",
         }
 
     add_follower(
@@ -1209,7 +1209,7 @@ def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_p
         stop_loss_pct=req.stop_loss_pct,
     )
 
-    # ── Feed entry: new copy event (single social post only — no duplicate trade log) ──
+    # ── Feed entry: new copy event (single social post only - no duplicate trade log) ──
     agent_profile = get_agent_profile(agent_id)
     _copy_reason = f"New follower allocated {req.allocation} USDC to copy {agent_profile['name']}."
     log_social_post(
@@ -1237,7 +1237,7 @@ def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_p
 
 @app.get("/agents")
 def list_agents():
-    """Public endpoint — returns all agent profiles with live metrics. No auth required."""
+    """Public endpoint - returns all agent profiles with live metrics. No auth required."""
     catalog = get_agent_catalog()
     result = []
     _live_prices = get_current_market_state()  # fetched once, shared across all agents below
@@ -1305,7 +1305,7 @@ def detach_agent(req: DetachRequest, current_user_id: str = Depends(verify_privy
         agent=req.agent_id,
         action="SELL",
         post_text=(
-            "A position was closed. A follower detached from my copy stream — "
+            "A position was closed. A follower detached from my copy stream - "
             "risk management at play. The strategy continues. 🐋"
         ),
         tx_id=None,
@@ -1322,7 +1322,7 @@ def detach_agent(req: DetachRequest, current_user_id: str = Depends(verify_privy
 @limiter.limit(lambda: f"{RATE_LIMIT_PER_MINUTE}/minute")
 def exit_all_positions_endpoint(request: Request, current_user_id: str = Depends(verify_privy_token)):
     """User-initiated emergency exit: sells the caller's current holdings back
-    to USDC across every agent they follow. Does not unfollow — the user
+    to USDC across every agent they follow. Does not unfollow - the user
     keeps following, they just exit whatever position they're in right now."""
     user_id = normalize_user_id(current_user_id)
     results = exit_all_positions(user_id)

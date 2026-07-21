@@ -191,7 +191,7 @@ class TestComputeAgentTrend:
     def test_insufficient_data_when_week_and_two_week_snapshots_coincide(self):
         # A gap in snapshot history (e.g. a missed daily run) means both the
         # "week ago" and "two weeks ago" lookups clamp to the same earlier
-        # row — not a real two-window comparison, so don't claim a trend.
+        # row - not a real two-window comparison, so don't claim a trend.
         same_snap = {"nav_multiplier": 1.00, "snapshot_date": "2026-06-20"}
         today_snap = {"nav_multiplier": 1.05, "snapshot_date": "2026-07-20"}
         with patch("backend.performance.get_nav_snapshot_on_or_before", side_effect=[today_snap, same_snap, same_snap]):
@@ -214,7 +214,7 @@ class TestComputeAgentTrend:
         assert round(result["prior_return_pct"], 2) == round(((1.10 / 1.00) - 1) * 100, 2)
 
     def test_stable_trend_when_drop_under_threshold(self):
-        # recent week +8%, prior week +10% — a 2pt drop, under the 5pt threshold
+        # recent week +8%, prior week +10% - a 2pt drop, under the 5pt threshold
         snapshots = [
             {"nav_multiplier": 1.188, "snapshot_date": "2026-07-20"},  # today
             {"nav_multiplier": 1.10, "snapshot_date": "2026-07-13"},   # week ago

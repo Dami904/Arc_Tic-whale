@@ -8,7 +8,7 @@ def _fresh_telegram_bot_module(monkeypatch):
     """Every test gets a fresh import with a fake-but-valid-shaped token, so
     module-level `bot = telebot.TeleBot(BOT_TOKEN)` construction succeeds
     without hitting the network (telebot's local token check just wants a
-    colon-separated string — see backend/config.py's real validation for
+    colon-separated string - see backend/config.py's real validation for
     the same pattern used in tests/test_bot_startup.py)."""
     import sys
     monkeypatch.setattr("backend.config.BOT_TOKEN", "123456:FAKE-TOKEN-FOR-TESTING-ONLY")

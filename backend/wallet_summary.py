@@ -45,7 +45,7 @@ def get_wallet_stats_safe(wallet_id: str | None) -> dict:
         if balances_response.data and balances_response.data.token_balances:
             market_state = get_current_market_state()
 
-            # Pass 1 — try to match by canonical contract address.
+            # Pass 1 - try to match by canonical contract address.
             # This avoids double-counting when Circle returns both a native
             # and a wrapped version of the same token on Arc Testnet.
             canonical: dict[str, dict] = {}   # symbol → entry
@@ -62,7 +62,7 @@ def get_wallet_stats_safe(wallet_id: str | None) -> dict:
                     sym = _ARC_CANONICAL.get(addr)
 
                 if sym:
-                    # Canonical match — always prefer this over an unmatched row
+                    # Canonical match - always prefer this over an unmatched row
                     canonical[sym] = {
                         "symbol": sym,
                         "name": tb.token.name,
@@ -75,7 +75,7 @@ def get_wallet_stats_safe(wallet_id: str | None) -> dict:
                     log.debug("Unmatched token: addr=%s sym=%s amount=%s",
                               addr, getattr(tb.token, "symbol", "?"), tb.amount)
 
-            # Pass 2 — for unmatched rows (address unknown / not in canonical list)
+            # Pass 2 - for unmatched rows (address unknown / not in canonical list)
             # only add if we don't already have that symbol from a canonical row,
             # and if the amount is non-zero to avoid ghost entries.
             for tb in unmatched:

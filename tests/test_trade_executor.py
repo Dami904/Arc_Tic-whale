@@ -86,7 +86,7 @@ class TestSellPriceConversion:
              patch.object(trade_executor, "_build_approval_calldata", side_effect=fake_build_approval_calldata), \
              patch.object(trade_executor, "_submit_contract_execution", return_value="0xtxid"):
             mock_dcw.TransactionsApi.return_value = MagicMock()
-            # No current_price passed at all — BUY must not need it.
+            # No current_price passed at all - BUY must not need it.
             result = execute_trade(
                 wallet_id="w1", action="BUY", target_asset_symbol="BTC",
                 amount="1.5", recipient_address="0xaddr",

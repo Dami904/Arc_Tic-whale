@@ -36,7 +36,7 @@ def _agent_index() -> list[dict]:
 
 
 def _match_agent_name(command: str) -> Optional[str]:
-    """Match an agent name — exact substring first, then key-word fallback."""
+    """Match an agent name - exact substring first, then key-word fallback."""
     normalized = _clean(command)
     # Pass 1: exact substring (id or full name)
     for agent in _agent_index():
@@ -70,7 +70,7 @@ def _copied_agents(user_id: str) -> list[dict]:
 
 
 def _primary_follow_agent_id(allocations: list[dict]) -> Optional[str]:
-    """Largest-allocation agent among the user's active follows — same
+    """Largest-allocation agent among the user's active follows - same
     'primary follow' convention used for the dashboard and daily summary."""
     if not allocations:
         return None
@@ -185,7 +185,7 @@ def _build_system_prompt(
     except Exception:
         trade_rows = []
     trade_str = "\n".join(
-        f"  [{(r.get('timestamp') or '')[:10]}] {r['action']} {r.get('asset') or 'market'} — {r.get('reason') or 'no reason'}"
+        f"  [{(r.get('timestamp') or '')[:10]}] {r['action']} {r.get('asset') or 'market'} - {r.get('reason') or 'no reason'}"
         for r in trade_rows
     ) or "  No trades recorded yet."
 
@@ -203,11 +203,11 @@ def _build_system_prompt(
         )
     agent_catalog_str = "\n".join(agent_lines) or "  No agents available."
 
-    return f"""You are Agent Wale — the AI assistant inside Arc_Tic Whale, a copy trading platform on Arc Testnet (blockchain by Circle).
+    return f"""You are Agent Wale - the AI assistant inside Arc_Tic Whale, a copy trading platform on Arc Testnet (blockchain by Circle).
 
-YOUR SCOPE: ONLY answer questions about Arc_Tic Whale — wallet, trades, copied agents, platform concepts (copy trading, P&L, allocations, stop loss, Uniswap swaps, how the app works), or the agents listed below. If the user asks about ANYTHING ELSE (coding, news, weather, math, other apps, politics, entertainment, random facts), politely decline: "I can only help with Arc_Tic Whale questions."
+YOUR SCOPE: ONLY answer questions about Arc_Tic Whale - wallet, trades, copied agents, platform concepts (copy trading, P&L, allocations, stop loss, Uniswap swaps, how the app works), or the agents listed below. If the user asks about ANYTHING ELSE (coding, news, weather, math, other apps, politics, entertainment, random facts), politely decline: "I can only help with Arc_Tic Whale questions."
 
-GREETINGS: If the user sends a greeting — ANY casual opener like hi, hello, hey, sup, wassup, yo, what's good, howdy, or any slang — respond warmly, introduce yourself, and offer to help. Never refuse a greeting as off-topic.
+GREETINGS: If the user sends a greeting - ANY casual opener like hi, hello, hey, sup, wassup, yo, what's good, howdy, or any slang - respond warmly, introduce yourself, and offer to help. Never refuse a greeting as off-topic.
 
 PLATFORM OVERVIEW:
 - Arc_Tic Whale is a DeFi copy trading platform on Arc Testnet (EVM chain by Circle)
@@ -230,11 +230,11 @@ USER'S LIVE ACCOUNT DATA:
 - Trade alerts: {'ON' if alerts_on else 'OFF'} | Daily summary: {'ON' if daily_on else 'OFF'}
 
 RESPONSE RULES:
-1. Be helpful, direct, and confident. Answer in 1–4 plain text sentences — no bullet points, no markdown headers.
+1. Be helpful, direct, and confident. Answer in 1–4 plain text sentences - no bullet points, no markdown headers.
 2. Use the live data above to give specific, personalised answers. Never invent numbers.
 3. If the user asks about agent performance or "which is best", use the AVAILABLE AGENTS metrics above.
 4. If you don't know something specific, say so honestly.
-5. Treat greetings warmly — never refuse them.
+5. Treat greetings warmly - never refuse them.
 6. Refuse off-topic questions gracefully and redirect to the platform."""
 
 
@@ -269,7 +269,7 @@ def handle_assistant_command(user_id: str, command: str, context: Optional[dict]
 
     command_text = command.strip()
     if not command_text:
-        return {"status": "error", "reply": "Type a question or command — e.g. 'What is my P&L?' or 'Copy Arc_Tic Whale'."}
+        return {"status": "error", "reply": "Type a question or command - e.g. 'What is my P&L?' or 'Copy Arc_Tic Whale'."}
 
     normalized   = _clean(command_text)
     context      = context or {}
@@ -278,7 +278,7 @@ def handle_assistant_command(user_id: str, command: str, context: Optional[dict]
     allocations  = _copied_agents(user_id)
 
     # ------------------------------------------------------------------
-    # 1. Copy intent — open the copy modal pre-filled
+    # 1. Copy intent - open the copy modal pre-filled
     # ------------------------------------------------------------------
     copy_intent = _parse_copy_intent(command_text)
     if copy_intent:
@@ -286,7 +286,7 @@ def handle_assistant_command(user_id: str, command: str, context: Optional[dict]
         profile = get_agent_profile(agent_id)
         if amount:
             reply = (
-                f"Opening copy setup for {profile['name']} — "
+                f"Opening copy setup for {profile['name']} - "
                 f"{amount:.0f} USDC with {stop_loss:.0f}% stop loss. Review and confirm in the modal."
             )
         else:
@@ -314,7 +314,7 @@ def handle_assistant_command(user_id: str, command: str, context: Optional[dict]
         detached = deactivate_follower(user_id, detach_target)
         if not detached:
             return {"status": "skipped", "reply": f"You're not actively copying {get_agent_profile(detach_target)['name']}."}
-        return {"status": "success", "reply": f"Done — detached you from {get_agent_profile(detach_target)['name']}."}
+        return {"status": "success", "reply": f"Done - detached you from {get_agent_profile(detach_target)['name']}."}
 
     # ------------------------------------------------------------------
     # 3. Toggle daily summary
@@ -332,7 +332,7 @@ def handle_assistant_command(user_id: str, command: str, context: Optional[dict]
         return {"status": "success", "reply": f"Trade alerts are now {'on' if alert_toggle else 'off'}."}
 
     # ------------------------------------------------------------------
-    # 5. Gemini LLM — all Q&A, greetings, agent comparisons, etc.
+    # 5. Gemini LLM - all Q&A, greetings, agent comparisons, etc.
     # ------------------------------------------------------------------
     try:
         system_prompt = _build_system_prompt(wallet_stats, allocations, preferences, user_id)

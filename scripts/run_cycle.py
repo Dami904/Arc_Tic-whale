@@ -1,10 +1,10 @@
 """
-run_cycle.py — Entry point for the scheduled GitHub Actions trade cycle.
+run_cycle.py - Entry point for the scheduled GitHub Actions trade cycle.
 
 Runs one trade cycle per agent in AGENT_PROFILES against the configured
 DATABASE_URL (Neon Postgres in production). Market data is fetched once
 and shared. Exits 0 if at least one agent completed (or kill switch is on),
-1 if every agent errored — so the Actions run shows red only on total failure.
+1 if every agent errored - so the Actions run shows red only on total failure.
 """
 from __future__ import annotations
 
@@ -44,8 +44,8 @@ def run_all() -> int:
 
     init_db()
     if is_kill_switch_active():
-        log.warning("Kill switch active — skipping this cycle.")
-        print("KILL SWITCH ACTIVE — cycle skipped.")
+        log.warning("Kill switch active - skipping this cycle.")
+        print("KILL SWITCH ACTIVE - cycle skipped.")
         return 0
 
     market = get_current_market_state()

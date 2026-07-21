@@ -1,10 +1,10 @@
 """
-telegram_bot.py — Telegram bot logic, delivered via webhook rather than
+telegram_bot.py - Telegram bot logic, delivered via webhook rather than
 long-polling.
 
 Long-polling needs an always-running process, which Render only offers on
 paid Background Worker plans. A webhook is just an HTTP route Telegram POSTs
-to — it rides on the already-deployed, already-free arctic-whale-api web
+to - it rides on the already-deployed, already-free arctic-whale-api web
 service instead of needing a separate worker, and it wakes correctly from
 Render's free-tier sleep on the next incoming message (see
 server/api.py's POST /telegram-webhook route and lifespan startup call to
@@ -65,7 +65,7 @@ if bot is not None:
         ))
 
         welcome_text = (
-            "Welcome to *Arc\\_Tic Whale* — an AI-driven copy-trading app on Arc Testnet.\n\n"
+            "Welcome to *Arc\\_Tic Whale* - an AI-driven copy-trading app on Arc Testnet.\n\n"
             "Follow automated investing agents and mirror their trades from your wallet.\n\n"
             "Open the dashboard below to allocate capital and enable copy trading.\n\n"
             f"Referral code: `{wallet.get('referral_code', 'pending')}`"
@@ -76,11 +76,11 @@ if bot is not None:
 
 def process_webhook_update(update_json: dict) -> None:
     """Parse one Telegram update and dispatch it to the registered handlers.
-    Never raises — Telegram expects a fast 200 regardless of what happened
+    Never raises - Telegram expects a fast 200 regardless of what happened
     inside, and a bug here shouldn't take down the request or trigger
     Telegram's retry storm."""
     if bot is None:
-        log.warning("Received a Telegram webhook update but no BOT_TOKEN is configured — ignoring.")
+        log.warning("Received a Telegram webhook update but no BOT_TOKEN is configured - ignoring.")
         return
     try:
         update = telebot.types.Update.de_json(update_json)
@@ -91,7 +91,7 @@ def process_webhook_update(update_json: dict) -> None:
 
 def ensure_webhook_registered() -> None:
     """Registers this service's /telegram-webhook URL with Telegram. Safe to
-    call on every boot — idempotent, and skips cleanly (rather than crashing
+    call on every boot - idempotent, and skips cleanly (rather than crashing
     startup) when there's no bot configured or the backend URL isn't
     publicly reachable (local dev)."""
     if bot is None:
@@ -101,7 +101,7 @@ def ensure_webhook_registered() -> None:
         log.info("Skipping Telegram webhook registration: PYTHON_BACKEND_URL (%s) isn't publicly reachable.", PYTHON_BACKEND_URL)
         return
     if not TELEGRAM_WEBHOOK_SECRET:
-        log.warning("TELEGRAM_WEBHOOK_SECRET is not set — the webhook endpoint will accept unauthenticated requests.")
+        log.warning("TELEGRAM_WEBHOOK_SECRET is not set - the webhook endpoint will accept unauthenticated requests.")
 
     webhook_url = f"{PYTHON_BACKEND_URL.rstrip('/')}/telegram-webhook"
     try:

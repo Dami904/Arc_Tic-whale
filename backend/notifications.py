@@ -52,7 +52,7 @@ def build_trade_alert_message(
     amount = f"${float(amount_usdc):,.2f}" if str(amount_usdc).replace(".", "", 1).isdigit() else f"${amount_usdc}"
     entry = f"${float(entry_price):,.2f}" if str(entry_price).replace(".", "", 1).isdigit() else f"${entry_price}"
     return (
-        "🚨 Trade Alert — Arc_Tic_Whale\n"
+        "🚨 Trade Alert - Arc_Tic_Whale\n"
         f"Agent: {agent_name}\n"
         f"Action: {action} {token}\n"
         f"Amount: {amount} USDC\n"
@@ -73,7 +73,7 @@ def build_daily_summary_message(
     pct_value = float(pnl_pct)
     sign = "+" if pnl_value >= 0 else "-"
     return (
-        "📊 Daily Summary — Arc_Tic_Whale\n"
+        "📊 Daily Summary - Arc_Tic_Whale\n"
         f"Date: {date_label}\n"
         f"Trades executed today: {int(trades_executed)}\n"
         f"Today's P&L: {sign}${abs(pnl_value):,.2f} ({sign}{abs(pct_value):.2f}%)\n"

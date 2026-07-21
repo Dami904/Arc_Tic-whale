@@ -1,5 +1,5 @@
 """
-purge_demo_data.py — One-time cleanup of seeded demo rows before public beta.
+purge_demo_data.py - One-time cleanup of seeded demo rows before public beta.
 Deletes trade_history/social_posts/followers/users rows created by seed_demo.py.
 Run: python scripts/purge_demo_data.py            (prints what it WOULD delete)
      python scripts/purge_demo_data.py --apply    (actually deletes)
@@ -13,7 +13,7 @@ import backend.database as db
 
 APPLY = "--apply" in sys.argv
 
-# Fixed predicates targeting only rows seed_demo.py creates — not user input.
+# Fixed predicates targeting only rows seed_demo.py creates - not user input.
 DEMO_PREDICATES = [
     ("trade_history", "tx_id LIKE '0xabc%' OR tx_id LIKE '0xf0%' OR agent LIKE '%dryrun%' OR agent LIKE '%demo%'"),
     ("social_posts",  "tx_id LIKE '0xabc%' OR tx_id LIKE '0xf0%'"),

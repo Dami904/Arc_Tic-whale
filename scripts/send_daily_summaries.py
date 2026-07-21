@@ -1,8 +1,8 @@
 """
-send_daily_summaries.py — Entry point for the scheduled GitHub Actions daily-summary job.
+send_daily_summaries.py - Entry point for the scheduled GitHub Actions daily-summary job.
 
 Replaces the old in-process threading.Thread scheduler (backend/daily_summary.py's
-start_daily_summary_scheduler), which died whenever Render slept the dyno — the
+start_daily_summary_scheduler), which died whenever Render slept the dyno - the
 same class of bug Phase 1 fixed for trading. Run once daily via
 .github/workflows/daily-summary.yml.
 """

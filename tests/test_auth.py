@@ -22,8 +22,8 @@ def client(tmp_path, monkeypatch):
 # server/api.py is GET /settings (there is no bare /profile route; the
 # closest is /user/profile). /settings is protected by verify_privy_token,
 # always returns 200 regardless of whether the user exists in the DB, and
-# only touches local DB helpers (get_setting/get_user_preferences) — no
-# external service calls — so it's used consistently as the auth probe here.
+# only touches local DB helpers (get_setting/get_user_preferences) - no
+# external service calls - so it's used consistently as the auth probe here.
 
 
 class TestWalletPseudoTokenRemoved:

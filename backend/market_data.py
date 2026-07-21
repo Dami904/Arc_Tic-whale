@@ -22,7 +22,7 @@ _FALLBACK_PRICES = {
 
 # Simple 60-second in-process cache to avoid CoinGecko/Yahoo rate limits
 # and redundant round-trips (get_current_market_state() is called once per
-# agent in several API loops — see backend/performance.py's current_prices
+# agent in several API loops - see backend/performance.py's current_prices
 # sharing pattern for the other half of that fix).
 _cache: dict = {}
 _cache_ts: float = 0.0
@@ -78,7 +78,7 @@ def _get_crypto_data():
         _cache_ts = time.time()
 
     except Exception as e:
-        print(f"❌ Market Data (CoinGecko): {e} — using fallback prices")
+        print(f"❌ Market Data (CoinGecko): {e} - using fallback prices")
         for symbol, fb in _FALLBACK_PRICES.items():
             crypto_data[symbol] = {**fb, "TYPE": "CRYPTO", "SOURCE": "CoinGecko (Cached)"}
 
@@ -92,7 +92,7 @@ def _percent_change(current, previous):
 def _get_stock_data():
     """
     Fetches stock/ETF price data from Yahoo's public chart endpoint.
-    Results are cached for 60 s — same rationale as _get_crypto_data().
+    Results are cached for 60 s - same rationale as _get_crypto_data().
     Returns a dictionary with symbols as keys.
     """
     global _stock_cache, _stock_cache_ts

@@ -167,7 +167,7 @@ def exit_all_positions(user_id: str) -> list[dict]:
     """
     User-initiated emergency exit: sells back to USDC whatever asset the user
     currently holds across every agent they follow (determined by each
-    follow's most recent mirrored trade). Does NOT unfollow the agent — the
+    follow's most recent mirrored trade). Does NOT unfollow the agent - the
     user keeps following, they just exit their current holding. A follow
     with no open position (last action was SELL, or no trades yet) is
     skipped, not an error.
@@ -184,7 +184,7 @@ def exit_all_positions(user_id: str) -> list[dict]:
 
         latest_trade = get_latest_follower_trade(wallet_id, agent_name)
         if not latest_trade or str(latest_trade.get("action") or "").upper() != "BUY":
-            continue  # already in USDC, or never traded — nothing to exit
+            continue  # already in USDC, or never traded - nothing to exit
 
         held_asset = str(latest_trade.get("asset") or "").upper()
         if not held_asset:

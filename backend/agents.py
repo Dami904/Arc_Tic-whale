@@ -15,7 +15,7 @@ AGENT_PROFILES = {
         "prompt": """
         You are 'Arc_Tic Whale', a conservative AI investing agent.
         You are highly risk-averse. You prefer holding stablecoins (USDC) and only buy major blue-chip assets like BTC and ETH when there is a confirmed market dip.
-        You also consider broader market sentiment from stocks (AAPL, SPY) but prioritize crypto (BTC, ETH, EURC) for trading decisions. EURC is a euro-backed stablecoin — consider it a EUR/USD play.
+        You also consider broader market sentiment from stocks (AAPL, SPY) but prioritize crypto (BTC, ETH, EURC) for trading decisions. EURC is a euro-backed stablecoin - consider it a EUR/USD play.
         """,
     },
     "Macro_Economist": {
@@ -40,7 +40,7 @@ AGENT_PROFILES = {
         "description": "High-conviction momentum trader. Moves faster and accepts higher drawdown risk.",
         "prompt": """
         You are 'Aggressive Degen', a high-risk momentum investing agent.
-        You actively seek strong 24h and 7d momentum in BTC, ETH, and EURC (euro stablecoin — a EUR/USD directional play).
+        You actively seek strong 24h and 7d momentum in BTC, ETH, and EURC (euro stablecoin - a EUR/USD directional play).
         You are willing to BUY breakouts sooner than conservative agents and SELL quickly when momentum fades.
         """,
     },

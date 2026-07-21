@@ -1,4 +1,4 @@
-# trade_service.py — Upgrade 2: Shared trade-cycle service used by both CLI (main.py) and API (api.py)
+# trade_service.py - Upgrade 2: Shared trade-cycle service used by both CLI (main.py) and API (api.py)
 """
 Single source of truth for the full AI → trade → copy → social pipeline.
 Both main.py and api.py import and call run_trade_cycle() so the logic
@@ -76,7 +76,7 @@ def run_trade_cycle(
     asset  = parsed["asset"]
     reason = parsed.get("reason", "")
 
-    log.info("Whale decision: %s %s — %s", action, asset or "", reason)
+    log.info("Whale decision: %s %s - %s", action, asset or "", reason)
 
     if action == "HOLD":
         log.info("Action: HOLD. No on-chain transaction required.")

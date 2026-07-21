@@ -34,7 +34,7 @@ def _connect():
 
 @contextmanager
 def _connection():
-    """Open a DB connection and guarantee it is closed — even on exception."""
+    """Open a DB connection and guarantee it is closed - even on exception."""
     conn = _connect()
     try:
         yield conn
@@ -621,7 +621,7 @@ def get_agent_retention_stats(agent_name: str) -> dict:
     total_follows / active_follows count every follow ever created for this
     agent (not just currently active ones), so retention_rate_pct reflects
     real churn. avg_tenure_days is computed only from follows that have both
-    followed_at and deactivated_at recorded — legacy rows predating those
+    followed_at and deactivated_at recorded - legacy rows predating those
     columns are excluded rather than guessed at.
     """
     with _connection() as conn:

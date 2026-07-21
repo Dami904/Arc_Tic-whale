@@ -1,12 +1,12 @@
 # Arc_Tic Whale
 
-**Arc_Tic Whale** is an AI-driven copy-trading app on **Arc Testnet**. Four Google Gemini-powered investing agents analyze live markets, execute swaps via Uniswap V3, and let users mirror agent strategies automatically — with every user wallet protected by **Circle Agent Stack spending policies**.
+**Arc_Tic Whale** is an AI-driven copy-trading app on **Arc Testnet**. Four Google Gemini-powered investing agents analyze live markets, execute swaps via Uniswap V3, and let users mirror agent strategies automatically - with every user wallet protected by **Circle Agent Stack spending policies**.
 
 ---
 
 ## ⭐ Circle Agent Stack Integration
 
-> This project integrates [Circle Agent Stack](https://agents.circle.com) — Circle's financial infrastructure for the agentic economy (launched May 2026).
+> This project integrates [Circle Agent Stack](https://agents.circle.com) - Circle's financial infrastructure for the agentic economy (launched May 2026).
 
 ### What Circle Agent Stack adds to this project
 
@@ -40,7 +40,7 @@ Python FastAPI  ──httpx──►  Circle Agent Service (Node.js · port 3001
 | `initiateDeveloperControlledWalletsClient()` | Authenticates with Circle using `CIRCLE_API_KEY` + `CIRCLE_ENTITY_SECRET` |
 | `client.createWalletSet()` | Creates a named wallet set for the user |
 | `client.createWallets()` | Provisions an SCA (Smart Contract Account) wallet on Arc Testnet |
-| `client.updateWallet({ spendingLimits })` | **Attaches spending policy** — per-tx, daily, and monthly USDC caps |
+| `client.updateWallet({ spendingLimits })` | **Attaches spending policy** - per-tx, daily, and monthly USDC caps |
 | `client.getWallet()` | Retrieves wallet info |
 | `client.listWalletBalance()` | Queries USDC balance for a wallet |
 
@@ -69,13 +69,13 @@ spendingLimits: [
 
 ### Fallback safety
 
-If the Agent Service is unreachable, the Python backend automatically falls back to the existing Circle Developer Controlled Wallets Python SDK — **no user-facing errors, no downtime**.
+If the Agent Service is unreachable, the Python backend automatically falls back to the existing Circle Developer Controlled Wallets Python SDK - **no user-facing errors, no downtime**.
 
 ---
 
 ## AI Agent Variations
 
-One `GOOGLE_API_KEY` powers all four agent profiles. Each uses the same Gemini 3.1 Flash Lite model with a different system prompt, risk posture, and temperature — producing genuinely different investing decisions:
+One `GOOGLE_API_KEY` powers all four agent profiles. Each uses the same Gemini 3.1 Flash Lite model with a different system prompt, risk posture, and temperature - producing genuinely different investing decisions:
 
 | Agent ID | Display Name | Risk | Temp | Strategy |
 |---|---|---|---|---|
@@ -84,7 +84,7 @@ One `GOOGLE_API_KEY` powers all four agent profiles. Each uses the same Gemini 3
 | `Aggressive_Degen` | Aggressive Degen ⚡ | High | 0.55 | Momentum breakout trader, accepts higher drawdown |
 | `Yield_Farmer` | Yield Farmer 🌊 | Low | 0.25 | Stablecoin-first, rotates into majors only on strong setups |
 
-All four agents are live in the marketplace. Users can follow any agent — each gets its own metrics, follower count, and feed entries attributed correctly.
+All four agents are live in the marketplace. Users can follow any agent - each gets its own metrics, follower count, and feed entries attributed correctly.
 
 ---
 
@@ -181,7 +181,7 @@ CIRCLE_ENTITY_SECRET=your_circle_entity_secret
 AGENT_WALLET_ADDRESS=0x...
 AGENT_WALLET_ID=uuid-from-circle
 
-# Circle Agent Stack — Node.js microservice
+# Circle Agent Stack - Node.js microservice
 AGENT_SERVICE_URL=http://localhost:3001
 AGENT_SERVICE_PORT=3001
 
@@ -200,7 +200,7 @@ CORS_ALLOWED_ORIGINS=http://127.0.0.1:8765,https://yourdomain.com
 RATE_LIMIT_PER_MINUTE=30
 LOG_LEVEL=INFO
 
-# Privy (web login — email + Google/Twitter)
+# Privy (web login - email + Google/Twitter)
 PRIVY_APP_ID=your_privy_app_id
 PRIVY_APP_SECRET=your_privy_app_secret
 PRIVY_CLIENT_ID=your_privy_client_id          # Dashboard → Settings → Clients
@@ -214,10 +214,10 @@ PRIVY_AUTH_ORIGIN=http://localhost:8765       # Use the exact deployed origin in
 
 ### Privy dashboard checklist
 
-1. **Login methods → Email** — enable one-time password.
-2. **Login methods → Socials** — enable Google and Twitter; add OAuth client ID/secret for each.
-3. **Settings → Domains** — allow your staging Vercel preview domain and your production Vercel domain.
-4. **Redirect URLs** — add the exact `/auth/callback` URL for each environment, for example:
+1. **Login methods → Email** - enable one-time password.
+2. **Login methods → Socials** - enable Google and Twitter; add OAuth client ID/secret for each.
+3. **Settings → Domains** - allow your staging Vercel preview domain and your production Vercel domain.
+4. **Redirect URLs** - add the exact `/auth/callback` URL for each environment, for example:
    - `http://127.0.0.1:8765/auth/callback`
    - `http://localhost:8765/auth/callback`
    - `https://your-project-git-develop-yourname.vercel.app/auth/callback`
@@ -280,7 +280,7 @@ Use the same Render blueprint pattern from `render.yaml`, but point each environ
 ### Scheduled Trading (GitHub Actions)
 
 Trade cycles run every 2 hours via GitHub Actions (`.github/workflows/trade-cycle.yml`),
-not inside the web service — so Render free-tier sleep never stops the agents.
+not inside the web service - so Render free-tier sleep never stops the agents.
 
 Required GitHub Actions secrets (repo → Settings → Secrets and variables → Actions):
 `DATABASE_URL`, `GOOGLE_API_KEY`, `CIRCLE_API_KEY`, `CIRCLE_ENTITY_SECRET`,
@@ -288,12 +288,12 @@ Required GitHub Actions secrets (repo → Settings → Secrets and variables →
 `RESEND_FROM_EMAIL` if you want trade-alert notifications to fire from this job.
 
 **GitHub only triggers `schedule:` workflows on the repository's default branch.**
-The cron does nothing until this workflow is merged into `main` — a manual run via
+The cron does nothing until this workflow is merged into `main` - a manual run via
 Actions tab → "Trade Cycle" → Run workflow works from any branch for testing.
 
-Kill switch: set the `kill_switch` setting to `1` — cycles skip cleanly and exit 0.
+Kill switch: set the `kill_switch` setting to `1` - cycles skip cleanly and exit 0.
 **Note:** `POST /settings/kill_switch` is currently reachable by any authenticated
-user, not just admins — anyone signed up can halt trading platform-wide. Tightening
+user, not just admins - anyone signed up can halt trading platform-wide. Tightening
 this to an admin-only check is a recommended follow-up now that it gates a live
 GitHub Actions trading job. `scripts/run_cycle.py` also refuses to run in live mode
 (`TRADE_DRY_RUN=false`) if any required secret is missing, rather than silently trading
@@ -301,37 +301,37 @@ against an empty fallback database.
 
 Two more daily jobs follow the same pattern:
 
-- `.github/workflows/nav-snapshot.yml` — once daily, records each agent's cumulative
+- `.github/workflows/nav-snapshot.yml` - once daily, records each agent's cumulative
   simulated-return multiplier so `backend/performance.py` can compute real 24h/7d/1y
   performance windows. Needs only the `DATABASE_URL` secret.
-- `.github/workflows/daily-summary.yml` — once daily (~20:00 Africa/Lagos), sends
+- `.github/workflows/daily-summary.yml` - once daily (~20:00 Africa/Lagos), sends
   daily summary notifications. Replaces the old in-process scheduler, which died
   whenever Render slept the dyno. Needs `DATABASE_URL` plus `BOT_TOKEN`/`RESEND_API_KEY`/
   `RESEND_FROM_EMAIL`.
 
 Performance numbers (`win_rate`, `24h`/`7d`/`1y`) are simulated signal-following
 returns (see `docs/superpowers/specs/2026-07-18-phase2-real-performance-stats-design.md`),
-not reconciled real on-chain trade amounts — the on-chain BUY/SELL sizing has a known
+not reconciled real on-chain trade amounts - the on-chain BUY/SELL sizing has a known
 unit inconsistency (out of scope to fix) that would make real-amount P&L noisy rather
 than meaningful.
 
 ### Telegram Bot
 
 The bot runs as a **webhook route on `arctic-whale-api`** (`backend/telegram_bot.py`,
-`POST /telegram-webhook`) — not a separate long-polling process. Render's Background
+`POST /telegram-webhook`) - not a separate long-polling process. Render's Background
 Worker plans aren't free, and a webhook rides for free on a web service that's already
 deployed; it also wakes correctly on the next incoming message even from Render's
 free-tier sleep, which a sleeping long-poller couldn't do anyway.
 
 - Set `PYTHON_BACKEND_URL` on `arctic-whale-api` to **that service's own public Render
-  URL** — the app registers its webhook with Telegram on every startup
+  URL** - the app registers its webhook with Telegram on every startup
   (`ensure_webhook_registered()`), and needs to know its own address to do that.
-- Set `TELEGRAM_WEBHOOK_SECRET` to a random string — Telegram echoes it back on every
+- Set `TELEGRAM_WEBHOOK_SECRET` to a random string - Telegram echoes it back on every
   webhook POST (`X-Telegram-Bot-Api-Secret-Token` header), and the route rejects
   anything that doesn't match. Without it, `/telegram-webhook` accepts unauthenticated
   requests (logged as a warning on startup).
 - Point `WEBAPP_URL` at the production web app URL
-- Run one production bot only — do not run a second bot token unless you later want
+- Run one production bot only - do not run a second bot token unless you later want
   Telegram staging
 
 ### Release Flow
@@ -358,10 +358,10 @@ This launches the Circle Agent Service on port 3001 and the FastAPI backend on p
 ### Manual start
 
 ```bash
-# Terminal 1 — Circle Agent Service
+# Terminal 1 - Circle Agent Service
 cd agent_service && node index.js
 
-# Terminal 2 — FastAPI backend
+# Terminal 2 - FastAPI backend
 source venv/bin/activate
 uvicorn server.api:app --host 127.0.0.1 --port 8765 --reload
 ```
@@ -377,7 +377,7 @@ python -m server.main
 ### Telegram Bot
 
 The bot is a webhook route inside the API (`POST /telegram-webhook`), not a separate
-process — running `uvicorn server.api:app` already serves it. Telegram needs a public
+process - running `uvicorn server.api:app` already serves it. Telegram needs a public
 HTTPS URL to send webhooks to, so local testing needs a tunnel (e.g. `ngrok http 8765`),
 with `PYTHON_BACKEND_URL` set to that tunnel's URL before startup so
 `ensure_webhook_registered()` registers the right address.
@@ -390,19 +390,19 @@ with `PYTHON_BACKEND_URL` set to that tunnel's URL before startup so
 
 | Endpoint | Method | Auth | Description |
 |---|---|---|---|
-| `/` | GET | — | Health check |
-| `/stats` | GET | — | Wallet balance + performance |
+| `/` | GET | - | Health check |
+| `/stats` | GET | - | Wallet balance + performance |
 | `/market-data` | GET | Rate-limited | Live crypto/stock prices |
-| `/dashboard` | GET | — | Full dashboard: wallet, agents, feed, trades |
-| `/trade-history` | GET | — | Trade history (scoped by username) |
+| `/dashboard` | GET | - | Full dashboard: wallet, agents, feed, trades |
+| `/trade-history` | GET | - | Trade history (scoped by username) |
 | `/users/ensure` | POST | Rate-limited | Create/load user wallet (via Agent Service) |
 | `/follow` | POST | Localhost/Bearer | Register as copy-trader for an agent |
 | `/trigger-trade` | POST | Localhost/Bearer | Force one AI trade cycle |
 | `/deposit` | POST | Localhost/Bearer | Get deposit address |
 | `/withdraw` | POST | Localhost/Bearer | Submit USDC withdrawal |
-| `/referrals` | GET | — | Referral code + reward history |
+| `/referrals` | GET | - | Referral code + reward history |
 | `/settings/:key` | POST | Localhost/Bearer | Update kill-switch / alerts / summary |
-| `/webapp` | GET | — | Telegram Mini App UI |
+| `/webapp` | GET | - | Telegram Mini App UI |
 | `/telegram-webhook` | POST | `X-Telegram-Bot-Api-Secret-Token` | Telegram bot updates (webhook, not polling) |
 
 > **Auth note:** Localhost requests (`127.0.0.1`) bypass Bearer token auth automatically. External callers require `Authorization: Bearer <API_AUTH_TOKEN>`. `TRADE_DRY_RUN=true` bypasses auth entirely.
@@ -424,7 +424,7 @@ with `PYTHON_BACKEND_URL` set to that tunnel's URL before startup so
 ```
 circle1/
 ├── agent_service/               ◄ Circle Agent Stack (Node.js)
-│   ├── index.js                 #   Express server — wallet + spending policy API
+│   ├── index.js                 #   Express server - wallet + spending policy API
 │   └── package.json             #   @circle-fin/developer-controlled-wallets, express
 │
 ├── backend/
@@ -439,16 +439,16 @@ circle1/
 │   ├── database.py              # SQLite (followers, trades, settings)
 │   ├── config.py                # Env vars, contract addresses, AGENT_SERVICE_URL
 │   ├── logger.py                # Structured logging (structlog)
-│   ├── telegram_bot.py          # Telegram bot — webhook handler, not a standalone process
+│   ├── telegram_bot.py          # Telegram bot - webhook handler, not a standalone process
 │   └── utils.py                 # parse_ai_decision parser
 │
 ├── server/
-│   ├── api.py                   # FastAPI — all endpoints, auth, dashboard, /telegram-webhook
+│   ├── api.py                   # FastAPI - all endpoints, auth, dashboard, /telegram-webhook
 │   ├── main.py                  # CLI entry point
 │   └── start_server.py          # Local DB initializer
 │
 ├── frontend/
-│   └── index.html               # Telegram Mini App — 5 pages, 3 step-by-step modals
+│   └── index.html               # Telegram Mini App - 5 pages, 3 step-by-step modals
 │
 ├── tests/
 │   ├── test_utils.py            # parse_ai_decision unit tests
@@ -466,12 +466,12 @@ circle1/
 ## Recent Changes
 
 ### Circle Agent Stack integration
-- **New:** `agent_service/` — Node.js microservice using `@circle-fin/developer-controlled-wallets`
+- **New:** `agent_service/` - Node.js microservice using `@circle-fin/developer-controlled-wallets`
 - **New:** Every user wallet created via the Agent Service gets spending policy guardrails (per-tx / daily / monthly USDC caps)
-- **New:** `start.sh` — runs both services together
-- **Modified:** `backend/wallet_manager.py` — `create_wallet_with_policy()` calls Agent Service with automatic DCW fallback
-- **Modified:** `backend/user_wallets.py` — new users routed through policy-enforced wallet creation
-- **Modified:** `backend/config.py` — `AGENT_SERVICE_URL` env var
+- **New:** `start.sh` - runs both services together
+- **Modified:** `backend/wallet_manager.py` - `create_wallet_with_policy()` calls Agent Service with automatic DCW fallback
+- **Modified:** `backend/user_wallets.py` - new users routed through policy-enforced wallet creation
+- **Modified:** `backend/config.py` - `AGENT_SERVICE_URL` env var
 
 ### Multi-agent marketplace
 - All 4 agents fully wired into `/follow`, `/trigger-trade`, `/dashboard`
@@ -479,10 +479,10 @@ circle1/
 - Agent metrics (win rate, trade count, followers) tracked independently per agent
 
 ### Frontend improvements
-- **Deposit** — 2-step guided modal (address display + copy button → awaiting confirmation)
-- **Withdraw** — 3-step guided modal (address → amount with 25%/50%/Max buttons → review + confirm)
-- **API Token** — popup modal on 401; saves to localStorage and retries automatically
-- Localhost requests bypass Bearer token auth — no token prompt in local browser
+- **Deposit** - 2-step guided modal (address display + copy button → awaiting confirmation)
+- **Withdraw** - 3-step guided modal (address → amount with 25%/50%/Max buttons → review + confirm)
+- **API Token** - popup modal on 401; saves to localStorage and retries automatically
+- Localhost requests bypass Bearer token auth - no token prompt in local browser
 
 ---
 
@@ -500,7 +500,7 @@ pytest tests/ -v
 | Layer | Technology |
 |---|---|
 | **AI Agents** | Google Gemini 3.1 Flash Lite, LangChain |
-| **Agent Stack** | **Circle Agent Stack** — `@circle-fin/developer-controlled-wallets` (Node.js) |
+| **Agent Stack** | **Circle Agent Stack** - `@circle-fin/developer-controlled-wallets` (Node.js) |
 | **Blockchain** | Circle Developer-Controlled Wallets, Uniswap V3, Arc Testnet |
 | **Backend** | Python, FastAPI, Uvicorn |
 | **Agent Service** | Node.js, Express |

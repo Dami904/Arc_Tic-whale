@@ -4,16 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arc_Tic Whale — AI Copy Trading</title>
+    <title>Arc_Tic Whale - AI Copy Trading</title>
     <meta name="description" content="Arc_Tic Whale: AI-driven copy trading on Circle Arc Testnet. Follow automated agents and mirror their trades.">
     <script src="/static/runtime-config.js"></script>
     <script type="module">
         import * as PrivyAuth from '/static/privy-bundle.mjs';
         window.PrivyAuth = PrivyAuth;
     </script>
-    <!-- Telegram Mini App SDK — enables window.Telegram.WebApp.initData for auth -->
+    <!-- Telegram Mini App SDK - enables window.Telegram.WebApp.initData for auth -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- WalletConnect SDK is loaded on-demand in connectWallet() — not here -->
+    <!-- WalletConnect SDK is loaded on-demand in connectWallet() - not here -->
     <link
         href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne+Mono&family=Syne:wght@700;800&display=swap"
         rel="stylesheet">
@@ -61,7 +61,7 @@
             padding-bottom: 80px;
         }
 
-        /* ── Floating account pill — top-right corner ── */
+        /* ── Floating account pill - top-right corner ── */
         #greetPill {
             position: fixed;
             top: 12px;
@@ -839,7 +839,7 @@
         }
 
         /* ══════════════════════════════════════
-           PAGE 1 — DASHBOARD
+           PAGE 1 - DASHBOARD
         ══════════════════════════════════════ */
         #page-home {
             padding-top: 0;
@@ -1366,7 +1366,7 @@
         }
 
         /* ══════════════════════════════════════
-           PAGE 2 — MARKETPLACE
+           PAGE 2 - MARKETPLACE
         ══════════════════════════════════════ */
         #page-market {
             padding-top: 16px;
@@ -1569,7 +1569,7 @@
         }
 
         /* ══════════════════════════════════════
-           PAGE 3 — FEED
+           PAGE 3 - FEED
         ══════════════════════════════════════ */
         #page-feed {
             padding-top: 16px;
@@ -1779,7 +1779,7 @@
         }
 
         /* ══════════════════════════════════════
-           PAGE 4 — TRADES
+           PAGE 4 - TRADES
         ══════════════════════════════════════ */
         #page-trades {
             padding-top: 16px;
@@ -2010,7 +2010,7 @@
         }
 
         /* ══════════════════════════════════════
-           PAGE 5 — WALLET
+           PAGE 5 - WALLET
         ══════════════════════════════════════ */
         #page-wallet {
             padding-top: 16px;
@@ -2661,7 +2661,7 @@
         }
 
         /* ══════════════════════════════════════════════
-           RESPONSIVE — TABLET & DESKTOP
+           RESPONSIVE - TABLET & DESKTOP
            ══════════════════════════════════════════════ */
         @media (min-width: 768px) {
 
@@ -2910,9 +2910,9 @@
         }
 
         /* ════════════════════════════════════════
-         LANDING PAGE — shown to anonymous web visitors only
+         LANDING PAGE - shown to anonymous web visitors only
          (never inside the Telegram Mini App; never for
-         returning signed-in users — see body.show-landing)
+         returning signed-in users - see body.show-landing)
 ════════════════════════════════════════ */
         #page-landing { display: none; }
         body.show-landing #page-landing { display: block; }
@@ -3345,7 +3345,7 @@
 <body>
 
     <!-- ════════════════════════════════════════
-     LANDING PAGE — anonymous web visitors only.
+     LANDING PAGE - anonymous web visitors only.
      Never shown inside the Telegram Mini App (isTelegramMode())
      and never shown to a returning signed-in user.
 ════════════════════════════════════════ -->
@@ -3363,13 +3363,13 @@
                 <div class="landing-eyebrow"><span class="live-dot-pulse"></span> Four AI agents, live on Arc Testnet</div>
                 <h1 class="landing-headline">AI agents make the call. Your wallet mirrors the trade.</h1>
                 <p class="landing-sub">
-                    Four Gemini-powered agents — from patient accumulator to momentum degen — read the market
+                    Four Gemini-powered agents - from patient accumulator to momentum degen - read the market
                     around the clock. Follow one, and every buy or sell it makes mirrors straight into your
                     own Circle-secured wallet, automatically.
                 </p>
                 <div class="landing-hero-actions">
                     <button class="landing-cta" type="button" onclick="enterApp()">Launch App</button>
-                    <span class="landing-hero-note">Test USDC only — no real funds at risk</span>
+                    <span class="landing-hero-note">Test USDC only - no real funds at risk</span>
                 </div>
             </div>
             <div class="sonar-stage" aria-hidden="true">
@@ -3399,14 +3399,14 @@
                     <div class="landing-step-num">2</div>
                     <div>
                         <div class="landing-step-title">Follow an agent</div>
-                        <div class="landing-step-body">Pick a risk profile — from cautious to aggressive — and set how much of your balance to allocate.</div>
+                        <div class="landing-step-body">Pick a risk profile - from cautious to aggressive - and set how much of your balance to allocate.</div>
                     </div>
                 </div>
                 <div class="landing-step">
                     <div class="landing-step-num">3</div>
                     <div>
                         <div class="landing-step-title">Trades mirror automatically</div>
-                        <div class="landing-step-body">Every buy or sell your agent makes executes from your own wallet — no manual approvals, no missed entries.</div>
+                        <div class="landing-step-body">Every buy or sell your agent makes executes from your own wallet - no manual approvals, no missed entries.</div>
                     </div>
                 </div>
             </div>
@@ -3414,7 +3414,7 @@
 
         <section class="landing-section" id="meet-the-agents">
             <div class="landing-section-title">Meet the agents</div>
-            <p class="landing-section-sub">Four distinct strategies, each trading live — pick the one that matches your nerve.</p>
+            <p class="landing-section-sub">Four distinct strategies, each trading live - pick the one that matches your nerve.</p>
             <div class="landing-agent-grid" id="landingAgentGrid">
                 <!-- populated live from /agents on load; see loadLandingAgents() -->
             </div>
@@ -3424,15 +3424,15 @@
             <div class="landing-trust">
                 <div class="landing-trust-item">
                     <h4>Your own wallet, not a pool</h4>
-                    <p>Every follower gets a dedicated Circle-secured wallet. Trades execute from your wallet directly — funds are never pooled with other users.</p>
+                    <p>Every follower gets a dedicated Circle-secured wallet. Trades execute from your wallet directly - funds are never pooled with other users.</p>
                 </div>
                 <div class="landing-trust-item">
                     <h4>Spending limits, enforced on-chain</h4>
-                    <p>Circle Agent Stack attaches per-transaction, daily, and monthly caps to every wallet — a ceiling on what any single mirrored trade can move.</p>
+                    <p>Circle Agent Stack attaches per-transaction, daily, and monthly caps to every wallet - a ceiling on what any single mirrored trade can move.</p>
                 </div>
                 <div class="landing-trust-item">
                     <h4>A real sandbox, not a demo</h4>
-                    <p>Everything runs live on Arc Testnet with test USDC — the same mechanics as production, none of the financial risk.</p>
+                    <p>Everything runs live on Arc Testnet with test USDC - the same mechanics as production, none of the financial risk.</p>
                 </div>
             </div>
         </section>
@@ -3447,7 +3447,7 @@
             <div class="landing-footer-grid">
                 <div>
                     <div class="landing-footer-brand"><span class="landing-brand-mark">🐋</span> Arc_Tic Whale</div>
-                    <p class="landing-footer-tagline">AI-driven copy trading on Circle Arc Testnet. Four agents trade live — you mirror the ones you trust.</p>
+                    <p class="landing-footer-tagline">AI-driven copy trading on Circle Arc Testnet. Four agents trade live - you mirror the ones you trust.</p>
                 </div>
                 <div>
                     <div class="landing-footer-col-title">Product</div>
@@ -3505,7 +3505,7 @@
     </aside>
 
     <!-- ════════════════════════════════════════
-     PAGE 1 — HOME / DASHBOARD
+     PAGE 1 - HOME / DASHBOARD
 ════════════════════════════════════════ -->
     <div id="page-home" class="page active">
 
@@ -3526,20 +3526,20 @@
         <div class="balance-card">
             <div class="balance-label">Vault Balance</div>
             <div class="balance-amount" id="balDisplay">
-                —<span class="balance-unit">USDC</span>
+                -<span class="balance-unit">USDC</span>
             </div>
             <div class="balance-sub">
                 <div class="balance-stat">
 	                    <div class="bs-label">24H PnL</div>
-                    <div class="bs-val" id="pnl24h">—</div>
+                    <div class="bs-val" id="pnl24h">-</div>
                 </div>
                 <div class="balance-stat">
 	                    <div class="bs-label">7D PnL</div>
-                    <div class="bs-val" id="pnl7d">—</div>
+                    <div class="bs-val" id="pnl7d">-</div>
                 </div>
                 <div class="balance-stat">
 	                    <div class="bs-label">1Y PnL</div>
-                    <div class="bs-val" id="pnlAllTime">—</div>
+                    <div class="bs-val" id="pnlAllTime">-</div>
                 </div>
             </div>
         </div>
@@ -3581,7 +3581,7 @@
                 <div class="term-dot red"></div>
                 <div class="term-dot amber"></div>
                 <div class="term-dot green"></div>
-                <span class="terminal-title">agent.terminal — live feed</span>
+                <span class="terminal-title">agent.terminal - live feed</span>
             </div>
             <div class="terminal-body" id="terminalBody"></div>
         </div>
@@ -3630,7 +3630,7 @@
     </div>
 
     <!-- ════════════════════════════════════════
-     PAGE 2 — MARKETPLACE
+     PAGE 2 - MARKETPLACE
 ════════════════════════════════════════ -->
     <div id="page-market" class="page">
 
@@ -3759,7 +3759,7 @@
     </div>
 
     <!-- ════════════════════════════════════════
-     PAGE 3 — SOCIAL FEED
+     PAGE 3 - SOCIAL FEED
 ════════════════════════════════════════ -->
     <div id="page-feed" class="page">
 
@@ -3778,7 +3778,7 @@
     </div>
 
     <!-- ════════════════════════════════════════
-     PAGE 4 — MY TRADES
+     PAGE 4 - MY TRADES
 ════════════════════════════════════════ -->
     <div id="page-trades" class="page">
 
@@ -3807,7 +3807,7 @@
     </div>
 
     <!-- ════════════════════════════════════════
-     PAGE 5 — WALLET
+     PAGE 5 - WALLET
 ════════════════════════════════════════ -->
     <div id="page-wallet" class="page">
         <div class="account-center-shell">
@@ -3821,7 +3821,7 @@
                                 <div class="profile-name" id="profileDisplayName">Arc_Tic Whale Member</div>
                                 <button class="profile-edit-btn" type="button" onclick="toggleProfileEdit()">✎</button>
                             </div>
-                            <div class="profile-meta" id="profileMemberSince">Member since —</div>
+                            <div class="profile-meta" id="profileMemberSince">Member since -</div>
                             <div class="profile-meta" id="profileContactEmail"></div>
                         </div>
                     </div>
@@ -3835,7 +3835,7 @@
                         </div>
                         <div class="pnl-chip-right">
                             <div class="pnl-chip-title">24h Change</div>
-                            <div class="pnl-chip-sub" id="portfolioPnlAgents" style="font-size:15px;font-weight:700;color:var(--cyan);">—</div>
+                            <div class="pnl-chip-sub" id="portfolioPnlAgents" style="font-size:15px;font-weight:700;color:var(--cyan);">-</div>
                         </div>
                     </div>
                     <div class="pnl-chip-address" id="walletAddress" onclick="copyAddress()" style="width:100%;text-align:center;margin-top:10px;">Loading wallet · Tap to copy</div>
@@ -3884,7 +3884,7 @@
             <div class="kill-switch" style="margin-bottom:12px; flex-direction:column; align-items:stretch; gap:12px;">
                 <div class="kill-info">
                     <div class="ki-title">🛑 Exit All Positions</div>
-                    <div class="ki-sub">Sell everything you currently hold back to USDC — you stay following</div>
+                    <div class="ki-sub">Sell everything you currently hold back to USDC - you stay following</div>
                 </div>
                 <button class="btn btn-danger" type="button" onclick="exitAllPositions()">Exit All</button>
             </div>
@@ -3976,7 +3976,7 @@
         <div class="nav-item" onclick="navigate('wallet',this)">
             <span class="nav-icon">💎</span><span class="nav-label">Wallet</span>
         </div>
-        <!-- Account pill — shown at sidebar bottom on desktop, floats top-right on mobile -->
+        <!-- Account pill - shown at sidebar bottom on desktop, floats top-right on mobile -->
         <div class="nav-account">
             <span id="greetPill" class="pill pill-amber">Connecting...</span>
         </div>
@@ -4040,7 +4040,7 @@
             <div id="depStep1">
                 <div style="font-size:12px;color:var(--muted-mid);line-height:1.6;margin-bottom:14px;">
                     Send <strong style="color:var(--cyan)">USDC</strong> to your Circle Wallet on
-                    <strong style="color:var(--text)">Arc Testnet</strong>. Only send USDC — other tokens may be lost.
+                    <strong style="color:var(--text)">Arc Testnet</strong>. Only send USDC - other tokens may be lost.
                 </div>
                 <div style="background:rgba(0,221,180,0.06);border:1px solid var(--border-accent);border-radius:12px;padding:14px;margin-bottom:12px;">
                     <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">Your Deposit Address</div>
@@ -4221,7 +4221,7 @@
         }
 
         // The app shell (layout sync, resize listener, dashboard polling) only
-        // needs to start once — either at initial load (returning signed-in
+        // needs to start once - either at initial load (returning signed-in
         // user) or the first time a landing-page visitor completes login.
         let _shellStarted = false;
         function _startAppShellOnce() {
@@ -4281,7 +4281,7 @@
             document.getElementById('greetPill').textContent = 'Sign In';
         }
 
-        // Clicking the greeting pill opens the login modal — only in web mode when signed out
+        // Clicking the greeting pill opens the login modal - only in web mode when signed out
         document.getElementById('greetPill').addEventListener('click', () => {
             if (isTelegramMode()) return;
             if (_privyUserId) { signOut(); return; }
@@ -4323,19 +4323,19 @@
 	                    const otpStep = document.getElementById('loginStepOtp');
 	                    const isOtpVisible = otpStep && otpStep.style.display !== 'none';
                         // Never interrupt an active OAuth/OTP flow, and never treat a
-                        // fresh session (< 20 s old) as "expired" — those 401s are
+                        // fresh session (< 20 s old) as "expired" - those 401s are
                         // configuration issues, not token expiry.
                         const sessionAge = _sessionSetAt ? Date.now() - _sessionSetAt : Infinity;
                         const freshSession = sessionAge < 20000;
 	                    if (!isOtpVisible && !_authInProgress && !freshSession) {
 	                        if (_privyToken) {
 	                            _clearPrivySession();
-	                            showToast('⚠️ Session expired — please sign in again');
+	                            showToast('⚠️ Session expired - please sign in again');
 	                        }
 	                        openLoginModal();
 	                    }
 	                }
-	                throw new Error('Authentication required — please sign in');
+	                throw new Error('Authentication required - please sign in');
 	            }
 	            return res;
 	        }
@@ -4367,7 +4367,7 @@
 	        }
 
 	        function currentUsername() {
-	            // Privy user ID (did:privy:…) — set after login
+	            // Privy user ID (did:privy:…) - set after login
 	            const params = new URLSearchParams(window.location.search);
 	            return _privyUserId || params.get('username') || '';
 	        }
@@ -4388,7 +4388,7 @@
             }
             const greet = document.getElementById('greetPill');
             if (greet && greet.textContent === 'Connecting...') return;
-            showToast('🔑 Setting up your wallet — usually takes 5–15 s');
+            showToast('🔑 Setting up your wallet - usually takes 5–15 s');
             log('Provisioning Circle wallet via API...', 'sys');
         }
 
@@ -4410,10 +4410,10 @@
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
-                    log(`Wallet ready — Circle ID: ${data.user.wallet_id || 'provisioned'}`, 'sys');
+                    log(`Wallet ready - Circle ID: ${data.user.wallet_id || 'provisioned'}`, 'sys');
                 }
 	            } catch (err) {
-	                log('Wallet provisioning check failed — retrying on next refresh.', 'warn');
+	                log('Wallet provisioning check failed - retrying on next refresh.', 'warn');
 	            }
 	        }
 
@@ -4448,9 +4448,9 @@
         }
 
         function _profileMemberSince(profile = {}) {
-            if (!profile.member_since) return 'Member since —';
+            if (!profile.member_since) return 'Member since -';
             const d = new Date(profile.member_since);
-            if (Number.isNaN(d.getTime())) return 'Member since —';
+            if (Number.isNaN(d.getTime())) return 'Member since -';
             return `Member since ${d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}`;
         }
 
@@ -4498,7 +4498,7 @@
                 panel.classList.toggle('open', utilityPanelOpen);
                 panel.classList.toggle('is-collapsed', !utilityPanelOpen && !isCompact);
                 panel.classList.toggle('is-mobile-hidden', !utilityPanelOpen && isCompact);
-                // Direct display override — guarantees hide regardless of CSS specificity
+                // Direct display override - guarantees hide regardless of CSS specificity
                 panel.style.display = utilityPanelOpen ? '' : 'none';
             }
             if (backdrop) backdrop.classList.toggle('show', utilityPanelOpen && isCompact);
@@ -4604,7 +4604,7 @@ function _assistantContext() {
             };
         }
 
-        // Suggestions removed — bot is freeform only
+        // Suggestions removed - bot is freeform only
         function renderAssistantSuggestions() {}
         function _defaultAssistantSuggestions() { return []; }
 
@@ -4669,7 +4669,7 @@ function _assistantContext() {
             }
 
             // ── Sync greetPill with the saved DB name ──────────────────────
-            // profile.display_name is the authoritative name — always wins over
+            // profile.display_name is the authoritative name - always wins over
             // whatever generic label (_setPrivySession set ('Trading Wallet',
             // 'Google Account', etc.) was stored during login.
             const savedName = profile.display_name;
@@ -4838,7 +4838,7 @@ function _assistantContext() {
 
         // Boot sequence
 	        const bootSeq = [
-            [300, 'System boot — Arc_Tic Whale copy-trading app', 'sys'],
+            [300, 'System boot - Arc_Tic Whale copy-trading app', 'sys'],
 	            [700, 'Connecting to Circle Wallet RPC...', 'sys'],
 	            [1100, 'Wallet status sync queued', 'info'],
 	            [1500, 'Scanning active market: BTC/USD', 'action'],
@@ -4927,7 +4927,7 @@ function _assistantContext() {
             document.getElementById('followerCountStat').textContent = fmtCount(followers.total_followers);
             document.getElementById('agentCountPill').textContent = `${agents.length} Live`;
 
-            // Total balance card — wired to wallet.total_balance_usd from backend
+            // Total balance card - wired to wallet.total_balance_usd from backend
             const totalBal = Number(wallet.total_balance_usd || 0);
             const perf24h = String(wallet.performance?.['24h'] || '0.00%');
             const perf24hNum = parseFloat(perf24h.replace('%', '')) || 0;
@@ -4958,7 +4958,7 @@ function _assistantContext() {
             const contactStatus = document.getElementById('accountContactStatus');
             if (contactStatus) {
                 const email = _safeContactEmail(profile.email);
-                contactStatus.textContent = email ? `Email: ${email}` : 'No email linked — add one in settings';
+                contactStatus.textContent = email ? `Email: ${email}` : 'No email linked - add one in settings';
             }
             const notifStatus = document.getElementById('accountNotificationStatus');
             if (notifStatus) {
@@ -5040,7 +5040,7 @@ function _assistantContext() {
         }
 
 	        async function refreshWalletStats() {
-	            // Skip if not authenticated — avoids 401 triggering the login modal
+	            // Skip if not authenticated - avoids 401 triggering the login modal
 	            if (!_privyToken && !isTelegramMode()) return;
 	            try {
 	                const username = currentUsername();
@@ -5049,7 +5049,7 @@ function _assistantContext() {
 	                if (!res.ok) throw new Error(`dashboard ${res.status}`);
 	                renderDashboard(await res.json());
 	            } catch (err) {
-                    // If this is shortly after login, Circle wallet may still be provisioning —
+                    // If this is shortly after login, Circle wallet may still be provisioning -
                     // schedule a silent retry in 8 s so the UI fills in automatically.
                     const sessionAge = _sessionSetAt ? Date.now() - _sessionSetAt : Infinity;
                     if (sessionAge < 60000 && !err.message.includes('Authentication')) {
@@ -5173,7 +5173,7 @@ function _assistantContext() {
             const container = document.getElementById('feedContainer');
             if (!container) return;
 
-            // Strip placeholders, idle noise, and HOLD scheduler entries — only BUY/SELL/social posts
+            // Strip placeholders, idle noise, and HOLD scheduler entries - only BUY/SELL/social posts
             const realFeed = (feed || []).filter(item =>
                 !item.is_placeholder &&
                 item.type !== 'placeholder' &&
@@ -5325,7 +5325,7 @@ function _assistantContext() {
         function toggleSummary() { toggleSetting('daily_summary', document.getElementById('summaryToggle')); }
 
         async function exitAllPositions() {
-            if (!confirm('Sell everything you currently hold back to USDC? You will keep following your agents — this only exits your current position.')) return;
+            if (!confirm('Sell everything you currently hold back to USDC? You will keep following your agents - this only exits your current position.')) return;
             try {
                 const res = await apiFetch('/positions/exit-all', { method: 'POST' });
                 const data = await res.json();
@@ -5381,9 +5381,9 @@ function _assistantContext() {
                     const agent = (dashboardCache.agents || []).find(a => a.id === d.agent_id);
                     const avatar   = d.agent_avatar || agent?.avatar || '🤖';
                     const risk     = agent?.risk_label || 'unknown';
-                    const wr       = agent ? `${agent.win_rate || 0}%` : '—';
-                    const trades   = agent?.trades || '—';
-                    const followers = agent?.followers ? fmtCount(agent.followers) : '—';
+                    const wr       = agent ? `${agent.win_rate || 0}%` : '-';
+                    const trades   = agent?.trades || '-';
+                    const followers = agent?.followers ? fmtCount(agent.followers) : '-';
                     setSelectedAgent(d.agent_id);
                     openCopyModal(avatar, d.agent_name, risk, wr, trades, followers, d.agent_id);
                     if (d.allocation) {
@@ -5600,7 +5600,7 @@ function _assistantContext() {
             document.getElementById('loginDivider').style.display = 'none';
             document.getElementById('loginSocials').style.display = 'none';
             if (d && d.provider === 'custom') {
-                _showOtpHint('Running locally — check the <strong>server console</strong> for your OTP code.');
+                _showOtpHint('Running locally - check the <strong>server console</strong> for your OTP code.');
                 if (d.privy_error) showToast('Privy: ' + d.privy_error);
             } else if (d && d.hint) {
                 _showOtpHint(d.hint);
@@ -5646,7 +5646,7 @@ function _assistantContext() {
             if (btn && btn.disabled) return;
             try {
                 const ok = await _sendLoginOtp();
-                if (ok) showToast('New code sent — check your email');
+                if (ok) showToast('New code sent - check your email');
             } catch (err) {
                 showToast(err.message || 'Could not resend code');
             }
@@ -5689,7 +5689,7 @@ function _assistantContext() {
             try {
                 await _sendLoginOtp();
             } catch (err) {
-                showToast(err.message || 'Could not send code — check connection');
+                showToast(err.message || 'Could not send code - check connection');
             }
         }
         async function verifyOtp() {
@@ -5724,7 +5724,7 @@ function _assistantContext() {
                 refreshDashboard();
             } catch (err) {
                 _authInProgress = false;
-                showToast(err.message || 'Verification failed — try again');
+                showToast(err.message || 'Verification failed - try again');
             }
         }
         async function connectWallet() {
@@ -5774,7 +5774,7 @@ function _assistantContext() {
                 if (err.code === 4001 || err.message?.includes('User rejected')) {
                     showToast('Wallet connection cancelled');
                 } else {
-                    showToast('Wallet login failed — ' + (err.message || 'unknown error'));
+                    showToast('Wallet login failed - ' + (err.message || 'unknown error'));
                 }
             }
         }
@@ -5807,7 +5807,7 @@ function _assistantContext() {
                     const { token, userId, email } = e.data;
                     if (!token || !userId) {
                         _authInProgress = false;
-                        showToast('Social login failed — check Privy dashboard settings');
+                        showToast('Social login failed - check Privy dashboard settings');
                         return;
                     }
 
@@ -5877,7 +5877,7 @@ function _assistantContext() {
                     });
                     const data = await response.json();
                     if (!response.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Follow failed');
-                    log(`Copy-trading ENABLED — ${alloc} USDC on ${activeAsset} with ${activeAgent?.name || agentId}`, 'action');
+                    log(`Copy-trading ENABLED - ${alloc} USDC on ${activeAsset} with ${activeAgent?.name || agentId}`, 'action');
                     showToast(`Now copying ${activeAgent?.name || 'selected agent'} ✓`);
                     await refreshDashboard();
                 } catch (err) {
@@ -5996,7 +5996,7 @@ function _assistantContext() {
 	            const stopLoss = parseFloat(document.getElementById('modalStopLoss').value || '10');
 	            if (!alloc || alloc <= 0) { showToast('Enter a valid USDC amount'); return; }
 
-	            // Balance check — use free (unallocated) USDC from cache as a pre-flight guard.
+	            // Balance check - use free (unallocated) USDC from cache as a pre-flight guard.
 	            // Server does the authoritative check; this just gives instant feedback.
 	            const available = Number(
 	                dashboardCache?.allocation?.free ??
@@ -6004,7 +6004,7 @@ function _assistantContext() {
 	                0
 	            );
 	            if (available > 0 && alloc > available) {
-	                showToast(`Insufficient balance — you have ${available.toFixed(2)} USDC available`);
+	                showToast(`Insufficient balance - you have ${available.toFixed(2)} USDC available`);
 	                return;
 	            }
 
@@ -6059,7 +6059,7 @@ function _assistantContext() {
         // Telegram Mini App users and returning signed-in users go straight in.
         function enterApp() {
             // Landing page stays visible behind the modal until login actually
-            // succeeds (_setPrivySession removes 'show-landing') — so closing
+            // succeeds (_setPrivySession removes 'show-landing') - so closing
             // the modal without finishing sign-in leaves the visitor back on
             // the marketing page, not a half-initialized app shell.
             openLoginModal();
@@ -6089,7 +6089,7 @@ function _assistantContext() {
                     </div>
                 `).join('');
             } catch (err) {
-                grid.innerHTML = '<div class="landing-section-sub">Agent data is warming up — check back in a moment.</div>';
+                grid.innerHTML = '<div class="landing-section-sub">Agent data is warming up - check back in a moment.</div>';
             }
         }
 

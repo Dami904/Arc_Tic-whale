@@ -211,7 +211,7 @@ def execute_trade(
     default $0.5-$2.0 clamp). For a BUY that's already the unit Uniswap
     needs (spend $X of USDC). For a SELL, current_price (the asset's USDC
     price) is required to convert that same $X notional into the asset's
-    own native units — without it, "amount" would be misread as raw units
+    own native units - without it, "amount" would be misread as raw units
     of the asset (e.g. "sell 1.0" meaning 1.0 whole BTC instead of $1 of
     BTC), so a SELL with no price is refused rather than guessed at.
     """
@@ -239,7 +239,7 @@ def execute_trade(
     if action == "SELL":
         if not current_price or current_price <= 0:
             log.error(
-                "Missing current_price for SELL %s — refusing to guess the USDC-to-asset-units conversion.",
+                "Missing current_price for SELL %s - refusing to guess the USDC-to-asset-units conversion.",
                 target_asset_symbol,
             )
             return None

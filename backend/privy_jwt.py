@@ -24,7 +24,7 @@ def _jwks_client() -> PyJWKClient | None:
     return PyJWKClient(JWKS_URL, cache_keys=True)
 
 
-_LEEWAY = 60  # seconds — tolerates minor server/Privy clock skew
+_LEEWAY = 60  # seconds - tolerates minor server/Privy clock skew
 
 
 def _decode_with_pem(token: str) -> dict[str, Any]:

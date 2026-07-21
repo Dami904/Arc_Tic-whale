@@ -28,7 +28,7 @@ function requireSecret(req, res, next) {
   next();
 }
 
-// x402 payment middleware — only active when CIRCLE_SELLER_ADDRESS is configured
+// x402 payment middleware - only active when CIRCLE_SELLER_ADDRESS is configured
 if (CIRCLE_SELLER_ADDRESS) {
   import('@circle-fin/x402-batching').then(({ paymentMiddleware }) => {
     app.use(paymentMiddleware(
@@ -40,9 +40,9 @@ if (CIRCLE_SELLER_ADDRESS) {
       },
       { url: X402_FACILITATOR_URL }
     ));
-    console.log(`[circle-agent] x402 payment middleware active — seller: ${CIRCLE_SELLER_ADDRESS}`);
+    console.log(`[circle-agent] x402 payment middleware active - seller: ${CIRCLE_SELLER_ADDRESS}`);
   }).catch(err => {
-    console.warn(`[circle-agent] x402-batching unavailable — payment middleware disabled: ${err.message}`);
+    console.warn(`[circle-agent] x402-batching unavailable - payment middleware disabled: ${err.message}`);
   });
 }
 
@@ -58,7 +58,7 @@ try {
     });
     console.log('[circle-agent] Circle client initialised');
   } else {
-    console.warn('[circle-agent] CIRCLE_API_KEY or CIRCLE_ENTITY_SECRET missing — running unconfigured');
+    console.warn('[circle-agent] CIRCLE_API_KEY or CIRCLE_ENTITY_SECRET missing - running unconfigured');
   }
 } catch (err) {
   console.error('[circle-agent] Circle client init failed:', err.message);
@@ -102,7 +102,7 @@ app.post('/wallets', async (req, res) => {
       idempotencyKey: uuidv4(),
     });
     const walletSetId = setRes.data?.walletSet?.id;
-    if (!walletSetId) throw new Error('Wallet set creation failed — no ID returned');
+    if (!walletSetId) throw new Error('Wallet set creation failed - no ID returned');
 
     // 2. Create wallet inside the set
     const walletRes = await circleClient.createWallets({
@@ -113,7 +113,7 @@ app.post('/wallets', async (req, res) => {
       accountType: 'SCA',
     });
     const wallet = walletRes.data?.wallets?.[0];
-    if (!wallet) throw new Error('Wallet creation failed — no wallet returned');
+    if (!wallet) throw new Error('Wallet creation failed - no wallet returned');
 
     // 3. Apply spending policy if requested
     let policyAttached = false;
@@ -136,7 +136,7 @@ app.post('/wallets', async (req, res) => {
         policyAttached = true;
         console.log(`[circle-agent] Spending policy applied to wallet ${wallet.id}`);
       } catch (policyErr) {
-        // Policy attachment is best-effort — wallet is still usable without it
+        // Policy attachment is best-effort - wallet is still usable without it
         console.warn(`[circle-agent] Spending policy failed (non-fatal): ${policyErr.message}`);
       }
     }
@@ -218,7 +218,7 @@ app.put('/wallets/:id/policy', async (req, res) => {
 // ── POST /signals ─────────────────────────────────────────────────────────────
 // Paid endpoint: returns an AI trading signal without executing a trade.
 // External agents on the Circle Agents marketplace pay $0.05 USDC per call.
-// Body: { agent_id? }  — defaults to Conservative_Whale
+// Body: { agent_id? }  - defaults to Conservative_Whale
 app.post('/signals', async (req, res) => {
   const { agent_id = 'Conservative_Whale' } = req.body || {};
 
@@ -227,7 +227,7 @@ app.post('/signals', async (req, res) => {
       action: 'HOLD',
       asset: null,
       agent: agent_id,
-      reason: 'Dry-run mode — no real signal generated',
+      reason: 'Dry-run mode - no real signal generated',
       paid: true,
       dry_run: true,
     });

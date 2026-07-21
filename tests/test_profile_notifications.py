@@ -73,13 +73,13 @@ def test_notification_helpers_and_channel_reminder(monkeypatch):
     assert "Add an email in Profile" in reminder
 
     trade_text = notifications.build_trade_alert_message("Arc_Tic Whale", "BUY", "BTC", 50, 68420.5, "2026-05-24T20:00:00")
-    assert "🚨 Trade Alert — Arc_Tic_Whale" in trade_text
+    assert "🚨 Trade Alert - Arc_Tic_Whale" in trade_text
     assert "Agent: Arc_Tic Whale" in trade_text
     assert "Action: BUY BTC" in trade_text
     assert "Amount: $50.00 USDC" in trade_text
 
     summary_text = notifications.build_daily_summary_message("2026-05-24", 3, 12.5, 1.2, 88.0, 2)
-    assert "📊 Daily Summary — Arc_Tic_Whale" in summary_text
+    assert "📊 Daily Summary - Arc_Tic_Whale" in summary_text
     assert "Trades executed today: 3" in summary_text
     assert "Today's P&L: +$12.50 (+1.20%)" in summary_text
 

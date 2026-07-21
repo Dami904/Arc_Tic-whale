@@ -1,9 +1,9 @@
 """
-snapshot_nav.py — Daily NAV snapshot for each agent's simulated performance.
+snapshot_nav.py - Daily NAV snapshot for each agent's simulated performance.
 
 Records today's cumulative return multiplier per agent into agent_nav_snapshots,
 so backend/performance.py can compute real 24h/7d/1y windows. Run once daily via
-.github/workflows/nav-snapshot.yml. Idempotent — safe to rerun same-day (upsert).
+.github/workflows/nav-snapshot.yml. Idempotent - safe to rerun same-day (upsert).
 """
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ def run_all() -> int:
         except Exception as exc:
             failures += 1
             log.error("Snapshot failed for %s: %s", agent, exc)
-            print(f"{agent}: FAILED — {exc}")
+            print(f"{agent}: FAILED - {exc}")
 
     return 1 if failures == len(AGENT_PROFILES) else 0
 

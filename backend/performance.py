@@ -1,10 +1,10 @@
 """
-performance.py — Simulated signal-following performance stats.
+performance.py - Simulated signal-following performance stats.
 
 Computes a hypothetical single-stake return by walking an agent's own
 BUY/SELL/HOLD trade_history in timestamp order, rather than reconciling
 real on-chain amounts (which aren't reliably comparable between an
-agent's BUY and SELL orders — see docs/superpowers/specs/2026-07-18-
+agent's BUY and SELL orders - see docs/superpowers/specs/2026-07-18-
 phase2-real-performance-stats-design.md for why).
 """
 from __future__ import annotations
@@ -33,7 +33,7 @@ def _walk_trade_rows(
     already ordered ascending by timestamp) as a simulated single stake per asset.
 
     assume_open_position_price: if the very first row is a SELL (the agent already
-    held a position when this window starts — e.g. a follower joining mid-position),
+    held a position when this window starts - e.g. a follower joining mid-position),
     treat it as if a BUY happened at this price. Ignored once any real BUY has
     already opened the walk.
     """
@@ -55,7 +55,7 @@ def _walk_trade_rows(
         if action == "BUY":
             if asset not in open_positions:
                 open_positions[asset] = price
-            # else: already holding — no-op (defensive)
+            # else: already holding - no-op (defensive)
         elif action == "SELL":
             if asset in open_positions:
                 entry = open_positions.pop(asset)
@@ -71,7 +71,7 @@ def _walk_trade_rows(
                 closed_trades += 1
                 if ratio > 1:
                     wins += 1
-            # else: SELL with nothing held and no synthetic entry — no-op (defensive)
+            # else: SELL with nothing held and no synthetic entry - no-op (defensive)
 
     has_open_position = len(open_positions) > 0
     if has_open_position and current_prices:
@@ -109,7 +109,7 @@ def _windows_from_snapshots(agent: str, live_multiplier: float, earliest_baselin
             windows[label] = None
             continue
         if earliest_baseline and snap["snapshot_date"] < earliest_baseline[:10]:
-            # Follower joined after this snapshot — no meaningful window that far back.
+            # Follower joined after this snapshot - no meaningful window that far back.
             windows[label] = None
             continue
         baseline = snap["nav_multiplier"]
@@ -127,7 +127,7 @@ def compute_agent_trend(agent_name: str, window_days: int = 7) -> dict:
     """
     Strategy degradation signal: compares this agent's most recent
     window_days NAV return against the prior window_days window. Needs a
-    real, distinct snapshot at both boundaries — reports insufficient_data
+    real, distinct snapshot at both boundaries - reports insufficient_data
     honestly rather than guessing from too little history (same pattern as
     the 24h/7d/1y windows).
     """
@@ -146,7 +146,7 @@ def compute_agent_trend(agent_name: str, window_days: int = 7) -> dict:
         return insufficient
     if snap_week["snapshot_date"] == snap_two_weeks["snapshot_date"]:
         # A gap in snapshot history collapsed both lookups onto the same
-        # row — there's no real prior window to compare against yet.
+        # row - there's no real prior window to compare against yet.
         return insufficient
     if not snap_week["nav_multiplier"] or not snap_two_weeks["nav_multiplier"]:
         return insufficient
