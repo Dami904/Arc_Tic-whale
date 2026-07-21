@@ -60,6 +60,8 @@ services:
         sync: false
       - key: GOOGLE_API_KEY
         sync: false
+      - key: COINGECKO_API_KEY
+        sync: false            # CoinGecko demo key - avoids 429s from the unauthenticated public tier
       - key: PRIVY_APP_ID
         sync: false
       - key: PRIVY_APP_SECRET

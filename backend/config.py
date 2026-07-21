@@ -7,6 +7,9 @@ load_dotenv(env_path)
 # AI Keys
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
+# Market Data Keys
+COINGECKO_API_KEY = os.getenv("COINGECKO_API_KEY", "")
+
 # Circle Keys
 CIRCLE_API_KEY = os.getenv("CIRCLE_API_KEY")
 CIRCLE_ENTITY_SECRET = os.getenv("CIRCLE_ENTITY_SECRET")

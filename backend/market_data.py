@@ -2,6 +2,8 @@
 import time
 import httpx
 
+from backend.config import COINGECKO_API_KEY
+
 # CoinGecko API endpoint for price and change data
 COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price"
 
@@ -55,7 +57,8 @@ def _get_crypto_data():
             "include_24hr_change": "true",
             "include_7d_change": "true",
         }
-        response = httpx.get(COINGECKO_API_URL, params=params, timeout=10)
+        headers = {"x-cg-demo-api-key": COINGECKO_API_KEY} if COINGECKO_API_KEY else {}
+        response = httpx.get(COINGECKO_API_URL, params=params, headers=headers, timeout=10)
         response.raise_for_status()
         data = response.json()
 
