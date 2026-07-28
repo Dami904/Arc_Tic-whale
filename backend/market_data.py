@@ -4,8 +4,10 @@ import httpx
 
 from backend.config import COINGECKO_API_KEY
 
-# CoinGecko API endpoint for price and change data
-COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price"
+# CoinGecko markets endpoint - the only endpoint that actually returns 7d/1y
+# change data ("/simple/price" silently ignores include_7d_change and always
+# reports 0.00%, which is why the fix uses this endpoint instead).
+COINGECKO_MARKETS_URL = "https://api.coingecko.com/api/v3/coins/markets"
 
 # Mapping CoinGecko IDs to common symbols for display
 # "euro-coin" is the correct CoinGecko ID for Circle's EURC stablecoin
@@ -52,27 +54,27 @@ def _get_crypto_data():
     crypto_data = {}
     try:
         params = {
+            "vs_currency": "usd",
             "ids": ",".join(CRYPTO_MAPPING.keys()),
-            "vs_currencies": "usd",
-            "include_24hr_change": "true",
-            "include_7d_change": "true",
+            "price_change_percentage": "24h,7d,1y",
         }
         headers = {"x-cg-demo-api-key": COINGECKO_API_KEY} if COINGECKO_API_KEY else {}
-        response = httpx.get(COINGECKO_API_URL, params=params, headers=headers, timeout=10)
+        response = httpx.get(COINGECKO_MARKETS_URL, params=params, headers=headers, timeout=10)
         response.raise_for_status()
-        data = response.json()
+        rows_by_id = {row["id"]: row for row in response.json()}
 
         for crypto_id, symbol in CRYPTO_MAPPING.items():
-            asset_data = data.get(crypto_id, {})
-            price     = asset_data.get("usd", 0.0) or 0.0
-            change_24h = asset_data.get("usd_24h_change", 0.0) or 0.0
-            change_7d  = asset_data.get("usd_7d_change",  0.0) or 0.0
+            asset_data = rows_by_id.get(crypto_id, {})
+            price      = asset_data.get("current_price", 0.0) or 0.0
+            change_24h = asset_data.get("price_change_percentage_24h_in_currency", 0.0) or 0.0
+            change_7d  = asset_data.get("price_change_percentage_7d_in_currency", 0.0) or 0.0
+            change_1y  = asset_data.get("price_change_percentage_1y_in_currency")
             fallback   = _FALLBACK_PRICES.get(symbol, {})
             crypto_data[symbol] = {
                 "PRICE":      price if price > 0 else fallback.get("PRICE", 0.0),
                 "24H_CHANGE": _format_change(change_24h),
                 "7D_CHANGE":  _format_change(change_7d),
-                "1Y_CHANGE":  fallback.get("1Y_CHANGE", "N/A"),
+                "1Y_CHANGE":  _format_change(change_1y) if change_1y is not None else fallback.get("1Y_CHANGE", "N/A"),
                 "TYPE":   "CRYPTO",
                 "SOURCE": "CoinGecko",
             }

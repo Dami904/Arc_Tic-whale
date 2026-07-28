@@ -1,5 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from backend.market_data import _format_change, _percent_change
+
+import backend.market_data as market_data_module
+from backend.market_data import _format_change, _get_crypto_data, _percent_change
 
 
 class TestFormatChange:
@@ -46,6 +50,71 @@ class TestPercentChange:
 
     def test_halving(self):
         assert _percent_change(50, 100) == -50.0
+
+
+class TestGetCryptoData:
+    """
+    Regression coverage for the /coins/markets fix: the old /simple/price
+    endpoint silently ignored include_7d_change and always returned 0.00%.
+    """
+
+    def _mock_markets_response(self):
+        return [
+            {
+                "id": "bitcoin", "current_price": 62946.0,
+                "price_change_percentage_24h_in_currency": -3.1,
+                "price_change_percentage_7d_in_currency": -5.2,
+                "price_change_percentage_1y_in_currency": -47.0,
+            },
+            {
+                "id": "ethereum", "current_price": 1868.25,
+                "price_change_percentage_24h_in_currency": -4.4,
+                "price_change_percentage_7d_in_currency": -3.6,
+                "price_change_percentage_1y_in_currency": -51.7,
+            },
+            {
+                "id": "euro-coin", "current_price": 1.14,
+                "price_change_percentage_24h_in_currency": -0.1,
+                "price_change_percentage_7d_in_currency": -0.4,
+                "price_change_percentage_1y_in_currency": -2.5,
+            },
+        ]
+
+    def test_7d_change_is_real_not_always_zero(self, monkeypatch):
+        monkeypatch.setattr(market_data_module, "_cache", {})
+        monkeypatch.setattr(market_data_module, "_cache_ts", 0.0)
+        mock_response = MagicMock()
+        mock_response.json.return_value = self._mock_markets_response()
+        mock_response.raise_for_status.return_value = None
+
+        with patch.object(market_data_module.httpx, "get", return_value=mock_response):
+            data = _get_crypto_data()
+
+        assert data["BTC"]["7D_CHANGE"] == "-5.20%"
+        assert data["ETH"]["7D_CHANGE"] == "-3.60%"
+        assert data["EURC"]["7D_CHANGE"] == "-0.40%"
+
+    def test_1y_change_comes_from_live_data(self, monkeypatch):
+        monkeypatch.setattr(market_data_module, "_cache", {})
+        monkeypatch.setattr(market_data_module, "_cache_ts", 0.0)
+        mock_response = MagicMock()
+        mock_response.json.return_value = self._mock_markets_response()
+        mock_response.raise_for_status.return_value = None
+
+        with patch.object(market_data_module.httpx, "get", return_value=mock_response):
+            data = _get_crypto_data()
+
+        assert data["BTC"]["1Y_CHANGE"] == "-47.00%"
+
+    def test_falls_back_to_hardcoded_prices_on_api_failure(self, monkeypatch):
+        monkeypatch.setattr(market_data_module, "_cache", {})
+        monkeypatch.setattr(market_data_module, "_cache_ts", 0.0)
+
+        with patch.object(market_data_module.httpx, "get", side_effect=Exception("network down")):
+            data = _get_crypto_data()
+
+        assert data["BTC"]["SOURCE"] == "CoinGecko (Cached)"
+        assert data["BTC"]["PRICE"] > 0
 
 
 class TestMarketDataStructure:
