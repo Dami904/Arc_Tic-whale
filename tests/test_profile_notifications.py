@@ -166,8 +166,9 @@ def test_copy_engine_alerts_fire_for_each_active_follower(monkeypatch):
 
     notified = []
 
-    monkeypatch.setattr(copy_engine, "get_active_followers", lambda agent_name: [("wallet_a", "0x1", 42.0)])
+    monkeypatch.setattr(copy_engine, "get_active_followers", lambda agent_name: [("wallet_a", "0x1", 42.0, 10.0, 42.0)])
     monkeypatch.setattr(copy_engine, "get_active_follower_rows", lambda agent_name: [])
+    monkeypatch.setattr(copy_engine, "adjust_follower_remaining_capital", lambda *a, **k: None)
     monkeypatch.setattr(copy_engine, "get_current_market_state", lambda: {"BTC": {"PRICE": 68000}})
     monkeypatch.setattr(copy_engine, "execute_trade", lambda **kwargs: "tx_123")
     monkeypatch.setattr(copy_engine, "log_trade", lambda **kwargs: None)
@@ -188,7 +189,9 @@ def test_copy_engine_alerts_fire_for_each_active_follower(monkeypatch):
     assert len(notified) == 1
     _, kwargs = notified[0]
     assert kwargs["agent_name"] == "Arc_Tic Whale"
-    assert kwargs["amount_usdc"] == 42.0
+    # Deployed notional, not the raw allocation: every entry deploys 10%
+    # of the follower's remaining capital pool (42.0 -> 4.2).
+    assert kwargs["amount_usdc"] == 4.2
     assert kwargs["token"] == "BTC"
 
 
@@ -207,8 +210,9 @@ def test_stop_loss_triggers_auto_sell_and_detach(monkeypatch):
         "stop_loss_pct": 10.0,
         "is_active": 1,
     }])
-    monkeypatch.setattr(copy_engine, "get_latest_follower_trade", lambda wallet_id, target_agent=None: {"action": "BUY", "asset": "BTC", "timestamp": "2026-05-24T12:00:00"})
+    monkeypatch.setattr(copy_engine, "get_latest_follower_trade", lambda wallet_id, target_agent=None: {"action": "BUY", "asset": "BTC", "timestamp": "2026-05-24T12:00:00", "amount_usdc": 3.3, "price": 68000})
     monkeypatch.setattr(copy_engine, "get_current_market_state", lambda: {"BTC": {"PRICE": 60000, "24H_CHANGE": "-12.5%"}})
+    monkeypatch.setattr(copy_engine, "adjust_follower_remaining_capital", lambda *a, **k: None)
     monkeypatch.setattr(copy_engine, "execute_trade", lambda **kwargs: actions.append(("execute", kwargs)) or "tx_stop")
     monkeypatch.setattr(copy_engine, "log_trade", lambda **kwargs: actions.append(("log", kwargs)))
     monkeypatch.setattr(copy_engine, "deactivate_follower", lambda user_id, target_agent: actions.append(("detach", user_id, target_agent)) or True)

@@ -163,3 +163,30 @@ class TestFollowerRetention:
         tmp_db.add_follower(user_id="u1", user_wallet_id="w1", target_agent="A", allocation_amount=1.0)
         stats = tmp_db.get_agent_retention_stats("A")
         assert stats["avg_tenure_days"] is None  # no churned follows to measure yet
+
+
+class TestReFollowDoesNotDuplicate:
+    def _active_rows(self, tmp_db, agent):
+        with tmp_db._connection() as conn:
+            cur = tmp_db._cursor(conn)
+            cur.execute("SELECT allocation_amount, remaining_capital FROM followers WHERE target_agent = ? AND is_active = 1", (agent,))
+            return tmp_db._rows(cur)
+
+    def test_refollow_replaces_previous_active_row(self, tmp_db):
+        tmp_db.add_follower(user_id="u1", user_wallet_id="w1", target_agent="A", allocation_amount=10.0)
+        tmp_db.add_follower(user_id="u1", user_wallet_id="w1", target_agent="A", allocation_amount=25.0)
+        rows = self._active_rows(tmp_db, "A")
+        assert len(rows) == 1
+        assert rows[0]["allocation_amount"] == 25.0
+        assert rows[0]["remaining_capital"] == 25.0  # fresh pool seeded from the new allocation
+
+    def test_refollow_only_touches_same_agent(self, tmp_db):
+        tmp_db.add_follower(user_id="u1", user_wallet_id="w1", target_agent="A", allocation_amount=10.0)
+        tmp_db.add_follower(user_id="u1", user_wallet_id="w1", target_agent="B", allocation_amount=15.0)
+        assert len(self._active_rows(tmp_db, "A")) == 1
+        assert len(self._active_rows(tmp_db, "B")) == 1
+
+    def test_different_users_can_follow_same_agent(self, tmp_db):
+        tmp_db.add_follower(user_id="u1", user_wallet_id="w1", target_agent="A", allocation_amount=10.0)
+        tmp_db.add_follower(user_id="u2", user_wallet_id="w2", target_agent="A", allocation_amount=10.0)
+        assert len(self._active_rows(tmp_db, "A")) == 2

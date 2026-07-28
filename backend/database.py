@@ -131,6 +131,7 @@ def init_db():
             cursor.execute("ALTER TABLE followers ADD COLUMN IF NOT EXISTS user_wallet_address TEXT")
             cursor.execute("ALTER TABLE followers ADD COLUMN IF NOT EXISTS stop_loss_pct REAL DEFAULT 10.0")
             cursor.execute("ALTER TABLE followers ADD COLUMN IF NOT EXISTS followed_at TEXT")
+            cursor.execute("ALTER TABLE followers ADD COLUMN IF NOT EXISTS remaining_capital DOUBLE PRECISION")
             cursor.execute("ALTER TABLE followers ADD COLUMN IF NOT EXISTS deactivated_at TEXT")
 
             cursor.execute('''
@@ -180,6 +181,7 @@ def init_db():
                 )
             ''')
             cursor.execute("ALTER TABLE trade_history ADD COLUMN IF NOT EXISTS price DOUBLE PRECISION")
+            cursor.execute("ALTER TABLE trade_history ADD COLUMN IF NOT EXISTS amount_usdc DOUBLE PRECISION")
 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS agent_nav_snapshots (
@@ -252,6 +254,8 @@ def init_db():
                 cursor.execute("ALTER TABLE followers ADD COLUMN stop_loss_pct REAL DEFAULT 10.0")
             if "followed_at" not in follower_columns:
                 cursor.execute("ALTER TABLE followers ADD COLUMN followed_at TEXT")
+            if "remaining_capital" not in follower_columns:
+                cursor.execute("ALTER TABLE followers ADD COLUMN remaining_capital REAL")
             if "deactivated_at" not in follower_columns:
                 cursor.execute("ALTER TABLE followers ADD COLUMN deactivated_at TEXT")
 
@@ -313,6 +317,8 @@ def init_db():
             trade_history_columns = {row[1] for row in cursor.fetchall()}
             if "price" not in trade_history_columns:
                 cursor.execute("ALTER TABLE trade_history ADD COLUMN price REAL")
+            if "amount_usdc" not in trade_history_columns:
+                cursor.execute("ALTER TABLE trade_history ADD COLUMN amount_usdc REAL")
 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS agent_nav_snapshots (
@@ -506,7 +512,9 @@ def get_user_allocations(user_id):
         cursor = _cursor(conn)
         rows = _select_follower_rows(
             cursor,
-            f"SELECT target_agent, allocation_amount, asset, stop_loss_pct, user_wallet_id, user_wallet_address FROM followers WHERE user_id = {_PH} AND is_active = 1 ORDER BY id DESC",
+            f"SELECT target_agent, allocation_amount, asset, stop_loss_pct, user_wallet_id, user_wallet_address, "
+            f"COALESCE(remaining_capital, allocation_amount) AS remaining_capital "
+            f"FROM followers WHERE user_id = {_PH} AND is_active = 1 ORDER BY id DESC",
             (user_id,),
         )
     return rows
@@ -581,13 +589,52 @@ def add_follower(
 ):
     with _connection() as conn:
         cursor = _cursor(conn)
+        # Re-following replaces the previous follow instead of stacking a
+        # duplicate active row (each active row would otherwise get its own
+        # mirrored trade per signal). The trade stream is keyed by
+        # wallet+agent, so an open position carries over to the new follow.
         cursor.execute(
-            f"INSERT INTO followers (user_id, user_wallet_id, user_wallet_address, target_agent, allocation_amount, asset, stop_loss_pct, followed_at) VALUES ({_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH})",
+            f"UPDATE followers SET is_active = 0, deactivated_at = {_PH} "
+            f"WHERE user_id = {_PH} AND target_agent = {_PH} AND is_active = 1",
+            (datetime.now(timezone.utc).isoformat(), user_id, target_agent),
+        )
+        if cursor.rowcount:
+            log.info("Replacing %d existing active follow(s) of %s for user %s.",
+                     cursor.rowcount, target_agent, user_id)
+        cursor.execute(
+            f"INSERT INTO followers (user_id, user_wallet_id, user_wallet_address, target_agent, allocation_amount, asset, stop_loss_pct, followed_at, remaining_capital) VALUES ({_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH})",
             (user_id, user_wallet_id, user_wallet_address, target_agent, allocation_amount, asset,
-             stop_loss_pct if stop_loss_pct is not None else 10.0, datetime.now(timezone.utc).isoformat()),
+             stop_loss_pct if stop_loss_pct is not None else 10.0, datetime.now(timezone.utc).isoformat(),
+             allocation_amount),
         )
         conn.commit()
     log.info("User %s is now following %s.", user_id, target_agent)
+
+
+def adjust_follower_remaining_capital(user_wallet_id: str, target_agent: str, delta: float) -> None:
+    """
+    Move a follower's deployable USDC pool: negative delta on a BUY (capital
+    deployed into the position), positive on a SELL (proceeds returned).
+    Floored at 0. Legacy rows with NULL remaining_capital are initialised
+    from allocation_amount before applying the delta.
+    """
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        cursor.execute(
+            f"SELECT COALESCE(remaining_capital, allocation_amount) AS remaining FROM followers "
+            f"WHERE user_wallet_id = {_PH} AND target_agent = {_PH} AND is_active = 1",
+            (user_wallet_id, target_agent),
+        )
+        row = _row(cursor)
+        if not row:
+            return
+        new_remaining = round(max(0.0, float(row["remaining"] or 0.0) + delta), 2)
+        cursor.execute(
+            f"UPDATE followers SET remaining_capital = {_PH} "
+            f"WHERE user_wallet_id = {_PH} AND target_agent = {_PH} AND is_active = 1",
+            (new_remaining, user_wallet_id, target_agent),
+        )
+        conn.commit()
 
 
 def get_active_followers(agent_name):
@@ -595,10 +642,13 @@ def get_active_followers(agent_name):
         cursor = _cursor(conn)
         rows = _select_follower_rows(
             cursor,
-            f"SELECT user_wallet_id, user_wallet_address, allocation_amount, stop_loss_pct FROM followers WHERE target_agent = {_PH} AND is_active = 1",
+            f"SELECT user_wallet_id, user_wallet_address, allocation_amount, stop_loss_pct, "
+            f"COALESCE(remaining_capital, allocation_amount) AS remaining_capital "
+            f"FROM followers WHERE target_agent = {_PH} AND is_active = 1",
             (agent_name,),
         )
-    return [(r["user_wallet_id"], r["user_wallet_address"], r["allocation_amount"], r.get("stop_loss_pct")) for r in rows]
+    return [(r["user_wallet_id"], r["user_wallet_address"], r["allocation_amount"], r.get("stop_loss_pct"),
+             r.get("remaining_capital", r["allocation_amount"])) for r in rows]
 
 
 def get_active_follower_rows(agent_name):
@@ -606,7 +656,9 @@ def get_active_follower_rows(agent_name):
         cursor = _cursor(conn)
         rows = _select_follower_rows(
             cursor,
-            f"SELECT user_id, user_wallet_id, user_wallet_address, target_agent, allocation_amount, asset, stop_loss_pct, is_active FROM followers WHERE target_agent = {_PH} AND is_active = 1 ORDER BY id DESC",
+            f"SELECT user_id, user_wallet_id, user_wallet_address, target_agent, allocation_amount, asset, stop_loss_pct, is_active, "
+            f"COALESCE(remaining_capital, allocation_amount) AS remaining_capital "
+            f"FROM followers WHERE target_agent = {_PH} AND is_active = 1 ORDER BY id DESC",
             (agent_name,),
         )
     return rows
@@ -698,12 +750,12 @@ def get_agent_retention_stats(agent_name: str) -> dict:
 
 # ── Trade history ─────────────────────────────────────────────────────────────
 
-def log_trade(agent: str, action: str, asset: str | None, tx_id: str | None, reason: str = "", price: float | None = None):
+def log_trade(agent: str, action: str, asset: str | None, tx_id: str | None, reason: str = "", price: float | None = None, amount_usdc: float | None = None):
     with _connection() as conn:
         cursor = _cursor(conn)
         cursor.execute(
-            f"INSERT INTO trade_history (agent, action, asset, tx_id, reason, timestamp, price) VALUES ({_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH})",
-            (agent, action, asset, tx_id, reason, datetime.now(timezone.utc).isoformat(), price),
+            f"INSERT INTO trade_history (agent, action, asset, tx_id, reason, timestamp, price, amount_usdc) VALUES ({_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH})",
+            (agent, action, asset, tx_id, reason, datetime.now(timezone.utc).isoformat(), price, amount_usdc),
         )
         conn.commit()
 
@@ -784,12 +836,12 @@ def get_latest_follower_trade(wallet_id: str, target_agent: str | None = None) -
         agent_key = follower_trade_agent_key(wallet_id, target_agent)
         if target_agent:
             cursor.execute(
-                f"SELECT id, agent, action, asset, tx_id, reason, timestamp FROM trade_history WHERE agent = {_PH} ORDER BY id DESC LIMIT 1",
+                f"SELECT id, agent, action, asset, tx_id, reason, timestamp, amount_usdc, price FROM trade_history WHERE agent = {_PH} ORDER BY id DESC LIMIT 1",
                 (agent_key,),
             )
         else:
             cursor.execute(
-                f"SELECT id, agent, action, asset, tx_id, reason, timestamp FROM trade_history WHERE (agent = {_PH} OR agent LIKE {_PH}) ORDER BY id DESC LIMIT 1",
+                f"SELECT id, agent, action, asset, tx_id, reason, timestamp, amount_usdc, price FROM trade_history WHERE (agent = {_PH} OR agent LIKE {_PH}) ORDER BY id DESC LIMIT 1",
                 (agent_key, f"{agent_key}:%"),
             )
         return _row(cursor)

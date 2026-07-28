@@ -1,3 +1,4 @@
+import os
 import uuid
 from decimal import Decimal, InvalidOperation
 
@@ -33,7 +34,10 @@ ASSET_DECIMALS = {
 
 UNISWAP_V3_POOL_FEE = 3000
 MIN_TRADE_AMOUNT = Decimal("0.5")
-MAX_TRADE_AMOUNT = Decimal("2.0")
+# Safety ceiling per trade, in USDC notional. Overridable so follower
+# allocations aren't silently capped at the old $2 testnet rail - a follower
+# allocating $20 now actually deploys their agent's trade_size_pct of it.
+MAX_TRADE_AMOUNT = Decimal(os.getenv("MAX_TRADE_NOTIONAL", "100"))
 
 UNISWAP_ROUTER_ABI = [
     {
@@ -207,8 +211,8 @@ def execute_trade(
 ) -> str | None:
     """
     amount is always a USDC notional (e.g. "1.0" = $1 worth), matching what
-    every caller actually passes (a follower's USDC allocation, or the
-    default $0.5-$2.0 clamp). For a BUY that's already the unit Uniswap
+    every caller actually passes (a follower's sized deployment, or the
+    agent's own ~$1 signal trade). For a BUY that's already the unit Uniswap
     needs (spend $X of USDC). For a SELL, current_price (the asset's USDC
     price) is required to convert that same $X notional into the asset's
     own native units - without it, "amount" would be misread as raw units
@@ -230,7 +234,7 @@ def execute_trade(
         log.error("Missing Circle wallet_id.")
         return None
 
-    final_amount = _normalize_amount(amount)  # USDC notional, clamped to $0.5-$2.0
+    final_amount = _normalize_amount(amount)  # USDC notional, clamped to MIN/MAX_TRADE_AMOUNT
     recipient = recipient_address or AGENT_WALLET_ADDRESS
     if not recipient:
         log.error("Missing recipient wallet address.")
