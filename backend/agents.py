@@ -1,8 +1,13 @@
 # agents.py
+import time
+
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from backend.config import AGENT_DEV_MODE, GOOGLE_API_KEY
+from backend.logger import get_logger
 from backend.market_data import get_current_market_state
+
+log = get_logger("agents")
 
 AGENT_PROFILES = {
     "Conservative_Whale": {
@@ -13,9 +18,15 @@ AGENT_PROFILES = {
         "temperature": 0.2,
         "description": "Macro-driven, patient accumulator. Targets blue-chip assets with low drawdown tolerance.",
         "prompt": """
-        You are 'Arc_Tic Whale', a conservative AI investing agent.
-        You are highly risk-averse. You prefer holding stablecoins (USDC) and only buy major blue-chip assets like BTC and ETH when there is a confirmed market dip.
-        You also consider broader market sentiment from stocks (AAPL, SPY) but prioritize crypto (BTC, ETH, EURC) for trading decisions. EURC is a euro-backed stablecoin - consider it a EUR/USD play.
+        You are 'Arc_Tic Whale', a conservative spot-trading agent. You hold USDC by default
+        and buy only genuine overextended dips in BTC or ETH.
+        ENTRY (only if you hold no position): BUY BTC or ETH when its 24H change is -3.00% or
+        lower, OR its 7D change is -7.00% or lower. If both BTC and ETH qualify, pick the one
+        with the deeper 7D drawdown.
+        EXIT (only if you hold a position): SELL when the held asset's 24H change is +4.00% or
+        higher (take profit into strength), or its 7D change is -10.00% or lower (thesis failed).
+        Otherwise HOLD. Stock data (AAPL, SPY) is context only - it must never veto a crypto
+        entry or exit that meets the thresholds above.
         """,
     },
     "Macro_Economist": {
@@ -26,9 +37,17 @@ AGENT_PROFILES = {
         "temperature": 0.35,
         "description": "Fed-watching swing trader. Uses market breadth, macro news, and risk-on/risk-off signals.",
         "prompt": """
-        You are 'Macro Economist', a balanced macro trading agent.
-        You react to broad risk conditions, macro news, BTC/ETH momentum, and stock-market proxies.
-        You can BUY when macro and crypto momentum align, SELL into overheated moves, and HOLD when signals conflict.
+        You are 'Macro Economist', a swing trader who trades crypto based on risk regime.
+        Define the regime yourself from the data: risk-ON when SPY's 24H change is positive AND
+        BTC's 7D change is positive; risk-OFF when SPY's 24H change is -1.00% or lower OR BTC's
+        7D change is -5.00% or lower; otherwise NEUTRAL.
+        ENTRY (only if you hold no position): in risk-ON, BUY BTC (or ETH if its 7D momentum is
+        stronger). In risk-OFF: BUY EURC only when SPY's 24H change is -1.50% or lower (defensive
+        EUR/USD rotation); if SPY's 24H change is above -1.50%, you must NOT buy anything - HOLD.
+        EXIT (only if you hold a position): SELL crypto when the regime turns risk-OFF. SELL EURC
+        when the regime turns risk-ON.
+        In NEUTRAL, HOLD. Do not require every signal to agree - the regime definition above IS
+        the decision rule.
         """,
     },
     "Aggressive_Degen": {
@@ -39,9 +58,15 @@ AGENT_PROFILES = {
         "temperature": 0.55,
         "description": "High-conviction momentum trader. Moves faster and accepts higher drawdown risk.",
         "prompt": """
-        You are 'Aggressive Degen', a high-risk momentum investing agent.
-        You actively seek strong 24h and 7d momentum in BTC, ETH, and EURC (euro stablecoin - a EUR/USD directional play).
-        You are willing to BUY breakouts sooner than conservative agents and SELL quickly when momentum fades.
+        You are 'Aggressive Degen', a high-risk spot momentum trader. You chase strength and cut
+        quickly. You do not buy dips.
+        ENTRY (only if you hold no position): BUY the asset (BTC or ETH) whose 24H change is
+        +2.00% or higher OR whose 7D change is +5.00% or higher. Prefer the stronger 24H mover.
+        EXIT (only if you hold a position): SELL the moment the held asset's 24H change turns
+        -1.00% or lower - momentum is gone, do not wait for it to come back.
+        HOLD only when nothing meets an entry and you hold nothing, or you hold a position whose
+        momentum is still positive. Ignore stocks and macro news entirely - you trade price, not
+        narrative.
         """,
     },
     "Yield_Farmer": {
@@ -52,9 +77,15 @@ AGENT_PROFILES = {
         "temperature": 0.25,
         "description": "Stablecoin-first optimizer. Prefers USDC and only rotates into majors on unusually attractive setups.",
         "prompt": """
-        You are 'Yield Farmer', a stablecoin-first investing agent.
-        You prefer capital preservation, USDC, and low-volatility entries.
-        You only BUY BTC or ETH when downside appears overextended, and you SELL when risk-adjusted upside weakens.
+        You are 'Yield Farmer', a stablecoin-first agent. USDC is your home; you make brief,
+        rare excursions into majors only on capitulation-grade dips, and return to USDC fast.
+        ENTRY (only if you hold no position): BUY BTC or ETH only when its 24H change is -5.00%
+        or lower, OR its 7D change is -10.00% or lower. These are rare - most cycles you will
+        correctly HOLD.
+        EXIT (only if you hold a position): SELL as soon as the held asset's 24H change is
+        +2.00% or higher (bank the bounce), or its 7D change falls -15.00% or lower
+        (capitulation continued - preserve capital and exit).
+        Otherwise HOLD in USDC. That is your job, not a failure.
         """,
     },
 }
@@ -80,15 +111,29 @@ def initialize_agent(temperature=0.2):
     )
 DEV_MODE = AGENT_DEV_MODE
 
-def ask_agent(market_data, agent_name="Conservative_Whale"):
+def _describe_positions(open_positions: dict | None) -> str:
+    if not open_positions:
+        return "You currently hold NO position - you are fully in USDC."
+    held = ", ".join(
+        f"{asset} (entered at ${entry:,.2f})" if entry else asset
+        for asset, entry in open_positions.items()
+    )
+    return f"You currently hold: {held}."
+
+
+def ask_agent(market_data, agent_name="Conservative_Whale", open_positions=None):
     profile = get_agent_profile(agent_name)
     if DEV_MODE:
         return "DECISION: BUY BTC\nREASON: Dev mode mock data bypass."
-    
+
     llm = initialize_agent(temperature=profile["temperature"])
 
     system_prompt = SystemMessage(content=f"""
     {profile["prompt"]}
+    POSITION STATE: {_describe_positions(open_positions)}
+    HARD RULES (these override everything above):
+    - Never BUY if you already hold a position. One position at a time.
+    - Never SELL an asset you do not currently hold.
     Based on the data provided, reply strictly in this format:
     DECISION: [BUY, SELL, or HOLD]
     REASON: [1 sentence explanation]
@@ -107,18 +152,23 @@ def ask_agent(market_data, agent_name="Conservative_Whale"):
     data_string = "Current Market State:\n" + "\n".join(data_string_parts)
     user_message = HumanMessage(content=data_string)
 
-    try:
-        response = llm.invoke([system_prompt, user_message])
-        # gemini-3.1-flash-lite is a thinking-capable model: response.content
-        # can be a list of content blocks (text + thinking parts) rather than
-        # a plain string. .text normalizes to just the text parts.
-        return response.text
-    except Exception as e:
-        return fallback_market_decision(market_data)
+    for attempt in (1, 2):
+        try:
+            response = llm.invoke([system_prompt, user_message])
+            # gemini-3.1-flash-lite is a thinking-capable model: response.content
+            # can be a list of content blocks (text + thinking parts) rather than
+            # a plain string. .text normalizes to just the text parts.
+            return response.text
+        except Exception as e:
+            log.error("Gemini call failed for %s (attempt %d/2): %s", agent_name, attempt, e)
+            if attempt == 1:
+                time.sleep(8)  # transient rate limits are the common case; brief backoff then retry once
+
+    return fallback_market_decision(market_data)
 
 
-def ask_conservative_whale(market_data):
-    return ask_agent(market_data, "Conservative_Whale")
+def ask_conservative_whale(market_data, open_positions=None):
+    return ask_agent(market_data, "Conservative_Whale", open_positions=open_positions)
 
 
 def fallback_market_decision(market_data):

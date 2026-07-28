@@ -14,6 +14,7 @@ def mock_trade_cycle():
          patch("backend.trade_service.log_social_post") as mock_social_log, \
          patch("backend.trade_service.log_trade") as mock_log, \
          patch("backend.trade_service.init_db") as mock_init_db, \
+         patch("backend.trade_service.get_open_positions", return_value={}) as mock_positions, \
          patch("backend.trade_service.is_kill_switch_active", return_value=False) as mock_kill:
         yield {
             "market": mock_market,
@@ -25,6 +26,7 @@ def mock_trade_cycle():
             "social_log": mock_social_log,
             "log": mock_log,
             "init_db": mock_init_db,
+            "positions": mock_positions,
             "kill": mock_kill,
         }
 
@@ -53,6 +55,7 @@ class TestTradeDecisionFlow:
         mock_trade_cycle["ai"].return_value = "DECISION: SELL ETH\nREASON: Take profit."
         mock_trade_cycle["parse"].return_value = {"decision": "SELL", "asset": "ETH", "reason": "Take profit."}
         mock_trade_cycle["exec"].return_value = "0xcafebabe"
+        mock_trade_cycle["positions"].return_value = {"ETH": 3000.0}
 
         from backend.trade_service import run_trade_cycle
         result = run_trade_cycle(wallet_id="test-wallet", rate_limit_sleep=0)
@@ -127,6 +130,52 @@ class TestTradeDecisionFlow:
             agent="Conservative_Whale", action="BUY", asset="BTC", tx_id="0xdeadbeef",
             reason="Dip.", price=68000,
         )
+
+
+class TestPositionGuard:
+    def test_buy_while_holding_downgraded_to_hold(self, mock_trade_cycle):
+        mock_trade_cycle["market"].return_value = {"BTC": {"PRICE": 68000}}
+        mock_trade_cycle["ai"].return_value = "DECISION: BUY BTC\nREASON: Dip."
+        mock_trade_cycle["parse"].return_value = {"decision": "BUY", "asset": "BTC", "reason": "Dip."}
+        mock_trade_cycle["positions"].return_value = {"BTC": 65000.0}
+
+        from backend.trade_service import run_trade_cycle
+        result = run_trade_cycle(wallet_id="test-wallet", rate_limit_sleep=0)
+
+        assert result["status"] == "hold"
+        assert result["action"] == "HOLD"
+        assert "Position guard" in result["reason"]
+        mock_trade_cycle["exec"].assert_not_called()
+        mock_trade_cycle["mirror"].assert_not_called()
+
+    def test_sell_without_position_downgraded_to_hold(self, mock_trade_cycle):
+        mock_trade_cycle["market"].return_value = {"ETH": {"PRICE": 3500}}
+        mock_trade_cycle["ai"].return_value = "DECISION: SELL ETH\nREASON: Take profit."
+        mock_trade_cycle["parse"].return_value = {"decision": "SELL", "asset": "ETH", "reason": "Take profit."}
+        mock_trade_cycle["positions"].return_value = {}
+
+        from backend.trade_service import run_trade_cycle
+        result = run_trade_cycle(wallet_id="test-wallet", rate_limit_sleep=0)
+
+        assert result["status"] == "hold"
+        assert result["action"] == "HOLD"
+        assert "Position guard" in result["reason"]
+        mock_trade_cycle["exec"].assert_not_called()
+        mock_trade_cycle["mirror"].assert_not_called()
+
+    def test_sell_of_held_asset_passes_guard(self, mock_trade_cycle):
+        mock_trade_cycle["market"].return_value = {"BTC": {"PRICE": 70000}}
+        mock_trade_cycle["ai"].return_value = "DECISION: SELL BTC\nREASON: Momentum gone."
+        mock_trade_cycle["parse"].return_value = {"decision": "SELL", "asset": "BTC", "reason": "Momentum gone."}
+        mock_trade_cycle["exec"].return_value = "0xfeedface"
+        mock_trade_cycle["positions"].return_value = {"BTC": 65000.0}
+
+        from backend.trade_service import run_trade_cycle
+        result = run_trade_cycle(wallet_id="test-wallet", rate_limit_sleep=0)
+
+        assert result["status"] == "success"
+        assert result["action"] == "SELL"
+        mock_trade_cycle["exec"].assert_called_once()
 
 
 class TestFallbackDecision:

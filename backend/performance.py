@@ -91,6 +91,23 @@ def _walk_trade_rows(
     }
 
 
+def get_open_positions(agent_name: str) -> dict[str, float]:
+    """
+    Current open positions for an agent, derived from its own trade_history
+    signal stream: {asset: entry_price}. Same walk semantics as
+    _walk_trade_rows (repeat BUYs don't re-enter, SELL closes).
+    Used to feed position state into the AI prompt and to hard-guard
+    run_trade_cycle against repeat entries/naked exits.
+    """
+    open_positions: dict[str, float] = {}
+    for row in get_trade_rows_for_performance(agent_name):
+        if row["action"] == "BUY":
+            open_positions.setdefault(row["asset"], row["price"])
+        elif row["action"] == "SELL":
+            open_positions.pop(row["asset"], None)
+    return open_positions
+
+
 _WINDOW_DAYS = {"24h": 1, "7d": 7, "1y": 365}
 
 

@@ -15,6 +15,7 @@ from backend.trade_executor import execute_trade
 from backend.copy_engine import mirror_agent_trade
 from backend.social import generate_canteen_post
 from backend.database import init_db, is_kill_switch_active, log_trade, log_social_post
+from backend.performance import get_open_positions
 from backend.config import AGENT_WALLET_ID
 
 log = get_logger("trade_service")
@@ -65,16 +66,34 @@ def run_trade_cycle(
 
     # ── 2. AI decision ──────────────────────────────────────────────────────
     profile = get_agent_profile(agent_name)
-    log.info("Passing data to %s for analysis...", profile["name"])
+    open_positions = get_open_positions(agent_name)
+    log.info("Passing data to %s for analysis (holding: %s)...",
+             profile["name"], ", ".join(open_positions) or "nothing")
     raw_ai_response = (
-        ask_conservative_whale(current_data)
-        if agent_name == AGENT_NAME else ask_agent(current_data, agent_name=agent_name)
+        ask_conservative_whale(current_data, open_positions=open_positions)
+        if agent_name == AGENT_NAME
+        else ask_agent(current_data, agent_name=agent_name, open_positions=open_positions)
     )
     parsed = parse_ai_decision(raw_ai_response)
 
     action = parsed["decision"]
     asset  = parsed["asset"]
     reason = parsed.get("reason", "")
+
+    # ── 2b. Position guard ──────────────────────────────────────────────────
+    # Hard backstop for the prompt's "one position at a time" rules. Without
+    # this, a repeated BUY signal would re-mirror every follower's FULL
+    # allocation each 15-min cycle, and a naked SELL would swap tokens the
+    # wallet doesn't hold. The AI is told these rules; this enforces them.
+    if action == "BUY" and open_positions:
+        held = ", ".join(open_positions)
+        log.warning("Position guard: downgrading BUY %s to HOLD - already holding %s.", asset, held)
+        action = "HOLD"
+        reason = f"Position guard: BUY blocked, already holding {held}. AI said: {reason}"
+    elif action == "SELL" and asset not in open_positions:
+        log.warning("Position guard: downgrading SELL %s to HOLD - no open position in it.", asset)
+        action = "HOLD"
+        reason = f"Position guard: SELL {asset} blocked, no open position. AI said: {reason}"
 
     log.info("Whale decision: %s %s - %s", action, asset or "", reason)
 
