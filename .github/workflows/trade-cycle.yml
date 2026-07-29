@@ -1,8 +1,14 @@
 name: Trade Cycle
 
 on:
+  # GitHub's `schedule` trigger is best-effort - under load it delays or
+  # silently drops runs, so a 15-min cron alone was landing 1-3 hours apart
+  # in practice. Firing every 5 min (GitHub's minimum granularity) raises the
+  # odds that at least one attempt lands close to on time; run_cycle.py's
+  # MIN_CYCLE_SECONDS floor skips the extra attempts so the real trading
+  # cadence stays ~15 min instead of firing 3x too often.
   schedule:
-    - cron: "7,22,37,52 * * * *"  # every 15 min (UTC), offset from :00/:15/:30/:45 to avoid congestion
+    - cron: "3,8,13,18,23,28,33,38,43,48,53,58 * * * *"  # every 5 min (UTC), offset from :00/:30
   workflow_dispatch: {}      # manual trigger for testing
 
 permissions: {}

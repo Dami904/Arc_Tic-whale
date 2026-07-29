@@ -15,7 +15,7 @@ import time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from backend.agents import AGENT_PROFILES
-from backend.database import init_db, is_kill_switch_active
+from backend.database import init_db, is_kill_switch_active, seconds_since_last_cycle
 from backend.logger import get_logger
 from backend.market_data import get_current_market_state
 from backend.trade_service import run_trade_cycle
@@ -23,6 +23,12 @@ from backend.trade_service import run_trade_cycle
 log = get_logger("run_cycle")
 
 STAGGER_SECONDS = 30  # between agents, for Gemini rate limits
+
+# GitHub Actions' `schedule` trigger is best-effort: under load it can delay or
+# silently drop runs, so trade-cycle.yml now fires every 5 min (its minimum
+# granularity) to raise the odds one attempt lands close to on time. This
+# floor stops those extra attempts from turning into a <15 min cadence.
+MIN_CYCLE_SECONDS = 13 * 60
 
 
 def _is_live_mode() -> bool:
@@ -46,6 +52,12 @@ def run_all() -> int:
     if is_kill_switch_active():
         log.warning("Kill switch active - skipping this cycle.")
         print("KILL SWITCH ACTIVE - cycle skipped.")
+        return 0
+
+    elapsed = seconds_since_last_cycle()
+    if elapsed is not None and elapsed < MIN_CYCLE_SECONDS:
+        log.info("Last cycle ran %.0fs ago (< %ds floor) - skipping.", elapsed, MIN_CYCLE_SECONDS)
+        print(f"Last cycle ran {elapsed:.0f}s ago - skipping (min interval {MIN_CYCLE_SECONDS}s).")
         return 0
 
     market = get_current_market_state()

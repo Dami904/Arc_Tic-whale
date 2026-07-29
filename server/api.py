@@ -1100,30 +1100,27 @@ async def wallet_auth(request: Request, body: dict):
 
 @app.get("/auth/callback")
 def auth_callback():
-    callback_candidates = [
-        os.path.join(os.path.dirname(__file__), "../frontend/auth/callback.html"),
-        os.path.join(os.path.dirname(__file__), "../frontend/callback.html"),
-    ]
-    for callback_path in callback_candidates:
-        if Path(callback_path).is_file():
-            html = Path(callback_path).read_text()
-            # Inject Privy credentials at serve time so the popup can complete OAuth.
-            # callback.html loads /static/runtime-config.js which has empty strings -
-            # we replace that tag with an inline script containing the real values.
-            inline_config = (
-                "<script>\n"
-                f"  window.PRIVY_APP_ID = '{PRIVY_APP_ID}';\n"
-                f"  window.PRIVY_CLIENT_ID = '{PRIVY_CLIENT_ID}';\n"
-                f"  window.PRIVY_AUTH_ORIGIN = '{PRIVY_AUTH_ORIGIN}';\n"
-                "</script>"
-            )
-            # Replace the runtime-config.js script tag with the inline version
-            html = html.replace(
-                '<script src="/static/runtime-config.js"></script>',
-                inline_config,
-            )
-            return HTMLResponse(content=html)
-    raise HTTPException(status_code=404, detail="Callback page not found")
+    callback_path = os.path.join(
+        os.path.dirname(__file__), "../frontend/auth/callback.html"
+    )
+    if not Path(callback_path).is_file():
+        raise HTTPException(status_code=404, detail="Callback page not found")
+    html = Path(callback_path).read_text()
+    # Inject Privy credentials at serve time so the popup can complete OAuth.
+    # callback.html loads /static/runtime-config.js which has empty strings -
+    # we replace that tag with an inline script containing the real values.
+    inline_config = (
+        "<script>\n"
+        f"  window.PRIVY_APP_ID = '{PRIVY_APP_ID}';\n"
+        f"  window.PRIVY_CLIENT_ID = '{PRIVY_CLIENT_ID}';\n"
+        f"  window.PRIVY_AUTH_ORIGIN = '{PRIVY_AUTH_ORIGIN}';\n"
+        "</script>"
+    )
+    html = html.replace(
+        '<script src="/static/runtime-config.js"></script>',
+        inline_config,
+    )
+    return HTMLResponse(content=html)
 
 
 @app.post("/trigger-trade")

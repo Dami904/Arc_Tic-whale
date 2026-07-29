@@ -920,6 +920,24 @@ def is_kill_switch_active() -> bool:
     return get_setting("kill_switch", "0") == "1"
 
 
+def seconds_since_last_cycle() -> float | None:
+    """Seconds since the most recent trade_history row (any agent, any action).
+    Returns None if no cycle has ever run. Used to self-throttle the GitHub
+    Actions trade-cycle job when the schedule trigger fires more often than
+    intended."""
+    with _connection() as conn:
+        cursor = _cursor(conn)
+        cursor.execute("SELECT MAX(timestamp) AS ts FROM trade_history")
+        row = _row(cursor)
+        ts = row["ts"] if row else None
+        if not ts:
+            return None
+        last = datetime.fromisoformat(ts)
+        if last.tzinfo is None:
+            last = last.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - last).total_seconds()
+
+
 # ── Sessions & auth nonces (DB-backed so they survive restarts/sleep) ─────────
 
 def _hash_token(token: str) -> str:
