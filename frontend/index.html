@@ -2899,6 +2899,13 @@
 ════════════════════════════════════════ */
         #page-landing { display: none; }
         body.show-landing #page-landing { display: block; }
+        /* The >=1100px layout reserves 240px on body for the app's sidebar
+           nav (see .bottom-nav rule above) - that sidebar is hidden below,
+           so the reservation must be dropped too or the landing page sits
+           shifted right with a blank gap on the left. */
+        body.show-landing {
+            padding-left: 0;
+        }
         body.show-landing .nav-toggle,
         body.show-landing .utility-toggle,
         body.show-landing .utility-backdrop,

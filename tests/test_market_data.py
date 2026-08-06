@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import backend.market_data as market_data_module
-from backend.market_data import _format_change, _get_crypto_data, _percent_change
+from backend.market_data import _format_change, _get_crypto_data, _get_news_headlines, _percent_change
 
 
 class TestFormatChange:
@@ -150,3 +150,58 @@ class TestMarketDataStructure:
             change = sample_market_data[symbol]["24H_CHANGE"]
             assert change.endswith("%"), f"{symbol} 24H_CHANGE should end with %"
             assert change[0] in ("+", "-"), f"{symbol} 24H_CHANGE should start with + or -"
+
+
+class TestGetNewsHeadlines:
+    def _mock_rss(self, titles):
+        items = "".join(f"<item><title>{t}</title></item>" for t in titles)
+        xml = f"<rss><channel>{items}</channel></rss>"
+        mock_response = MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.content = xml.encode("utf-8")
+        return mock_response
+
+    def test_combines_headlines_from_both_feeds(self, monkeypatch):
+        monkeypatch.setattr(market_data_module, "_news_cache", [])
+        monkeypatch.setattr(market_data_module, "_news_cache_ts", 0.0)
+        feed_a = self._mock_rss(["Headline A1", "Headline A2"])
+        feed_b = self._mock_rss(["Headline B1"])
+
+        def fake_get(url, **kwargs):
+            return feed_a if "coindesk" in url else feed_b
+
+        with patch.object(market_data_module.httpx, "get", side_effect=fake_get):
+            headlines = _get_news_headlines()
+
+        assert "Headline A1" in headlines
+        assert "Headline B1" in headlines
+
+    def test_caps_total_headlines(self, monkeypatch):
+        monkeypatch.setattr(market_data_module, "_news_cache", [])
+        monkeypatch.setattr(market_data_module, "_news_cache_ts", 0.0)
+        feed = self._mock_rss([f"H{i}" for i in range(8)])
+
+        with patch.object(market_data_module.httpx, "get", return_value=feed):
+            headlines = _get_news_headlines()
+
+        assert len(headlines) <= market_data_module._MAX_HEADLINES
+
+    def test_returns_empty_list_when_all_feeds_fail(self, monkeypatch):
+        monkeypatch.setattr(market_data_module, "_news_cache", [])
+        monkeypatch.setattr(market_data_module, "_news_cache_ts", 0.0)
+
+        with patch.object(market_data_module.httpx, "get", side_effect=Exception("network down")):
+            headlines = _get_news_headlines()
+
+        assert headlines == []
+
+    def test_failed_fetch_does_not_poison_cache(self, monkeypatch):
+        """An all-feeds-down blip shouldn't lock out headlines for 30 min once feeds recover."""
+        monkeypatch.setattr(market_data_module, "_news_cache", [])
+        monkeypatch.setattr(market_data_module, "_news_cache_ts", 0.0)
+
+        with patch.object(market_data_module.httpx, "get", side_effect=Exception("down")):
+            _get_news_headlines()
+
+        assert market_data_module._news_cache == []
+        assert market_data_module._news_cache_ts == 0.0

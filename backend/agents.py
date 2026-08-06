@@ -46,8 +46,13 @@ AGENT_PROFILES = {
         EUR/USD rotation); if SPY's 24H change is above -0.75%, you must NOT buy anything - HOLD.
         EXIT (only if you hold a position): SELL crypto when the regime turns risk-OFF. SELL EURC
         when the regime turns risk-ON.
-        In NEUTRAL, HOLD. Do not require every signal to agree - the regime definition above IS
-        the decision rule.
+        In NEUTRAL, the price data alone doesn't tell you which way to lean - this is the ONLY
+        case where the headlines below matter. If the headlines are clearly and specifically
+        risk-off (e.g. exchange hack, regulatory crackdown, major default) treat NEUTRAL as
+        risk-OFF; if clearly and specifically risk-on (e.g. major ETF inflow, institutional
+        adoption news) treat it as risk-ON. Generic or ambiguous headlines change nothing - HOLD.
+        The headlines can only break a NEUTRAL tie; they can never override a price-based
+        risk-ON or risk-OFF signal, and never justify skipping the numeric thresholds above.
         """,
     },
     "Aggressive_Degen": {
@@ -142,8 +147,13 @@ def ask_agent(market_data, agent_name="Conservative_Whale", open_positions=None)
 
     # Convert the multi-asset dictionary to a structured string for the AI
     data_string_parts = [f"Overall Macro News: {market_data.get('MACRO_NEWS', 'N/A')}"]
+    headlines = market_data.get("NEWS_HEADLINES") or []
+    if headlines:
+        data_string_parts.append(
+            "Recent Headlines:\n" + "\n".join(f"  - {h}" for h in headlines)
+        )
     for asset, data in market_data.items():
-        if asset == "MACRO_NEWS":
+        if asset in ("MACRO_NEWS", "NEWS_HEADLINES"):
             continue # Already handled
         data_string_parts.append(
             f"  - {asset} ({data.get('TYPE')}): Price=${float(data.get('PRICE') or 0):.2f}, 24H_Change={data.get('24H_CHANGE')}, 7D_Change={data.get('7D_CHANGE')}, 1Y_Change={data.get('1Y_CHANGE')}"

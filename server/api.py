@@ -229,6 +229,7 @@ class WalletStats(BaseModel):
 class MarketDataResponse(BaseModel):
     assets: dict
     macro_news: str
+    news_headlines: list = []
 
 class UpdateProfileRequest(BaseModel):
     email: Optional[str] = None
@@ -870,12 +871,13 @@ def withdraw(req: Optional[WithdrawRequest] = None, _: str = Depends(verify_priv
 def get_market_data(request: Request):
     market_state = get_current_market_state()
     macro_news = market_state.pop("MACRO_NEWS", "Market data unavailable.")
-    return {"assets": market_state, "macro_news": macro_news}
+    news_headlines = market_state.pop("NEWS_HEADLINES", [])
+    return {"assets": market_state, "macro_news": macro_news, "news_headlines": news_headlines}
 
 @app.get("/webapp")
 def serve_telegram_webapp():
     html_path = os.path.join(os.path.dirname(__file__), "../frontend/index.html")
-    html = Path(html_path).read_text()
+    html = Path(html_path).read_text(encoding="utf-8")
     # index.html loads /static/runtime-config.js which contains empty placeholder values.
     # We replace that tag with an inline script injecting real env vars at serve time.
     inline_config = (
@@ -1105,7 +1107,7 @@ def auth_callback():
     )
     if not Path(callback_path).is_file():
         raise HTTPException(status_code=404, detail="Callback page not found")
-    html = Path(callback_path).read_text()
+    html = Path(callback_path).read_text(encoding="utf-8")
     # Inject Privy credentials at serve time so the popup can complete OAuth.
     # callback.html loads /static/runtime-config.js which has empty strings -
     # we replace that tag with an inline script containing the real values.

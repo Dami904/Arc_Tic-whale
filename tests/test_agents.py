@@ -70,6 +70,41 @@ class TestPositionStateInPrompt:
         assert "BTC (entered at $65,000.00)" in prompt
 
 
+class TestNewsHeadlinesInPrompt:
+    def _user_message_for(self, market_data):
+        mock_response = MagicMock()
+        mock_response.text = "DECISION: HOLD\nREASON: ok"
+        mock_llm = MagicMock()
+        mock_llm.invoke.return_value = mock_response
+
+        with patch.object(agents_module, "DEV_MODE", False), \
+             patch.object(agents_module, "initialize_agent", return_value=mock_llm):
+            ask_agent(market_data, agent_name="Macro_Economist")
+
+        messages = mock_llm.invoke.call_args[0][0]
+        return messages[1].content
+
+    def test_headlines_included_when_present(self):
+        content = self._user_message_for({
+            "BTC": {"PRICE": 1},
+            "NEWS_HEADLINES": ["ETF sees record inflows", "Exchange discloses breach"],
+        })
+        assert "Recent Headlines:" in content
+        assert "ETF sees record inflows" in content
+        assert "Exchange discloses breach" in content
+
+    def test_no_headlines_section_when_empty(self):
+        content = self._user_message_for({"BTC": {"PRICE": 1}, "NEWS_HEADLINES": []})
+        assert "Recent Headlines:" not in content
+
+    def test_headlines_key_not_treated_as_an_asset(self):
+        content = self._user_message_for({
+            "BTC": {"PRICE": 1},
+            "NEWS_HEADLINES": ["Some headline"],
+        })
+        assert "NEWS_HEADLINES" not in content
+
+
 class TestGetOpenPositions:
     def _rows(self, *actions):
         return [{"action": a, "asset": s, "price": p, "timestamp": f"t{i}"}
