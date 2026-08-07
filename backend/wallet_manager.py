@@ -78,10 +78,11 @@ def create_wallet_with_policy(
 ) -> dict | None:
     """
     Creates a wallet via the Node.js Agent Service (spending policies enforced).
-    Falls back to create_agent_wallet() if the service is unreachable.
+    Fails closed if the service cannot attach the requested spending policy.
     """
     if not AGENT_SERVICE_URL:
-        return create_agent_wallet(agent_name)
+        log.error("AGENT_SERVICE_URL is required to create policy-protected user wallets.")
+        return None
     try:
         headers = {"x-agent-secret": AGENT_SERVICE_SECRET} if AGENT_SERVICE_SECRET else {}
         res = httpx.post(
@@ -100,14 +101,20 @@ def create_wallet_with_policy(
         )
         res.raise_for_status()
         data = res.json()
+        if data.get("policy_attached") is not True:
+            log.error(
+                "Agent Service returned wallet without spending policy for %s: id=%s",
+                agent_name, data.get("wallet_id"),
+            )
+            return None
         log.info(
             "Agent Service wallet created for %s: id=%s policy_attached=%s",
             agent_name, data.get("wallet_id"), data.get("policy_attached"),
         )
         return {"wallet_id": data["wallet_id"], "address": data["address"]}
     except Exception as e:
-        log.warning("Agent Service unreachable (%s) - falling back to DCW.", e)
-        return create_agent_wallet(agent_name)
+        log.error("Policy-protected wallet creation failed via Agent Service: %s", e)
+        return None
 
 
 if __name__ == "__main__":

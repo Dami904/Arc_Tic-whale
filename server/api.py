@@ -374,6 +374,36 @@ def get_active_wallet_context(username: Optional[str] = None) -> dict:
     }
 
 
+def get_authenticated_wallet_context(current_user_id: str, *, provision: bool = True) -> dict:
+    """Resolve the wallet owned by the verified caller.
+
+    Admin/service-token callers keep the configured agent wallet behavior used
+    by schedulers and internal services. Normal users never fall back to that
+    wallet, because doing so would turn a missing user record into cross-account
+    access to shared funds.
+    """
+    if current_user_id == "admin":
+        return get_active_wallet_context(None)
+
+    user_id = normalize_user_id(current_user_id)
+    user_wallet = ensure_user_wallet(user_id) if provision else get_user(user_id)
+    if not user_wallet:
+        raise HTTPException(status_code=503, detail="User wallet provisioning unavailable")
+
+    wallet_id = user_wallet.get("wallet_id")
+    wallet_address = user_wallet.get("wallet_address") or _lookup_wallet_address(wallet_id)
+    if not wallet_id:
+        raise HTTPException(status_code=503, detail="User wallet is missing a wallet id")
+
+    return {
+        "wallet_id": wallet_id,
+        "address": wallet_address,
+        "source": "user",
+        "user": user_wallet,
+        "allocations": get_user_allocations(user_id),
+    }
+
+
 def _rank_agent_cards(cards: list[dict]) -> list[dict]:
     """Sorts agent cards by win_rate descending (stable - ties keep catalog
     order) and assigns a 1-indexed rank. win_rate is 0.0 for agents with no
@@ -543,9 +573,10 @@ def ping():
 
 @app.post("/users/ensure")
 @limiter.limit(lambda: f"{RATE_LIMIT_PER_MINUTE}/minute")
-def ensure_user(request: Request, req: EnsureUserRequest):
+def ensure_user(request: Request, req: EnsureUserRequest, current_user_id: str = Depends(verify_privy_token)):
+    user_id = normalize_user_id(current_user_id)
     wallet = ensure_user_wallet(
-        req.username,
+        user_id,
         email=req.email,
         display_name=req.display_name,
         avatar_url=req.avatar_url,
@@ -599,8 +630,8 @@ def update_profile(req: UpdateProfileRequest, current_user_id: str = Depends(ver
     }
 
 @app.get("/trade-history")
-def get_history(username: Optional[str] = None):
-    wallet = get_active_wallet_context(username)
+def get_history(username: Optional[str] = None, current_user_id: str = Depends(verify_privy_token)):
+    wallet = get_authenticated_wallet_context(current_user_id, provision=True)
     if wallet["source"] == "user":
         return {"trades": get_follower_trade_history(wallet["wallet_id"], limit=10, actions=TRADE_ACTIONS)}
     return {"trades": get_trade_history(limit=10, agent=AGENT_NAME, actions=TRADE_ACTIONS)}
@@ -612,9 +643,7 @@ def get_dashboard(username: Optional[str] = None, current_user_id: str = Depends
             evaluate_stop_losses(profile["id"])
         except Exception as exc:
             log.warning("Stop loss evaluation failed for %s: %s", profile["id"], exc)
-    # Use the authenticated user_id when no explicit username is supplied
-    effective_username = username or normalize_user_id(current_user_id)
-    wallet = get_active_wallet_context(effective_username)
+    wallet = get_authenticated_wallet_context(current_user_id, provision=True)
     stats = get_wallet_stats_safe(wallet["wallet_id"])
     trades = get_trade_history(limit=20, actions=FEED_ACTIONS)   # BUY/SELL only - no HOLD noise
     social_posts = get_social_posts(limit=20)
@@ -803,8 +832,8 @@ def assistant_command(req: AssistantCommandRequest, current_user_id: str = Depen
     return result
 
 @app.post("/deposit")
-def deposit(username: Optional[str] = None, _: str = Depends(verify_privy_token)):
-    wallet = get_active_wallet_context(username)
+def deposit(username: Optional[str] = None, current_user_id: str = Depends(verify_privy_token)):
+    wallet = get_authenticated_wallet_context(current_user_id, provision=True)
     if not wallet["address"]:
         return {"status": "error", "message": "No deposit address is configured for the active wallet."}
     return {
@@ -817,14 +846,14 @@ def deposit(username: Optional[str] = None, _: str = Depends(verify_privy_token)
     }
 
 @app.post("/withdraw")
-def withdraw(req: Optional[WithdrawRequest] = None, _: str = Depends(verify_privy_token)):
+def withdraw(req: Optional[WithdrawRequest] = None, current_user_id: str = Depends(verify_privy_token)):
     if req is None:
         return {
             "status": "needs_input",
             "message": "Withdraw requires destination address, asset, and amount.",
         }
 
-    wallet = get_active_wallet_context(req.username)
+    wallet = get_authenticated_wallet_context(current_user_id, provision=True)
     tx_id = execute_transfer(
         wallet_id=wallet["wallet_id"],
         destination_address=req.destination_address,
@@ -1127,10 +1156,10 @@ def auth_callback():
 
 @app.post("/trigger-trade")
 @limiter.limit(lambda: f"{RATE_LIMIT_PER_MINUTE}/minute")
-def trigger_trade(request: Request, req: Optional[TriggerTradeRequest] = None, _: str = Depends(verify_privy_token)):
+def trigger_trade(request: Request, req: Optional[TriggerTradeRequest] = None, current_user_id: str = Depends(verify_privy_token)):
     log.info("Manual trade trigger received")
 
-    active_wallet = get_active_wallet_context(req.username if req else None)
+    active_wallet = get_authenticated_wallet_context(current_user_id, provision=True)
     agent_ids = {agent["id"] for agent in get_agent_catalog()}
     agent_id = req.agent_id if req and req.agent_id in agent_ids else AGENT_NAME
     result = run_trade_cycle(
@@ -1174,12 +1203,13 @@ def scheduler_status(_: str = Depends(verify_privy_token)):
 
 @app.post("/follow")
 @limiter.limit(lambda: f"{RATE_LIMIT_PER_MINUTE}/minute")
-def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_privy_token)):
+def follow_agent(request: Request, req: FollowRequest, current_user_id: str = Depends(verify_privy_token)):
     agent_ids = {agent["id"] for agent in get_agent_catalog()}
     agent_id = req.agent_id if req.agent_id in agent_ids else AGENT_NAME
-    log.info("Follow request from @%s for %s USDC via %s", req.username, req.allocation, agent_id)
+    user_id = normalize_user_id(current_user_id)
+    log.info("Follow request from %s for %s USDC via %s", user_id, req.allocation, agent_id)
 
-    wallet_record = ensure_user_wallet(req.username)
+    wallet_record = ensure_user_wallet(user_id)
     real_wallet_id = wallet_record.get("wallet_id") if wallet_record else None
     real_wallet_address = wallet_record.get("wallet_address") if wallet_record else None
 
@@ -1222,7 +1252,7 @@ def follow_agent(request: Request, req: FollowRequest, _: str = Depends(verify_p
 
     return {
         "status": "success",
-        "message": f"User {req.username} secured to smart contract.",
+        "message": f"User {wallet_record['user_id']} secured to smart contract.",
         "wallet_id": real_wallet_id,
         "address": real_wallet_address,
         "stop_loss_pct": req.stop_loss_pct,

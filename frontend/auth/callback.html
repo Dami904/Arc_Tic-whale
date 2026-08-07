@@ -75,13 +75,23 @@
         const spinEl   = document.getElementById('spinner');
         const statusEl = document.getElementById('status');
 
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[ch]));
+        }
+
         function showError(title, body, hint) {
             spinEl.style.display = 'none';
             cardEl.innerHTML = `
                 <div class="err-icon">⚠️</div>
-                <div class="err-title">${title}</div>
-                <div class="err-body">${body}</div>
-                ${hint ? `<div class="err-hint">${hint}</div>` : ''}
+                <div class="err-title">${escapeHtml(title)}</div>
+                <div class="err-body">${escapeHtml(body)}</div>
+                ${hint ? `<div class="err-hint">${escapeHtml(hint)}</div>` : ''}
                 <a class="btn-close" href="javascript:window.close()">Close window</a>
             `;
         }

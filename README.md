@@ -61,15 +61,15 @@ The Agent Service exposes these endpoints (port 3001):
 ```js
 // Attached to every new user wallet at creation time
 spendingLimits: [
-  { limits: [{ amount: "10.00", currency: "USD" }], timeFrame: "TRANSACTION" },
-  { limits: [{ amount: "200.00", currency: "USD" }], timeFrame: "DAILY" },
-  { limits: [{ amount: "1000.00", currency: "USD" }], timeFrame: "MONTHLY" },
+  { limits: [{ amount: "2.00", currency: "USD" }], timeFrame: "TRANSACTION" },
+  { limits: [{ amount: "50.00", currency: "USD" }], timeFrame: "DAILY" },
+  { limits: [{ amount: "500.00", currency: "USD" }], timeFrame: "MONTHLY" },
 ]
 ```
 
-### Fallback safety
+### Fail-closed safety
 
-If the Agent Service is unreachable, the Python backend automatically falls back to the existing Circle Developer Controlled Wallets Python SDK - **no user-facing errors, no downtime**.
+User wallet creation fails closed if the Agent Service cannot attach the requested spending policy. The Python backend rejects any Agent Service wallet response where `policy_attached` is not `true`, so a user wallet is never silently handed back without the advertised guardrails.
 
 ---
 

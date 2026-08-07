@@ -4357,18 +4357,34 @@
 	            return String(num);
 	        }
 
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[ch]));
+            }
+
+            function escapeJsString(value) {
+                return String(value ?? '')
+                    .replace(/\\/g, '\\\\')
+                    .replace(/'/g, "\\'")
+                    .replace(/\r/g, '\\r')
+                    .replace(/\n/g, '\\n')
+                    .replace(/</g, '\\x3C');
+            }
+
+            function safeClassToken(value, fallback = '') {
+                return String(value || fallback).replace(/[^A-Za-z0-9_-]/g, '');
+            }
+
 	        function currentUsername() {
 	            // Privy user ID (did:privy:…) - set after login
 	            const params = new URLSearchParams(window.location.search);
 	            return _privyUserId || params.get('username') || '';
 	        }
-
-	        function usernameQuery() {
-	            const username = currentUsername();
-	            return username ? `?username=${encodeURIComponent(username)}` : '';
-	        }
-
-
 
         function _showWalletLoading() {
             // Show a "creating wallet" skeleton state immediately after login
@@ -4780,19 +4796,22 @@ function _assistantContext() {
         // ── Stop-loss inline editor ──────────────────────────────────────────
         function openStopLossEdit(agentId, event) {
             if (event) { event.stopPropagation(); event.preventDefault(); }
-            document.getElementById(`sl-display-${agentId}`).style.display = 'none';
-            const editEl = document.getElementById(`sl-edit-${agentId}`);
+            const safeAgentId = safeClassToken(agentId, 'agent');
+            document.getElementById(`sl-display-${safeAgentId}`).style.display = 'none';
+            const editEl = document.getElementById(`sl-edit-${safeAgentId}`);
             editEl.style.display = 'flex';
             editEl.querySelector('input').focus();
         }
         function cancelStopLossEdit(agentId, event) {
             if (event) { event.stopPropagation(); event.preventDefault(); }
-            document.getElementById(`sl-display-${agentId}`).style.display = 'flex';
-            document.getElementById(`sl-edit-${agentId}`).style.display = 'none';
+            const safeAgentId = safeClassToken(agentId, 'agent');
+            document.getElementById(`sl-display-${safeAgentId}`).style.display = 'flex';
+            document.getElementById(`sl-edit-${safeAgentId}`).style.display = 'none';
         }
         async function saveStopLoss(agentId, event) {
             if (event) { event.stopPropagation(); event.preventDefault(); }
-            const input = document.getElementById(`sl-input-${agentId}`);
+            const safeAgentId = safeClassToken(agentId, 'agent');
+            const input = document.getElementById(`sl-input-${safeAgentId}`);
             const pct = parseFloat(input.value);
             if (!pct || pct <= 0 || pct > 99) { showToast('Enter a valid % (1–99)'); return; }
             try {
@@ -4804,7 +4823,7 @@ function _assistantContext() {
                 const data = await res.json();
                 if (!res.ok || data.status !== 'success') throw new Error(data.message || 'Update failed');
                 // update displayed value without full re-render
-                const valEl = document.getElementById(`sl-val-${agentId}`);
+                const valEl = document.getElementById(`sl-val-${safeAgentId}`);
                 if (valEl) valEl.textContent = `${pct.toFixed(1)}%`;
                 cancelStopLossEdit(agentId);
                 showToast(`Stop-loss set to ${pct.toFixed(1)}% ✓`);
@@ -4822,7 +4841,7 @@ function _assistantContext() {
             const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const line = document.createElement('div');
             line.className = 'log-line';
-            line.innerHTML = `<span class="log-ts">[${ts}]</span><span class="${termColors[type] || 'log-info'}"> › ${msg}</span>`;
+            line.innerHTML = `<span class="log-ts">[${escapeHtml(ts)}]</span><span class="${termColors[type] || 'log-info'}"> › ${escapeHtml(msg)}</span>`;
             body.appendChild(line);
             body.scrollTop = body.scrollHeight;
         }
@@ -4994,19 +5013,23 @@ function _assistantContext() {
                 } else if (marketCache && marketCache[baseSymbol] && marketCache[baseSymbol].PRICE) {
                     usdVal = fmtUsd(rawAmt * marketCache[baseSymbol].PRICE);
                 }
+                const safeSymbol = escapeHtml(symbol);
+                const safeName = escapeHtml(name);
+                const safeAmount = escapeHtml(amount);
+                const safeUsdVal = escapeHtml(usdVal);
 
                 return `
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,0.02);gap:12px;">
                         <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-                            <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:15px;color:${color};flex-shrink:0;">${icon}</div>
+                            <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:15px;color:${color};flex-shrink:0;">${escapeHtml(icon)}</div>
                             <div style="min-width:0;">
-                                <strong style="color:var(--text);font-size:13px;">${symbol}</strong>
-                                <div style="font-size:11px;color:var(--muted);margin-top:2px;">${name}</div>
+                                <strong style="color:var(--text);font-size:13px;">${safeSymbol}</strong>
+                                <div style="font-size:11px;color:var(--muted);margin-top:2px;">${safeName}</div>
                             </div>
                         </div>
                         <div style="text-align:right;flex-shrink:0;">
-                            <div style="font-size:14px;font-weight:700;color:${color};">${amount} ${symbol}</div>
-                            <div style="font-size:11px;color:var(--muted);">${usdVal ? usdVal + ' · ' : ''}Arc Testnet</div>
+                            <div style="font-size:14px;font-weight:700;color:${color};">${safeAmount} ${safeSymbol}</div>
+                            <div style="font-size:11px;color:var(--muted);">${safeUsdVal ? safeUsdVal + ' · ' : ''}Arc Testnet</div>
                         </div>
                     </div>
                 `;
@@ -5019,9 +5042,7 @@ function _assistantContext() {
 	            // Skip if not authenticated - avoids 401 triggering the login modal
 	            if (!_privyToken && !isTelegramMode()) return;
 	            try {
-	                const username = currentUsername();
-	                const dashboardUrl = username ? `/dashboard?username=${encodeURIComponent(username)}` : '/dashboard';
-	                const res = await apiFetch(dashboardUrl);
+	                const res = await apiFetch('/dashboard');
 	                if (!res.ok) throw new Error(`dashboard ${res.status}`);
 	                renderDashboard(await res.json());
 	            } catch (err) {
@@ -5054,7 +5075,7 @@ function _assistantContext() {
                     const asset = marketCache[symbol];
                     if (!asset) return;
                     const icon = symbol === 'BTC' ? '₿' : symbol === 'ETH' ? 'Ξ' : symbol === 'SOL' ? '◎' : symbol === 'AAPL' ? '🍎' : '📊';
-                    pill.innerHTML = `${icon} ${symbol} · ${fmtUsd(asset.PRICE)} · ${asset['24H_CHANGE']}`;
+                    pill.textContent = `${icon} ${symbol} · ${fmtUsd(asset.PRICE)} · ${asset['24H_CHANGE']}`;
                 });
 
 	                const btc = marketCache.BTC;
@@ -5084,6 +5105,9 @@ function _assistantContext() {
 	                const stopLoss = Number(agent.stop_loss_pct || 10);
 	                const statusText = agent.status || 'Ready to trade';
 	                const statusDetail = agent.status_detail || 'No live trades yet';
+                const agentId = safeClassToken(agent.id, 'agent');
+                const risk = ['high', 'medium', 'low'].includes(agent.risk) ? agent.risk : 'low';
+                const safeStatusText = escapeHtml(statusText);
                 const args = [
                     agent.id,
                     agent.avatar,
@@ -5092,53 +5116,53 @@ function _assistantContext() {
 	                    `${agent.win_rate || 0}%`,
 	                    agent.trades || 0,
 	                    fmtCount(agent.followers),
-	                ].map(v => String(v).replace(/'/g, "\\'"));
+	                ].map(escapeJsString);
 	                return `
-	                    <div class="agent-card risk-${agent.risk}" data-risk="${agent.risk}"
+	                    <div class="agent-card risk-${risk}" data-risk="${risk}"
 	                        onclick="openCopyModal('${args[1]}','${args[2]}','${args[3]}','${args[4]}','${args[5]}','${args[6]}','${args[0]}')">
 	                        <div class="agent-card-top">
 	                            <div class="agent-card-icon" style="position:relative;">
-	                                ${agent.avatar}
-	                                <span style="position:absolute;bottom:-4px;right:-4px;background:var(--surface-raised);border:1px solid var(--border-accent);border-radius:20px;font-size:9px;font-family:var(--font-mono);padding:1px 5px;color:var(--cyan);" title="Ranked by win rate">#${agent.rank || '-'}</span>
+	                                ${escapeHtml(agent.avatar)}
+	                                <span style="position:absolute;bottom:-4px;right:-4px;background:var(--surface-raised);border:1px solid var(--border-accent);border-radius:20px;font-size:9px;font-family:var(--font-mono);padding:1px 5px;color:var(--cyan);" title="Ranked by win rate">#${escapeHtml(agent.rank || '-')}</span>
 	                            </div>
                             <div class="agent-card-info">
-                                <div class="agent-card-name">${agent.name}</div>
-                                <div class="agent-card-desc">${agent.description}</div>
-                                <div class="agent-card-desc" style="margin-top:6px;color:var(--muted-mid);font-size:11px;">Status: ${statusText} · ${statusDetail}</div>
+                                <div class="agent-card-name">${escapeHtml(agent.name)}</div>
+                                <div class="agent-card-desc">${escapeHtml(agent.description)}</div>
+                                <div class="agent-card-desc" style="margin-top:6px;color:var(--muted-mid);font-size:11px;">Status: ${safeStatusText} · ${escapeHtml(statusDetail)}</div>
                             </div>
                             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
-                                <span class="pill ${pill}">${agent.risk_label}</span>
+                                <span class="pill ${pill}">${escapeHtml(agent.risk_label)}</span>
                                 ${agent.trend === 'declining' ? '<span class="pill pill-red" title="Recent return has trailed the prior week by more than 5 points">⚠ Declining</span>' : ''}
                             </div>
                         </div>
                         <div class="agent-card-stats">
-                            <div class="acs"><div class="acs-val ${color}">${agent.win_rate || 0}%</div><div class="acs-lbl">Win Rate</div></div>
-                            <div class="acs"><div class="acs-val">${agent.trades || 0}</div><div class="acs-lbl">Trades</div></div>
-                            <div class="acs"><div class="acs-val ${color}">${agent.roi_24h || 'N/A'}</div><div class="acs-lbl">24h Signal</div></div>
+                            <div class="acs"><div class="acs-val ${color}">${escapeHtml(agent.win_rate || 0)}%</div><div class="acs-lbl">Win Rate</div></div>
+                            <div class="acs"><div class="acs-val">${escapeHtml(agent.trades || 0)}</div><div class="acs-lbl">Trades</div></div>
+                            <div class="acs"><div class="acs-val ${color}">${escapeHtml(agent.roi_24h || 'N/A')}</div><div class="acs-lbl">24h Signal</div></div>
                         </div>
                         ${agent.retention_rate_pct != null ? `
                         <div style="font-size:11px;color:var(--muted-mid);margin-top:-4px;margin-bottom:10px;">
-                            🔁 ${agent.retention_rate_pct}% of followers still active${agent.avg_tenure_days != null ? ` · avg ${agent.avg_tenure_days}d before leaving` : ''}
+                            🔁 ${escapeHtml(agent.retention_rate_pct)}% of followers still active${agent.avg_tenure_days != null ? ` · avg ${escapeHtml(agent.avg_tenure_days)}d before leaving` : ''}
                         </div>` : ''}
                         <div class="agent-card-allocation">
                             <div style="flex:1;">
                                 <div class="agent-alloc-label">USDC allocated</div>
                                 <div class="agent-alloc-value">${fmtUsdc(allocated)} USDC</div>
                                 ${allocated > 0 ? `
-                                <div class="stop-loss-row" id="sl-display-${agent.id}" style="display:flex;align-items:center;gap:6px;margin-top:5px;">
+                                <div class="stop-loss-row" id="sl-display-${agentId}" style="display:flex;align-items:center;gap:6px;margin-top:5px;">
                                     <span style="font-size:11px;color:var(--muted);">Stop-loss:</span>
-                                    <span style="font-size:11px;font-weight:600;color:var(--amber,#f59e0b);" id="sl-val-${agent.id}">${stopLoss.toFixed(1)}%</span>
-                                    <button type="button" onclick="openStopLossEdit('${agent.id}', event)" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:11px;color:var(--muted);" title="Edit stop-loss">✎</button>
+                                    <span style="font-size:11px;font-weight:600;color:var(--amber,#f59e0b);" id="sl-val-${agentId}">${stopLoss.toFixed(1)}%</span>
+                                    <button type="button" onclick="openStopLossEdit('${escapeJsString(agent.id)}', event)" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:11px;color:var(--muted);" title="Edit stop-loss">✎</button>
                                 </div>
-                                <div class="stop-loss-edit" id="sl-edit-${agent.id}" style="display:none;align-items:center;gap:6px;margin-top:5px;" onclick="event.stopPropagation()">
-                                    <input type="number" min="1" max="99" step="0.5" value="${stopLoss.toFixed(1)}" id="sl-input-${agent.id}"
+                                <div class="stop-loss-edit" id="sl-edit-${agentId}" style="display:none;align-items:center;gap:6px;margin-top:5px;" onclick="event.stopPropagation()">
+                                    <input type="number" min="1" max="99" step="0.5" value="${stopLoss.toFixed(1)}" id="sl-input-${agentId}"
                                         style="width:60px;padding:3px 6px;font-size:12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input,#1a1a2e);color:var(--text);">
                                     <span style="font-size:11px;color:var(--muted);">%</span>
-                                    <button type="button" onclick="saveStopLoss('${agent.id}', event)" style="font-size:11px;padding:3px 8px;border-radius:6px;border:none;background:var(--cyan);color:#000;cursor:pointer;font-weight:600;">Save</button>
-                                    <button type="button" onclick="cancelStopLossEdit('${agent.id}', event)" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;">✕</button>
+                                    <button type="button" onclick="saveStopLoss('${escapeJsString(agent.id)}', event)" style="font-size:11px;padding:3px 8px;border-radius:6px;border:none;background:var(--cyan);color:#000;cursor:pointer;font-weight:600;">Save</button>
+                                    <button type="button" onclick="cancelStopLossEdit('${escapeJsString(agent.id)}', event)" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;">✕</button>
                                 </div>` : ''}
                             </div>
-                            ${allocated > 0 ? `<button class="btn btn-outline agent-detach-btn" type="button" onclick="detachAgent('${agent.id}', event)">Detach</button>` : `<span class="pill pill-amber" style="font-size:10px;">${statusText}</span>`}
+                            ${allocated > 0 ? `<button class="btn btn-outline agent-detach-btn" type="button" onclick="detachAgent('${escapeJsString(agent.id)}', event)">Detach</button>` : `<span class="pill pill-amber" style="font-size:10px;">${safeStatusText}</span>`}
                         </div>
                     </div>
                 `;
@@ -5175,23 +5199,23 @@ function _assistantContext() {
                 const timeLabel = `${timeAgo(item.timestamp)}${item.type === 'post' ? ' · social' : ''}`;
                 const avatar = item.avatar || '🐋';
                 const copyHandler = item.agent_id
-                    ? `copyFeedAgent('${String(item.agent_id).replace(/'/g, "\\'")}')`
+                    ? `copyFeedAgent('${escapeJsString(item.agent_id)}')`
                     : `navigate('home', document.querySelector('.nav-item'))`;
                 return `
                     <div class="feed-post">
                         <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">
-                            <span>${feedType}</span>
-                            ${txLabel ? `<span>${txLabel}</span>` : ''}
+                            <span>${escapeHtml(feedType)}</span>
+                            ${txLabel ? `<span>${escapeHtml(txLabel)}</span>` : ''}
                         </div>
                         <div class="post-header">
-                            <div class="post-avatar" style="font-size:28px;display:flex;align-items:center;justify-content:center;">${avatar}</div>
+                            <div class="post-avatar" style="font-size:28px;display:flex;align-items:center;justify-content:center;">${escapeHtml(avatar)}</div>
                             <div class="post-meta">
-                                <div class="post-agent">${item.agent || 'Agent'}</div>
-                                <div class="post-time">${timeLabel}</div>
+                                <div class="post-agent">${escapeHtml(item.agent || 'Agent')}</div>
+                                <div class="post-time">${escapeHtml(timeLabel)}</div>
                             </div>
-                            <div class="post-action-tag ${tagClass}">${item.action || 'UPDATE'}</div>
+                            <div class="post-action-tag ${tagClass}">${escapeHtml(item.action || 'UPDATE')}</div>
                         </div>
-                        <div class="post-body">${item.body || ''}</div>
+                        <div class="post-body">${escapeHtml(item.body || '')}</div>
                         <div class="post-footer">
                             <div class="reaction-row">
                                 <div class="reaction-btn" onclick="react(this,'👍')">👍 0</div>
@@ -5218,10 +5242,10 @@ function _assistantContext() {
 	                    <div class="tx-item">
 	                        <div class="tx-icon">${txIcon}</div>
 	                        <div class="tx-info">
-	                            <div class="tx-desc">${tx.action} · ${tx.asset || 'N/A'}</div>
-	                            <div class="tx-time">${new Date(tx.timestamp).toLocaleString()}</div>
+	                            <div class="tx-desc">${escapeHtml(tx.action)} · ${escapeHtml(tx.asset || 'N/A')}</div>
+	                            <div class="tx-time">${escapeHtml(new Date(tx.timestamp).toLocaleString())}</div>
 	                        </div>
-	                        <div class="tx-amt ${positive ? 'pos' : 'neg'}">${amount}</div>
+	                        <div class="tx-amt ${positive ? 'pos' : 'neg'}">${escapeHtml(amount)}</div>
 	                    </div>
 	                `;
 	            }).join('');
@@ -5231,7 +5255,7 @@ function _assistantContext() {
         async function fetchTradeHistory() {
             if (!_privyToken && !isTelegramMode()) return;
             try {
-                const res = await apiFetch(`/trade-history${usernameQuery()}`);
+                const res = await apiFetch('/trade-history');
                 const data = await res.json();
                 const container = document.getElementById('tradeHistoryContainer');
                 if (!container) return;
@@ -5244,13 +5268,13 @@ function _assistantContext() {
                     <div class="trade-icon ${t.action === 'BUY' ? 'ti-buy' : 'ti-sell'}">${t.action === 'BUY' ? '📈' : ''}</div>
                     <div class="trade-info">
                         <div class="ti-top">
-                            <span class="ti-pair">${t.action} · ${t.asset || 'N/A'}</span>
-                            <span class="pill ${t.action === 'BUY' ? 'pill-cyan' : 'pill-red'}" style="font-size:9px;padding:2px 6px;">${t.agent}</span>
+                            <span class="ti-pair">${escapeHtml(t.action)} · ${escapeHtml(t.asset || 'N/A')}</span>
+                            <span class="pill ${t.action === 'BUY' ? 'pill-cyan' : 'pill-red'}" style="font-size:9px;padding:2px 6px;">${escapeHtml(t.agent)}</span>
                         </div>
-                        <div class="ti-time">${new Date(t.timestamp).toLocaleString()}</div>
+                        <div class="ti-time">${escapeHtml(new Date(t.timestamp).toLocaleString())}</div>
                     </div>
                     <div class="ti-right">
-                        <div class="ti-pnl ${t.action === 'BUY' ? 'pos' : 'neg'}">${t.reason || 'N/A'}</div>
+                        <div class="ti-pnl ${t.action === 'BUY' ? 'pos' : 'neg'}">${escapeHtml(t.reason || 'N/A')}</div>
                     </div>
                 </div>
             `).join('');
@@ -5391,7 +5415,7 @@ function _assistantContext() {
         // ── Deposit Modal ──
         async function handleDeposit() {
             try {
-                const res = await apiFetch(`/deposit${usernameQuery()}`, { method: 'POST' });
+                const res = await apiFetch('/deposit', { method: 'POST' });
                 const data = await res.json();
                 const addr = data.address || latestWalletAddress || '';
                 if (addr) latestWalletAddress = addr;
@@ -5472,11 +5496,10 @@ function _assistantContext() {
             const btn = document.getElementById('wdConfirmBtn');
             btn.disabled = true; btn.textContent = 'Processing...';
             try {
-                const tgUser = currentUsername();
                 const res = await apiFetch('/withdraw', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ destination_address: destination, amount, asset: 'USDC', username: tgUser || null })
+                    body: JSON.stringify({ destination_address: destination, amount, asset: 'USDC' })
                 });
                 const data = await res.json();
                 if (!res.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Withdraw failed');
@@ -5635,7 +5658,7 @@ function _assistantContext() {
                 return;
             }
             hint.style.display = 'block';
-            hint.innerHTML = message;
+            hint.textContent = message;
         }
 
         function _privySdkReady() {
@@ -5844,7 +5867,6 @@ function _assistantContext() {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            username: tgUser,
                             allocation: parseFloat(alloc),
                             stop_loss_pct: parseFloat(stopLoss || '10'),
                             agent_id: agentId
@@ -5882,15 +5904,12 @@ function _assistantContext() {
         async function forceMarketCheck() {
             log(`Forcing market check...`, 'action');
             showToast('AI Pipeline awakened...');
-            try {
-		                const tgUser = currentUsername();
-		                const options = tgUser
-		                    ? {
-		                        method: 'POST',
-		                        headers: { 'Content-Type': 'application/json' },
-		                        body: JSON.stringify({ username: tgUser, agent_id: selectedAgentId || 'Conservative_Whale' })
-		                    }
-		                    : { method: 'POST' };
+	            try {
+			                const options = {
+		                    method: 'POST',
+		                    headers: { 'Content-Type': 'application/json' },
+		                    body: JSON.stringify({ agent_id: selectedAgentId || 'Conservative_Whale' })
+		                };
 		                const res = await apiFetch('/trigger-trade', options);
                 const data = await res.json();
 	                if (data.status === 'success' || data.status === 'hold') {
@@ -5983,12 +6002,11 @@ function _assistantContext() {
 	                return;
 	            }
 
-	            const tgUser = currentUsername() || 'BrowserTester';
 	            try {
 	                const res = await apiFetch('/follow', {
 	                    method: 'POST',
 	                    headers: { 'Content-Type': 'application/json' },
-	                    body: JSON.stringify({ username: tgUser, allocation: alloc, asset: 'USDC', stop_loss_pct: stopLoss, agent_id: modalAgent.id })
+	                    body: JSON.stringify({ allocation: alloc, asset: 'USDC', stop_loss_pct: stopLoss, agent_id: modalAgent.id })
 	                });
 	                const data = await res.json();
 	                if (!res.ok || data.status !== 'success') throw new Error(data.detail || data.message || 'Copy failed');
@@ -6050,15 +6068,15 @@ function _assistantContext() {
                 grid.innerHTML = agents.map(a => `
                     <div class="landing-agent-card">
                         <div class="landing-agent-top">
-                            <span class="landing-agent-avatar">${a.avatar || '🤖'}</span>
+                            <span class="landing-agent-avatar">${escapeHtml(a.avatar || '🤖')}</span>
                             <div>
-                                <div class="landing-agent-name">${a.name}</div>
-                                <div class="landing-agent-risk">${a.risk_label} risk</div>
+                                <div class="landing-agent-name">${escapeHtml(a.name)}</div>
+                                <div class="landing-agent-risk">${escapeHtml(a.risk_label)} risk</div>
                             </div>
                         </div>
-                        <div class="landing-agent-desc">${a.description || ''}</div>
+                        <div class="landing-agent-desc">${escapeHtml(a.description || '')}</div>
                         <div class="landing-agent-stats">
-                            <span>Win rate <b>${a.win_rate || 0}%</b></span>
+                            <span>Win rate <b>${escapeHtml(a.win_rate || 0)}%</b></span>
                             <span>Followers <b>${fmtCount(a.followers || 0)}</b></span>
                         </div>
                     </div>

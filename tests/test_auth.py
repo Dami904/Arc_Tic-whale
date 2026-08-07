@@ -194,6 +194,139 @@ class TestExitAllPositionsEndpoint:
         assert body["failed"] == []
 
 
+class TestAuthenticatedWalletAuthorization:
+    def _seed_users(self):
+        db.upsert_user_wallet(
+            user_id="alice",
+            wallet_id="wallet_alice",
+            wallet_address="0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            referral_code="ref_alice",
+        )
+        db.upsert_user_wallet(
+            user_id="bob",
+            wallet_id="wallet_bob",
+            wallet_address="0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            referral_code="ref_bob",
+        )
+
+    def test_users_ensure_requires_auth(self, client):
+        r = client.post("/users/ensure", json={"username": "alice"})
+        assert r.status_code == 401
+
+    def test_deposit_ignores_username_query_and_uses_authenticated_user(self, client):
+        self._seed_users()
+        token = db.create_session("alice")
+
+        r = client.post(
+            "/deposit?username=bob",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert r.status_code == 200
+        body = r.json()
+        assert body["status"] == "success"
+        assert body["wallet_id"] == "wallet_alice"
+        assert body["address"] == "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+    def test_withdraw_ignores_request_username_and_uses_authenticated_wallet(self, client, monkeypatch):
+        import server.api as api
+
+        self._seed_users()
+        token = db.create_session("alice")
+        calls = []
+
+        def fake_execute_transfer(**kwargs):
+            calls.append(kwargs)
+            return "tx_alice"
+
+        monkeypatch.setattr(api, "execute_transfer", fake_execute_transfer)
+
+        r = client.post(
+            "/withdraw",
+            json={
+                "username": "bob",
+                "destination_address": "0xcccccccccccccccccccccccccccccccccccccccc",
+                "amount": 1.25,
+                "asset": "USDC",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert r.status_code == 200
+        assert r.json()["status"] == "success"
+        assert calls[0]["wallet_id"] == "wallet_alice"
+
+    def test_follow_ignores_request_username_and_records_authenticated_user(self, client, monkeypatch):
+        import server.api as api
+
+        self._seed_users()
+        token = db.create_session("alice")
+        monkeypatch.setattr(api, "get_wallet_stats_safe", lambda wallet_id: {
+            "total_balance_usd": 10.0,
+            "token_balances": [{"symbol": "USDC", "amount": "10.0"}],
+            "performance": {},
+        })
+
+        r = client.post(
+            "/follow",
+            json={
+                "username": "bob",
+                "allocation": 5.0,
+                "stop_loss_pct": 10.0,
+                "agent_id": "Conservative_Whale",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert r.status_code == 200
+        body = r.json()
+        assert body["status"] == "success"
+        assert body["wallet_id"] == "wallet_alice"
+        assert db.get_follower_wallet("Conservative_Whale", "alice")["user_wallet_id"] == "wallet_alice"
+        assert db.get_follower_wallet("Conservative_Whale", "bob") is None
+
+    def test_trigger_trade_ignores_request_username_and_uses_authenticated_wallet(self, client, monkeypatch):
+        import server.api as api
+
+        self._seed_users()
+        token = db.create_session("alice")
+        calls = []
+
+        def fake_run_trade_cycle(**kwargs):
+            calls.append(kwargs)
+            return {"status": "hold", "action": "HOLD", "tx_hash": None}
+
+        monkeypatch.setattr(api, "run_trade_cycle", fake_run_trade_cycle)
+
+        r = client.post(
+            "/trigger-trade",
+            json={"username": "bob", "agent_id": "Conservative_Whale"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert r.status_code == 200
+        assert r.json()["status"] == "hold"
+        assert calls[0]["wallet_id"] == "wallet_alice"
+        assert calls[0]["recipient_address"] == "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+    def test_trade_history_requires_auth_and_ignores_username_query(self, client):
+        self._seed_users()
+        db.log_trade(agent="Follower:wallet_alice", action="BUY", asset="BTC", tx_id="tx_a", reason="alice trade")
+        db.log_trade(agent="Follower:wallet_bob", action="BUY", asset="ETH", tx_id="tx_b", reason="bob trade")
+
+        assert client.get("/trade-history?username=bob").status_code == 401
+
+        token = db.create_session("alice")
+        r = client.get(
+            "/trade-history?username=bob",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert r.status_code == 200
+        trades = r.json()["trades"]
+        assert [trade["tx_id"] for trade in trades] == ["tx_a"]
+
+
 class TestTelegramWebhookEndpoint:
     def test_no_secret_configured_accepts_any_request(self, client, monkeypatch):
         import server.api as api

@@ -136,8 +136,14 @@ app.post('/wallets', async (req, res) => {
         policyAttached = true;
         console.log(`[circle-agent] Spending policy applied to wallet ${wallet.id}`);
       } catch (policyErr) {
-        // Policy attachment is best-effort - wallet is still usable without it
-        console.warn(`[circle-agent] Spending policy failed (non-fatal): ${policyErr.message}`);
+        console.error(`[circle-agent] Spending policy failed for wallet ${wallet.id}: ${policyErr.message}`);
+        return res.status(502).json({
+          error: 'Spending policy attachment failed',
+          detail: policyErr.message,
+          wallet_id: wallet.id,
+          address: wallet.address,
+          policy_attached: false,
+        });
       }
     }
 
