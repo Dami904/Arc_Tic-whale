@@ -23,10 +23,10 @@ Python FastAPI  ──httpx──►  Circle Agent Service (Node.js · port 3001
                              Circle API → Arc Testnet wallet created
                                     │
                                     ▼
-                          Spending policy attached:
-                          • Max $2.00 per transaction
-                          • Max $50.00 per day
-                          • Max $500.00 per month
+Spending policy attached:
+                          • Max $100.00 per transaction by default
+                          • Max $1,000.00 per day by default
+                          • Max $5,000.00 per month by default
 ```
 
 ### Circle Agent Stack SDK used
@@ -61,11 +61,15 @@ The Agent Service exposes these endpoints (port 3001):
 ```js
 // Attached to every new user wallet at creation time
 spendingLimits: [
-  { limits: [{ amount: "2.00", currency: "USD" }], timeFrame: "TRANSACTION" },
-  { limits: [{ amount: "50.00", currency: "USD" }], timeFrame: "DAILY" },
-  { limits: [{ amount: "500.00", currency: "USD" }], timeFrame: "MONTHLY" },
+  { limits: [{ amount: "100.00", currency: "USD" }], timeFrame: "TRANSACTION" },
+  { limits: [{ amount: "1000.00", currency: "USD" }], timeFrame: "DAILY" },
+  { limits: [{ amount: "5000.00", currency: "USD" }], timeFrame: "MONTHLY" },
 ]
 ```
+
+When a user follows an agent, the Python backend also calls `PUT /wallets/:id/policy`
+before recording the allocation, so Circle's enforced spending caps stay aligned
+with the copy-engine trade sizing.
 
 ### Fail-closed safety
 
@@ -291,11 +295,9 @@ Required GitHub Actions secrets (repo → Settings → Secrets and variables →
 The cron does nothing until this workflow is merged into `main` - a manual run via
 Actions tab → "Trade Cycle" → Run workflow works from any branch for testing.
 
-Kill switch: set the `kill_switch` setting to `1` - cycles skip cleanly and exit 0.
-**Note:** `POST /settings/kill_switch` is currently reachable by any authenticated
-user, not just admins - anyone signed up can halt trading platform-wide. Tightening
-this to an admin-only check is a recommended follow-up now that it gates a live
-GitHub Actions trading job. `scripts/run_cycle.py` also refuses to run in live mode
+Kill switch: set the `kill_switch` setting to `1` with the admin API token - cycles
+skip cleanly and exit 0. `POST /settings/kill_switch` is admin-gated; regular users
+can only update their own notification preferences. `scripts/run_cycle.py` also refuses to run in live mode
 (`TRADE_DRY_RUN=false`) if any required secret is missing, rather than silently trading
 against an empty fallback database.
 

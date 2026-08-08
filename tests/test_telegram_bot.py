@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
 
 import pytest
 
@@ -18,6 +19,13 @@ def _fresh_telegram_bot_module(monkeypatch):
 
 
 class TestProcessWebhookUpdate:
+    def test_telegram_user_id_uses_immutable_numeric_id(self):
+        import backend.telegram_bot as tb
+
+        message = SimpleNamespace(from_user=SimpleNamespace(id=123, username="mutable_name"))
+
+        assert tb._telegram_user_id(message) == "tg_123"
+
     def test_parses_and_dispatches_update(self):
         import backend.telegram_bot as tb
 

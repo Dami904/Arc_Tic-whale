@@ -59,7 +59,7 @@ from backend.agents import get_agent_catalog, get_agent_profile, AGENT_PROFILES
 from backend.user_wallets import ensure_user_wallet, normalize_user_id
 from backend.wallet_summary import get_wallet_stats_safe
 from backend.performance import get_agent_performance, get_follower_performance
-from backend.wallet_manager import initialize_circle_client
+from backend.wallet_manager import initialize_circle_client, policy_for_copy_allocation, update_wallet_policy
 from backend.telegram_bot import ensure_webhook_registered, process_webhook_update
 from circle.web3.developer_controlled_wallets.api import TransactionsApi, WalletsApi
 from backend.config import (
@@ -1226,6 +1226,19 @@ def follow_agent(request: Request, req: FollowRequest, current_user_id: str = De
             "status": "error",
             "message": f"Insufficient balance - you have {usdc_balance:.2f} USDC available.",
         }
+
+    if not TRADE_DRY_RUN:
+        policy = policy_for_copy_allocation(req.allocation)
+        if not update_wallet_policy(
+            real_wallet_id,
+            daily_limit=policy["dailyLimit"],
+            max_per_tx=policy["maxPerTx"],
+            monthly_limit=policy["monthlyLimit"],
+        ):
+            return {
+                "status": "error",
+                "message": "Failed to update wallet spending policy for this allocation.",
+            }
 
     add_follower(
         user_id=wallet_record["user_id"],

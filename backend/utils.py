@@ -23,18 +23,14 @@ def parse_ai_decision(raw_response: str) -> dict:
     decision = decision_match.group(1)
     asset = decision_match.group(2)
 
-    if decision in {"BUY", "SELL"} and asset not in SUPPORTED_ASSETS:
-        fallback_asset = _find_asset_in_text(text)
-        asset = fallback_asset or "ETH"
-
     reason_match = re.search(r"REASON:\s*(.+)", raw_response or "", re.IGNORECASE | re.DOTALL)
     reason = reason_match.group(1).strip() if reason_match else ""
 
+    if decision in {"BUY", "SELL"} and asset not in SUPPORTED_ASSETS:
+        return {
+            "decision": "HOLD",
+            "asset": None,
+            "reason": reason or f"Unsupported or missing asset for {decision}: {asset or 'none'}.",
+        }
+
     return {"decision": decision, "asset": asset, "reason": reason}
-
-
-def _find_asset_in_text(text: str) -> str | None:
-    for asset in SUPPORTED_ASSETS:
-        if re.search(rf"\b{asset}\b", text):
-            return asset
-    return None

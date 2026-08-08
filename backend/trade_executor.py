@@ -1,4 +1,5 @@
 import os
+import time
 import uuid
 from decimal import Decimal, InvalidOperation
 
@@ -33,6 +34,12 @@ ASSET_DECIMALS = {
 }
 
 UNISWAP_V3_POOL_FEE = 3000
+DEFAULT_SLIPPAGE_BPS = 100
+BASIS_POINTS = 10_000
+TRANSACTION_CONFIRM_TIMEOUT_SECONDS = int(os.getenv("TRANSACTION_CONFIRM_TIMEOUT_SECONDS", "90"))
+TRANSACTION_CONFIRM_POLL_SECONDS = float(os.getenv("TRANSACTION_CONFIRM_POLL_SECONDS", "3"))
+TRANSACTION_SUCCESS_STATES = {"CONFIRMED", "COMPLETE"}
+TRANSACTION_FAILURE_STATES = {"CANCELLED", "DENIED", "FAILED", "STUCK"}
 MIN_TRADE_AMOUNT = Decimal("0.5")
 # Safety ceiling per trade, in USDC notional. Overridable so follower
 # allocations aren't silently capped at the old $2 testnet rail - a follower
@@ -108,7 +115,45 @@ def _to_token_units(amount: Decimal, decimals: int) -> int:
     return int(amount * (Decimal(10) ** decimals))
 
 
-def _build_swap_calldata(action: str, target_asset_symbol: str, amount: Decimal, recipient_address: str) -> str:
+def _expected_output_amount(
+    action: str,
+    target_asset_symbol: str,
+    amount_in: Decimal,
+    current_price: float | Decimal,
+) -> Decimal:
+    price = Decimal(str(current_price))
+    if price <= 0:
+        raise ValueError("current_price must be positive")
+
+    if action == "BUY":
+        # USDC in -> target asset out.
+        return amount_in / price
+    if action == "SELL":
+        # Target asset in -> USDC out.
+        return amount_in * price
+    raise ValueError(f"Unsupported swap action: {action}")
+
+
+def _minimum_output_units(
+    action: str,
+    target_asset_symbol: str,
+    amount_in: Decimal,
+    current_price: float | Decimal,
+    slippage_bps: int = DEFAULT_SLIPPAGE_BPS,
+) -> int:
+    output_symbol = target_asset_symbol if action == "BUY" else "USDC"
+    expected_output = _expected_output_amount(action, target_asset_symbol, amount_in, current_price)
+    min_output = expected_output * Decimal(BASIS_POINTS - slippage_bps) / Decimal(BASIS_POINTS)
+    return _to_token_units(min_output, ASSET_DECIMALS[output_symbol])
+
+
+def _build_swap_calldata(
+    action: str,
+    target_asset_symbol: str,
+    amount: Decimal,
+    recipient_address: str,
+    current_price: float | Decimal,
+) -> str:
     try:
         from web3 import Web3
     except ImportError as exc:
@@ -133,13 +178,14 @@ def _build_swap_calldata(action: str, target_asset_symbol: str, amount: Decimal,
         token_out = usdc_address
         amount_in = _to_token_units(amount, ASSET_DECIMALS[target_asset_symbol])
 
+    amount_out_minimum = _minimum_output_units(action, target_asset_symbol, amount, current_price)
     params = {
         "tokenIn": token_in,
         "tokenOut": token_out,
         "fee": UNISWAP_V3_POOL_FEE,
         "recipient": recipient,
         "amountIn": amount_in,
-        "amountOutMinimum": int(amount_in * 0.99),  # 1% max slippage
+        "amountOutMinimum": amount_out_minimum,
         "sqrtPriceLimitX96": 0,
     }
     return router.functions.exactInputSingle(params)._encode_transaction_data()
@@ -186,6 +232,22 @@ def _extract_transaction_id(response) -> str:
     return "unknown"
 
 
+def _extract_transaction_state(response) -> str | None:
+    data = getattr(response, "data", None)
+    transaction = getattr(data, "transaction", None) if data is not None else None
+    if transaction is None and data is not None and hasattr(data, "to_dict"):
+        transaction = data.to_dict().get("transaction")
+    if transaction is None:
+        return None
+
+    state = getattr(transaction, "state", None)
+    if state is None and isinstance(transaction, dict):
+        state = transaction.get("state")
+    if hasattr(state, "value"):
+        state = state.value
+    return str(state).upper() if state else None
+
+
 def _submit_contract_execution(transactions_api, wallet_id: str, contract_address: str, call_data: str, ref_id: str) -> str:
     request = developer_controlled_wallets.CreateContractExecutionTransactionForDeveloperRequest.from_dict(
         {
@@ -199,6 +261,38 @@ def _submit_contract_execution(transactions_api, wallet_id: str, contract_addres
     )
     response = transactions_api.create_developer_transaction_contract_execution(request)
     return _extract_transaction_id(response)
+
+
+def _wait_for_transaction_success(
+    transactions_api,
+    tx_id: str,
+    timeout_seconds: int = TRANSACTION_CONFIRM_TIMEOUT_SECONDS,
+    poll_seconds: float = TRANSACTION_CONFIRM_POLL_SECONDS,
+) -> bool:
+    if not tx_id or tx_id == "unknown":
+        log.error("Cannot confirm transaction without a Circle transaction id: %s", tx_id)
+        return False
+
+    deadline = time.monotonic() + max(0, timeout_seconds)
+    while True:
+        try:
+            response = transactions_api.get_transaction(tx_id)
+            state = _extract_transaction_state(response)
+        except Exception as exc:
+            log.warning("Transaction confirmation lookup failed for %s: %s", tx_id, exc)
+            state = None
+
+        if state in TRANSACTION_SUCCESS_STATES:
+            log.info("Transaction %s confirmed with state %s.", tx_id, state)
+            return True
+        if state in TRANSACTION_FAILURE_STATES:
+            log.error("Transaction %s reached failure state %s.", tx_id, state)
+            return False
+
+        if time.monotonic() >= deadline:
+            log.error("Transaction %s did not confirm before timeout; last state=%s.", tx_id, state or "unknown")
+            return False
+        time.sleep(poll_seconds)
 
 
 def execute_trade(
@@ -218,6 +312,8 @@ def execute_trade(
     own native units - without it, "amount" would be misread as raw units
     of the asset (e.g. "sell 1.0" meaning 1.0 whole BTC instead of $1 of
     BTC), so a SELL with no price is refused rather than guessed at.
+    Live BUYs also require current_price so Uniswap's amountOutMinimum can
+    be computed in the output token's decimals instead of the input token's.
     """
     action = (action or "").upper().strip()
     target_asset_symbol = (target_asset_symbol or "").upper().strip()
@@ -249,6 +345,12 @@ def execute_trade(
             return None
         swap_amount = final_amount / Decimal(str(current_price))
     else:
+        if not TRADE_DRY_RUN and (not current_price or current_price <= 0):
+            log.error(
+                "Missing current_price for BUY %s - refusing to build an unsafe slippage limit.",
+                target_asset_symbol,
+            )
+            return None
         swap_amount = final_amount
 
     log.info(
@@ -276,8 +378,11 @@ def execute_trade(
             f"approve-{token_to_approve}-for-{action.lower()}",
         )
         log.info("Approval submitted. Tx: %s", approval_tx_id)
+        if not _wait_for_transaction_success(transactions_api, approval_tx_id):
+            log.error("Approval did not confirm for %s %s. Aborting swap.", action, target_asset_symbol)
+            return None
 
-        call_data = _build_swap_calldata(action, target_asset_symbol, swap_amount, recipient)
+        call_data = _build_swap_calldata(action, target_asset_symbol, swap_amount, recipient, current_price)
         tx_id = _submit_contract_execution(
             transactions_api,
             wallet_id,
@@ -286,7 +391,11 @@ def execute_trade(
             f"{action.lower()}-{target_asset_symbol.lower()}-swap",
         )
 
-        log.info("SUCCESS: %s %s submitted. Tx: %s", action, target_asset_symbol, tx_id)
+        if not _wait_for_transaction_success(transactions_api, tx_id):
+            log.error("%s %s swap did not confirm. Tx: %s", action, target_asset_symbol, tx_id)
+            return None
+
+        log.info("SUCCESS: %s %s confirmed. Tx: %s", action, target_asset_symbol, tx_id)
         return tx_id
     except Exception as exc:
         log.error("Transaction failed", error=str(exc))
@@ -341,7 +450,10 @@ def execute_transfer(
             call_data,
             f"transfer-{asset_symbol.lower()}",
         )
-        log.info("SUCCESS: %s transfer submitted. Tx: %s", asset_symbol, tx_id)
+        if not _wait_for_transaction_success(transactions_api, tx_id):
+            log.error("%s transfer did not confirm. Tx: %s", asset_symbol, tx_id)
+            return None
+        log.info("SUCCESS: %s transfer confirmed. Tx: %s", asset_symbol, tx_id)
         return tx_id
     except Exception as exc:
         log.error("Transfer failed", error=str(exc))

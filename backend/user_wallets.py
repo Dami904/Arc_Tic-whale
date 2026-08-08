@@ -67,7 +67,7 @@ def ensure_user_wallet(
         wallet_address = AGENT_WALLET_ADDRESS or "0x0000000000000000000000000000000000000000"
     else:
         log.info("Provisioning first-access Arc Testnet wallet for @%s...", user_id)
-        wallet_record = create_wallet_with_policy(f"User_{user_id}", daily_limit=50.0, max_per_tx=2.0)
+        wallet_record = create_wallet_with_policy(f"User_{user_id}")
         if not wallet_record:
             return None
         wallet_id = wallet_record.get("wallet_id")

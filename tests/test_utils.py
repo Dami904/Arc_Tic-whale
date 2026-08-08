@@ -22,13 +22,13 @@ class TestParseAIDecision:
         assert result["decision"] == "HOLD"
         assert result["asset"] is None
 
-    def test_parse_buy_sol_remaps_to_supported(self):
-        # SOL has no on-chain contract; the parser falls back to the first supported
-        # asset it finds in the text, or ETH as the last resort.
+    def test_parse_buy_sol_defaults_to_hold(self):
+        # SOL has no on-chain contract; the parser must not silently trade
+        # a different asset.
         response = "DECISION: BUY SOL\nREASON: SOL breakout above resistance."
         result = parse_ai_decision(response)
-        assert result["decision"] == "BUY"
-        assert result["asset"] in {"BTC", "ETH", "EURC"}  # SOL remapped to a supported asset
+        assert result["decision"] == "HOLD"
+        assert result["asset"] is None
 
     def test_parse_case_insensitive(self):
         response = "decision: buy eth\nreason: dip buy opportunity."
@@ -36,11 +36,11 @@ class TestParseAIDecision:
         assert result["decision"] == "BUY"
         assert result["asset"] == "ETH"
 
-    def test_parse_no_asset_with_buy_falls_back(self):
+    def test_parse_no_asset_with_buy_defaults_to_hold(self):
         response = "DECISION: BUY\nREASON: General market dip."
         result = parse_ai_decision(response)
-        assert result["decision"] == "BUY"
-        assert result["asset"] == "ETH"
+        assert result["decision"] == "HOLD"
+        assert result["asset"] is None
 
     def test_parse_invalid_decision_defaults_hold(self):
         response = "Some random text without a decision."
@@ -58,12 +58,11 @@ class TestParseAIDecision:
         assert result["decision"] == "HOLD"
         assert result["asset"] is None
 
-    def test_parse_unsupported_asset_with_fallback(self):
+    def test_parse_unsupported_asset_defaults_to_hold(self):
         response = "DECISION: BUY DOGE\nREASON: Doge mooning."
         result = parse_ai_decision(response)
-        assert result["decision"] == "BUY"
-        assert result["asset"] is not None
-        assert result["asset"] in {"BTC", "ETH", "EURC"}
+        assert result["decision"] == "HOLD"
+        assert result["asset"] is None
 
     def test_parse_reason_with_newlines(self):
         response = "DECISION: HOLD\nREASON: Multiple factors:\n1. High volatility\n2. Low volume\nWaiting for confirmation."

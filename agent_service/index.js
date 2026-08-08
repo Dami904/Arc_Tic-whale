@@ -21,7 +21,10 @@ const X402_FACILITATOR_URL = process.env.X402_FACILITATOR_URL || 'https://x402.o
 const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || 'http://localhost:8765';
 
 function requireSecret(req, res, next) {
-  if (!AGENT_SERVICE_SECRET) return next();
+  if (!AGENT_SERVICE_SECRET) {
+    if (DRY_RUN) return next();
+    return res.status(503).json({ error: 'AGENT_SERVICE_SECRET is required' });
+  }
   if (req.headers['x-agent-secret'] !== AGENT_SERVICE_SECRET) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -47,6 +50,7 @@ if (CIRCLE_SELLER_ADDRESS) {
 }
 
 app.use('/wallets', requireSecret);
+app.use('/signals', requireSecret);
 
 // Initialise Circle client once at startup
 let circleClient = null;
@@ -70,6 +74,8 @@ app.get('/health', (_req, res) => {
     status: 'ok',
     circle_configured: !!circleClient,
     dry_run: DRY_RUN,
+    auth_required: !DRY_RUN,
+    auth_configured: !!AGENT_SERVICE_SECRET,
     version: '1.0.0',
   });
 });
@@ -268,5 +274,8 @@ app.post('/signals', async (req, res) => {
 });
 
 app.listen(PORT, () => {
+  if (!DRY_RUN && !AGENT_SERVICE_SECRET) {
+    console.error('[circle-agent] AGENT_SERVICE_SECRET is missing - protected routes will fail closed');
+  }
   console.log(`[circle-agent] Circle Agent Service running on port ${PORT} (dry_run=${DRY_RUN})`);
 });

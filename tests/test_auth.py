@@ -261,11 +261,17 @@ class TestAuthenticatedWalletAuthorization:
 
         self._seed_users()
         token = db.create_session("alice")
+        policy_updates = []
         monkeypatch.setattr(api, "get_wallet_stats_safe", lambda wallet_id: {
             "total_balance_usd": 10.0,
             "token_balances": [{"symbol": "USDC", "amount": "10.0"}],
             "performance": {},
         })
+        monkeypatch.setattr(
+            api,
+            "update_wallet_policy",
+            lambda wallet_id, **policy: policy_updates.append((wallet_id, policy)) or True,
+        )
 
         r = client.post(
             "/follow",
@@ -282,8 +288,36 @@ class TestAuthenticatedWalletAuthorization:
         body = r.json()
         assert body["status"] == "success"
         assert body["wallet_id"] == "wallet_alice"
+        assert policy_updates[0][0] == "wallet_alice"
         assert db.get_follower_wallet("Conservative_Whale", "alice")["user_wallet_id"] == "wallet_alice"
         assert db.get_follower_wallet("Conservative_Whale", "bob") is None
+
+    def test_follow_fails_if_policy_update_fails(self, client, monkeypatch):
+        import server.api as api
+
+        self._seed_users()
+        token = db.create_session("alice")
+        monkeypatch.setattr(api, "get_wallet_stats_safe", lambda wallet_id: {
+            "total_balance_usd": 10.0,
+            "token_balances": [{"symbol": "USDC", "amount": "10.0"}],
+            "performance": {},
+        })
+        monkeypatch.setattr(api, "update_wallet_policy", lambda *args, **kwargs: False)
+
+        r = client.post(
+            "/follow",
+            json={
+                "username": "bob",
+                "allocation": 5.0,
+                "stop_loss_pct": 10.0,
+                "agent_id": "Conservative_Whale",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert r.status_code == 200
+        assert r.json()["status"] == "error"
+        assert db.get_follower_wallet("Conservative_Whale", "alice") is None
 
     def test_trigger_trade_ignores_request_username_and_uses_authenticated_wallet(self, client, monkeypatch):
         import server.api as api

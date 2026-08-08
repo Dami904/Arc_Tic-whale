@@ -26,7 +26,7 @@ bot: telebot.TeleBot | None = telebot.TeleBot(BOT_TOKEN) if BOT_TOKEN else None
 
 def _telegram_user_id(message):
     user = message.from_user
-    return user.username or f"tg_{user.id}"
+    return f"tg_{user.id}"
 
 
 def _start_referral_code(message):
